@@ -66,6 +66,27 @@ input {
   gap: 6px;
 }
 
+/* ---- footer ---- */
+.footer {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 16px;
+  align-items: baseline;
+  justify-content: space-between;
+  margin-top: 32px;
+  padding-top: 14px;
+  border-top: 3px solid var(--wall);
+  color: var(--muted);
+  font-size: 13px;
+}
+.footer p {
+  margin: 0;
+}
+.footer .ver {
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+}
+
 .chip {
   border: 2px solid var(--wall);
   background: var(--tile);
@@ -118,7 +139,8 @@ input {
 .link:focus-visible,
 .brush:focus-visible,
 .accuse select:focus-visible,
-.seedbox input:focus-visible {
+.seedbox input:focus-visible,
+.feedback :is(input, select, textarea):focus-visible {
   outline: 3px solid var(--accent);
   outline-offset: 2px;
 }
@@ -512,6 +534,62 @@ img.art {
     opacity: 0;
     transform: translateY(4px);
   }
+}
+
+/* ---- 피드백 모달 ---- */
+.feedback {
+  border: 3px solid var(--wall);
+  /* 안쪽 입력 6 + 패딩 16 = 22 */
+  border-radius: 22px;
+  background: #fffdf7;
+  color: var(--ink);
+  padding: 0;
+  width: min(440px, calc(100vw - 32px));
+  box-shadow: 4px 4px 0 var(--wall);
+}
+.feedback::backdrop {
+  background: rgb(35 32 28 / 0.45);
+}
+.feedback form {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 16px;
+}
+.feedback h2 {
+  margin: 0;
+  font-size: 18px;
+}
+.fb-note {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--muted);
+}
+.feedback label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 13px;
+  font-weight: 700;
+}
+.feedback :is(input, select, textarea) {
+  width: 100%;
+  min-height: 40px;
+  border: 2px solid var(--wall);
+  border-radius: 6px;
+  padding: 6px 8px;
+  background: var(--tile);
+  font-weight: 400;
+}
+.feedback textarea {
+  resize: vertical;
+  line-height: 1.5;
+}
+.fb-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
 }
 
 @media (prefers-reduced-motion: reduce) {

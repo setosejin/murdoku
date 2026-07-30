@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
 import Board from './components/Board';
+import FeedbackDialog from './components/FeedbackDialog';
 import { DIFFICULTIES, generatePuzzle } from './game/generate';
 
 const newSeed = () => Math.random().toString(36).slice(2, 8);
@@ -48,7 +49,7 @@ export default function App() {
     <div className="app">
       <header className="topbar">
         <h1>
-          murdoku <span className="sub">머도쿠 · v{import.meta.env.VITE_APP_VERSION}</span>
+          murdoku <span className="sub">머도쿠</span>
         </h1>
         <div className="controls">
           {DIFFICULTIES.map((d) => (
@@ -65,6 +66,7 @@ export default function App() {
           <button type="button" className="chip primary" onClick={() => reset()}>
             새 사건
           </button>
+          <FeedbackDialog seed={seed} n={n} />
         </div>
       </header>
 
@@ -208,6 +210,22 @@ export default function App() {
           </div>
         </div>
       </section>
+
+      <footer className="footer">
+        <p>
+          © {new Date().getFullYear()} setosejin ·{' '}
+          <a
+            className="link"
+            href="https://github.com/setosejin/murdoku"
+            target="_blank"
+            rel="noreferrer"
+            aria-label="GitHub 저장소 열기 (새 탭)"
+          >
+            GitHub
+          </a>
+        </p>
+        <p className="ver">v{import.meta.env.VITE_APP_VERSION}</p>
+      </footer>
     </div>
   );
 }

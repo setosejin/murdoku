@@ -30,6 +30,7 @@ npm run build   # 정적 빌드 (dist/)
 | `src/game/generate.ts`     | BSP 평면도 → 가구 → 정답 배치 → 증언 → 유일해 검증 루프      |
 | `src/data/content.ts`      | 이름·가구·방 이름·사건 제목 풀                                |
 | `src/components/Board.tsx` | 격자·방 경계·가구·메모 렌더                                   |
+| `src/components/FeedbackDialog.tsx` | 피드백 모달 → GitHub 이슈 작성 폼 prefill                |
 
 증언은 `ON` / `NEXT_TO` / `IN_ROOM` 세 종류. 퍼즐은 매번 생성되며 항상 해가 하나뿐임이 보장된다.
 
@@ -43,3 +44,4 @@ npm run build   # 정적 빌드 (dist/)
 - 거짓말하는 용의자 / 목격자 / 알리바이 같은 트릭 (증언 타입 하나 추가로 확장 가능)
 - 7×7 이상 대형 격자 — 솔버가 완전 백트래킹이라 그때 제약 전파 필요
 - 저장·랭킹·서버. 전부 클라이언트에서 돌고, 시드로만 사건을 다시 불러온다.
+- 피드백 자동 등록. 정적 배포라 토큰을 둘 곳이 없어서, 모달 입력값으로 GitHub 이슈 작성 폼을 채워 열어주고 등록은 GitHub 에서 사용자가 누른다.

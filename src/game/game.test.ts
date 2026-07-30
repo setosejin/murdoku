@@ -3,6 +3,7 @@ import { createElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { generatePuzzle } from './generate';
 import Board from '../components/Board';
+import FeedbackDialog, { issueUrl } from '../components/FeedbackDialog';
 import { indexScene, matchingCells, satisfies } from './clues';
 import { solve } from './solve';
 import type { Room, Furniture, WallItem } from './types';
@@ -190,5 +191,26 @@ describe('Board 렌더링', () => {
   it('메모는 공개 전에만 보인다', () => {
     expect(render(false, { '0,0': 'X' }).html).toContain('✕');
     expect(render(true, { '0,0': 'X' }).html).not.toContain('✕');
+  });
+});
+
+describe('FeedbackDialog', () => {
+  it('이슈 URL에 유형·제목·본문·시드가 인코딩된다', () => {
+    const url = new URL(issueUrl('버그', ' 방이 겹쳐 ', '4x4에서 재현됨', 'abc123', 4));
+
+    expect(url.origin + url.pathname).toBe('https://github.com/setosejin/murdoku/issues/new');
+    expect(url.searchParams.get('title')).toBe('[버그] 방이 겹쳐');
+    const body = url.searchParams.get('body')!;
+    expect(body).toContain('4x4에서 재현됨');
+    expect(body).toContain('시드: `abc123`');
+    expect(body).toContain('난이도: 4x4');
+  });
+
+  it('제목 입력과 취소/제출 버튼을 그린다', () => {
+    const html = renderToStaticMarkup(createElement(FeedbackDialog, { seed: 'abc123', n: 4 }));
+    expect(html).toContain('<dialog');
+    expect(html).toContain('피드백');
+    expect(html).toContain('required');
+    expect(html).toContain('이슈로 열기');
   });
 });
