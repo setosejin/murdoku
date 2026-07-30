@@ -9,16 +9,7 @@ npm test        # 엔진·렌더링 검증
 npm run build   # 정적 빌드 (dist/)
 ```
 
-## 배포·버전
-
-`package.json` 의 버전이 빌드에 박히고 제목 옆에 그대로 찍힌다(`머도쿠 · v0.1.0`). 배포된 페이지를 열면 어떤 버전인지 바로 보인다.
-
-```bash
-npm version patch          # 0.1.0 -> 0.1.1, 커밋 + v0.1.1 태그까지 자동
-git push --follow-tags
-```
-
-`minor` / `major` 도 같다. 버전은 `package.json` 한 곳에서만 관리한다.
+`main` 에 푸시하면 GitHub Actions 가 빌드해서 GitHub Pages 로 배포한다 (`.github/workflows/deploy.yml`).
 
 ## 규칙
 
@@ -31,14 +22,14 @@ git push --follow-tags
 
 ## 구조
 
-| 파일 | 역할 |
-|---|---|
-| `src/game/types.ts` | 데이터 모델, 시드 RNG |
-| `src/game/clues.ts` | 증언 판정(`matchingCells`)과 한국어 문구 — 규칙의 유일한 출처 |
-| `src/game/solve.ts` | 행/열/방 비트마스크 백트래킹 솔버 + 유일해 판정 |
-| `src/game/generate.ts` | BSP 평면도 → 가구 → 정답 배치 → 증언 → 유일해 검증 루프 |
-| `src/data/content.ts` | 이름·가구·방 이름·사건 제목 풀 |
-| `src/components/Board.tsx` | 격자·방 경계·가구·메모 렌더 |
+| 파일                         | 역할                                                             |
+| ---------------------------- | ---------------------------------------------------------------- |
+| `src/game/types.ts`        | 데이터 모델, 시드 RNG                                            |
+| `src/game/clues.ts`        | 증언 판정(`matchingCells`)과 한국어 문구 — 규칙의 유일한 출처 |
+| `src/game/solve.ts`        | 행/열/방 비트마스크 백트래킹 솔버 + 유일해 판정                  |
+| `src/game/generate.ts`     | BSP 평면도 → 가구 → 정답 배치 → 증언 → 유일해 검증 루프      |
+| `src/data/content.ts`      | 이름·가구·방 이름·사건 제목 풀                                |
+| `src/components/Board.tsx` | 격자·방 경계·가구·메모 렌더                                   |
 
 증언은 `ON` / `NEXT_TO` / `IN_ROOM` 세 종류. 퍼즐은 매번 생성되며 항상 해가 하나뿐임이 보장된다.
 
