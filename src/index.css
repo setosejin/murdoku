@@ -1,0 +1,482 @@
+:root {
+  --paper: #f7f1e3;
+  --ink: #23201c;
+  --wall: #23201c;
+  --tile: #fdfaf2;
+  --tile-line: #e0d8c6;
+  --accent: #c0392b;
+  --muted: #7d7466;
+  color-scheme: light;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: var(--paper);
+  color: var(--ink);
+  font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, 'Apple SD Gothic Neo',
+    'Noto Sans KR', system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  /* 한국어는 어절 중간에서 끊기면 읽기 나빠진다 */
+  word-break: keep-all;
+  overflow-wrap: break-word;
+  text-wrap: pretty;
+}
+
+button,
+select,
+input {
+  font: inherit;
+  color: inherit;
+}
+
+.app {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 24px 16px 64px;
+}
+
+/* ---- top bar ---- */
+.topbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: baseline;
+  justify-content: space-between;
+  border-bottom: 3px solid var(--wall);
+  padding-bottom: 12px;
+}
+.topbar h1 {
+  margin: 0;
+  font-size: 30px;
+  letter-spacing: -0.02em;
+  text-wrap: balance;
+}
+.topbar .sub {
+  font-size: 15px;
+  color: var(--muted);
+  font-weight: 500;
+}
+.controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.chip {
+  border: 2px solid var(--wall);
+  background: var(--tile);
+  border-radius: 999px;
+  padding: 6px 14px;
+  min-height: 40px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-size: 14px;
+  transition: transform 0.08s ease, background 0.15s ease;
+}
+.chip:hover {
+  transform: translateY(-1px);
+}
+.chip:active {
+  transform: scale(0.96);
+}
+.chip.on {
+  background: var(--wall);
+  color: var(--paper);
+}
+.chip.primary {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+}
+.chip:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+  transform: none;
+}
+.link {
+  background: none;
+  border: none;
+  text-decoration: underline;
+  cursor: pointer;
+  color: var(--muted);
+  font-size: 13px;
+  padding: 0;
+  min-height: 40px;
+  display: inline-flex;
+  align-items: center;
+  text-align: left;
+}
+
+/* 커스텀 테두리 위에선 브라우저 기본 링이 잘 안 보인다 */
+.chip:focus-visible,
+.link:focus-visible,
+.brush:focus-visible,
+.accuse select:focus-visible,
+.seedbox input:focus-visible {
+  outline: 3px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* ---- case board ---- */
+.case {
+  margin: 24px 0;
+  border: 3px solid var(--wall);
+  /* 안쪽 카드 8 + 패딩 16 = 동심 반경 24 */
+  border-radius: 24px;
+  background: #fffdf7;
+  padding: 16px;
+  box-shadow: 4px 4px 0 var(--wall);
+}
+.case-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  border-bottom: 2px solid var(--wall);
+  padding-bottom: 8px;
+}
+.case-no {
+  font-size: 11px;
+  letter-spacing: 0.18em;
+  border: 2px solid var(--wall);
+  border-radius: 4px;
+  padding: 2px 6px;
+}
+.case-head h2 {
+  margin: 0;
+  font-size: 20px;
+  text-wrap: balance;
+}
+.brief {
+  margin: 10px 0 16px;
+  color: var(--muted);
+  font-size: 14px;
+}
+.cards {
+  display: grid;
+  /* auto-fill 이면 인물 수보다 칸이 많아져 오른쪽에 빈 열이 남는다 */
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 10px;
+}
+.card {
+  border: 2px solid var(--wall);
+  border-radius: 8px;
+  padding: 10px;
+  background: var(--tile);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.card.victim {
+  background: #ecebe8;
+}
+.card b {
+  font-size: 14px;
+}
+.card p {
+  margin: 0;
+  font-size: 13px;
+  color: var(--muted);
+  line-height: 1.4;
+}
+.avatar {
+  width: 44px;
+  height: 44px;
+  border-radius: 8px;
+  border: 2px solid var(--wall);
+  display: grid;
+  place-items: center;
+  font-weight: 700;
+  overflow: hidden;
+}
+.avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* ---- play area ---- */
+.play {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 260px;
+  gap: 20px;
+  align-items: start;
+}
+
+.board {
+  display: grid;
+  grid-template-columns: repeat(var(--n), 1fr);
+  border: 4px solid var(--wall);
+  border-radius: 4px;
+  /* 칸이 모서리를 덮어서 라운딩이 안 보이던 것 */
+  overflow: hidden;
+  background: var(--tile);
+  max-width: 620px;
+  width: 100%;
+  margin: 0 auto;
+}
+
+.cell {
+  position: relative;
+  border-style: solid;
+  border-color: var(--tile-line);
+  border-width: 1px 0 0 1px;
+  background: var(--tile);
+  cursor: pointer;
+  padding: 0;
+  display: grid;
+  place-items: center;
+  aspect-ratio: 1;
+}
+.cell:hover {
+  background: #f3ecdb;
+}
+.cell:focus-visible {
+  outline: 3px solid var(--accent);
+  outline-offset: -3px;
+  z-index: 4;
+}
+.cell.blocked {
+  background: #f3eee1;
+}
+
+.furniture {
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  border-radius: 6px;
+  background: #ded7c6;
+  display: grid;
+  place-items: center;
+  align-content: center;
+  gap: 2px;
+  overflow: hidden;
+  pointer-events: none;
+  /* 2칸 가구가 옆 칸 배경에 가려지지 않게 positioned 레이어 위로 올린다 */
+  z-index: 1;
+}
+.fur-label {
+  font-size: clamp(8px, 1.5vw, 11px);
+  line-height: 1;
+  color: #5b5245;
+  font-weight: 700;
+  white-space: nowrap;
+}
+.furniture.standable {
+  background: #e9e2f2;
+}
+.art {
+  font-size: clamp(14px, 3.4vw, 26px);
+  line-height: 1;
+}
+img.art {
+  width: 80%;
+  height: 80%;
+  object-fit: contain;
+}
+
+.wall-item {
+  position: absolute;
+  display: grid;
+  place-items: center;
+  background: #fff;
+  border: 2px solid var(--wall);
+  border-radius: 3px;
+  pointer-events: none;
+  z-index: 3;
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 1;
+}
+.wall-item.window {
+  background: #d9ecfa;
+}
+.wall-item.door {
+  background: #efdcc4;
+}
+.wall-item .art {
+  font-size: 11px;
+}
+.wall-item.top,
+.wall-item.bottom {
+  left: 22%;
+  width: 56%;
+  height: 14px;
+}
+.wall-item.top {
+  top: 1px;
+}
+.wall-item.bottom {
+  bottom: 1px;
+}
+.wall-item.left,
+.wall-item.right {
+  top: 22%;
+  height: 56%;
+  width: 14px;
+}
+.wall-item.left {
+  left: 1px;
+}
+.wall-item.right {
+  right: 1px;
+}
+
+.room-label {
+  position: absolute;
+  right: 3px;
+  bottom: 3px;
+  font-size: 10px;
+  background: #fffdf7cc;
+  border: 1px solid var(--wall);
+  border-radius: 999px;
+  padding: 0 6px;
+  pointer-events: none;
+  z-index: 4;
+}
+
+.token {
+  position: relative;
+  z-index: 2;
+  width: 62%;
+  height: 62%;
+  border-radius: 50%;
+  border: 2px solid var(--wall);
+  background: #fffdf7;
+  display: grid;
+  place-items: center;
+  font-weight: 700;
+  font-size: clamp(12px, 2.6vw, 20px);
+}
+.token.solved {
+  border-width: 3px;
+}
+.mark-x {
+  position: relative;
+  z-index: 2;
+  font-size: clamp(16px, 4vw, 30px);
+  color: #4a453d;
+}
+
+/* ---- side panels ---- */
+.side {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.panel {
+  border: 3px solid var(--wall);
+  /* 안쪽 입력 6 + 패딩 12 = 18 */
+  border-radius: 18px;
+  background: #fffdf7;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.panel b {
+  font-size: 14px;
+}
+.rules ol {
+  margin: 0;
+  padding-left: 18px;
+  font-size: 13px;
+  color: var(--muted);
+  line-height: 1.6;
+}
+.brushes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.brush {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  border: 3px solid var(--wall);
+  background: var(--tile);
+  cursor: pointer;
+  font-weight: 700;
+  transition: transform 0.08s ease, background 0.15s ease;
+}
+.brush:active {
+  transform: scale(0.96);
+}
+.brush.on {
+  background: var(--wall);
+  color: var(--paper);
+}
+.accuse select {
+  border: 2px solid var(--wall);
+  border-radius: 6px;
+  padding: 6px 8px;
+  min-height: 40px;
+  background: var(--tile);
+}
+.verdict {
+  margin: 0;
+  font-weight: 700;
+  font-size: 14px;
+}
+.verdict.ok {
+  color: #1e7a45;
+}
+.verdict.no {
+  color: var(--accent);
+}
+.seedbox code {
+  font-size: 13px;
+  background: #efe8d7;
+  padding: 2px 6px;
+  border-radius: 4px;
+  align-self: flex-start;
+}
+.seedbox form {
+  display: flex;
+  gap: 6px;
+}
+.seedbox input {
+  flex: 1;
+  min-width: 0;
+  min-height: 40px;
+  border: 2px solid var(--wall);
+  border-radius: 6px;
+  padding: 5px 8px;
+  background: var(--tile);
+}
+
+/* 결과는 자주 안 뜨는 상태 변화라 등장 모션이 값을 한다 */
+.verdict {
+  animation: verdict-in 0.18s ease-out;
+}
+@keyframes verdict-in {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+  .chip:hover,
+  .chip:active,
+  .brush:active {
+    transform: none;
+  }
+}
+
+@media (max-width: 760px) {
+  .play {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
