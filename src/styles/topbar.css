@@ -1,0 +1,26 @@
+/* ---- top bar ---- */
+.topbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: baseline;
+  justify-content: space-between;
+  border-bottom: 3px solid var(--wall);
+  padding-bottom: 12px;
+}
+.topbar h1 {
+  margin: 0;
+  font-size: 30px;
+  letter-spacing: -0.02em;
+  text-wrap: balance;
+}
+.topbar .sub {
+  font-size: 15px;
+  color: var(--muted);
+  font-weight: 500;
+}
+.controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}

@@ -43,6 +43,7 @@ npm run build   # 정적 빌드 (dist/)
 | `src/game/generate.ts`     | BSP 평면도 → 가구 → 정답 배치 → 증언 → 유일해 검증 루프      |
 | `src/data/content.ts`      | `THEMES` — 테마별 방·바닥·가구·제목·직업 풀                  |
 | `src/components/Board.tsx` | 격자·방 경계·바닥 재질·가구·메모 렌더                         |
+| `src/components/HistoryPanel.tsx` | 기록 목록 + 계정 + 복구 키 패널                        |
 | `src/assets/sprite.svg`    | 가구·벽부착물·인물 아이콘 (`<symbol id="i-<kind>">`)          |
 | `src/game/history.ts`      | 플레이 기록 — 검증·병합(순수) + localStorage + 동기화          |
 | `src/game/auth.ts`         | 계정 — 아이디/`dk` 검증(공용) + 브라우저 PBKDF2·가입·로그인      |

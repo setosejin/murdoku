@@ -1,0 +1,134 @@
+/* ---- side panels ---- */
+.side {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.panel {
+  border: 3px solid var(--wall);
+  /* 안쪽 입력 6 + 패딩 12 = 18 */
+  border-radius: 18px;
+  background: #fffdf7;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.panel b {
+  font-size: 14px;
+}
+.rules ol {
+  margin: 0;
+  padding-left: 18px;
+  font-size: 13px;
+  color: var(--muted);
+  line-height: 1.6;
+}
+/* 이번 사건에 실제로 나온 가구만 — 설 수 있는지 없는지가 핵심 정보다 */
+.legend ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.legend li {
+  display: grid;
+  grid-template-columns: 24px 1fr auto;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+}
+.legend svg.art {
+  width: 22px;
+  height: 22px;
+}
+.legend .art {
+  font-size: 17px;
+  justify-self: center;
+}
+.legend em {
+  font-style: normal;
+  font-size: 11px;
+  font-weight: 700;
+  border: 2px solid var(--wall);
+  border-radius: 999px;
+  padding: 1px 7px;
+  white-space: nowrap;
+}
+.legend .ok em {
+  background: #dcefdd;
+}
+.legend .no em {
+  background: #f2dcd8;
+}
+.brushes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.brush {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  border: 3px solid var(--wall);
+  background: var(--tile);
+  cursor: pointer;
+  font-weight: 700;
+}
+
+/* ---- 누름 피드백 (칩·브러시 공용) ---- */
+.chip,
+.brush {
+  transition: transform var(--dur-press) var(--ease-out), background var(--dur-fast) var(--ease-out);
+}
+.chip:active,
+.brush:active {
+  transform: scale(0.97);
+}
+.brush.on {
+  background: var(--wall);
+  color: var(--paper);
+}
+.accuse select {
+  border: 2px solid var(--wall);
+  border-radius: 6px;
+  padding: 6px 8px;
+  min-height: 40px;
+  background: var(--tile);
+}
+.verdict {
+  margin: 0;
+  font-weight: 700;
+  font-size: 14px;
+}
+.verdict.ok {
+  color: #1e7a45;
+}
+.verdict.no {
+  color: var(--accent);
+}
+.seedbox code,
+.sync code {
+  font-size: 13px;
+  background: #efe8d7;
+  padding: 2px 6px;
+  border-radius: 4px;
+  align-self: flex-start;
+}
+.seedbox form,
+.sync form {
+  display: flex;
+  gap: 6px;
+}
+.seedbox input,
+.sync input {
+  flex: 1;
+  min-width: 0;
+  min-height: 40px;
+  border: 2px solid var(--wall);
+  border-radius: 6px;
+  padding: 5px 8px;
+  background: var(--tile);
+}

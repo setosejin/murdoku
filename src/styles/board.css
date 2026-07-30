@@ -1,0 +1,320 @@
+/* ---- play area ---- */
+.play {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 260px;
+  gap: 20px;
+  align-items: start;
+}
+
+.board-wrap {
+  position: relative;
+}
+
+/* 스크롤 위치와 무관하게 늘 보이도록 뷰포트에 고정 */
+.notice {
+  position: fixed;
+  left: 50%;
+  bottom: 20px;
+  transform: translateX(-50%);
+  margin: 0;
+  max-width: calc(100% - 24px);
+  padding: 8px 14px;
+  border-radius: 999px;
+  background: #2f2a24;
+  color: #fdf6e6;
+  font-size: 14px;
+  font-weight: 600;
+  white-space: nowrap;
+  box-shadow: 0 6px 18px rgb(47 42 36 / 0.28);
+  pointer-events: none;
+  z-index: 6;
+  animation: notice-in var(--dur-fast) var(--ease-out);
+  transition: opacity 200ms var(--ease-out);
+}
+@starting-style {
+  .notice {
+    opacity: 0;
+  }
+}
+/* ponytail: 퇴장 페이드는 없다. React 가 노드를 즉시 제거하기 때문.
+   필요해지면 Board.tsx 에서 exiting 상태를 두고 200ms 뒤 언마운트할 것. */
+@keyframes notice-in {
+  from {
+    opacity: 0;
+    transform: translate(-50%, 6px);
+  }
+}
+
+/* reduced-motion 에서 등장 모션을 대체한다. 이동만 빼고 투명도는 남긴다. */
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+}
+
+.board {
+  display: grid;
+  /* grid-template-columns 는 Board.tsx 가 인라인으로 넣는다 (Safari 가 var() 를 캐싱한다) */
+  /* 위계: 외벽 5px > 방 경계 3px > 칸선 1px */
+  border: 5px solid var(--wall);
+  border-radius: 4px;
+  /* 칸이 모서리를 덮어서 라운딩이 안 보이던 것 */
+  overflow: hidden;
+  background: var(--tile);
+  max-width: 620px;
+  width: 100%;
+  margin: 0 auto;
+}
+
+.cell {
+  position: relative;
+  border-style: solid;
+  border-color: var(--tile-line);
+  border-width: 1px 0 0 1px;
+  background-color: var(--floor-tint, var(--tile));
+  background-image: var(--floor-img, none);
+  background-size: var(--floor-size, auto);
+  cursor: pointer;
+  padding: 0;
+  display: grid;
+  place-items: center;
+  aspect-ratio: 1;
+}
+
+/* 방마다 다른 바닥 재질. 이미지 없이 그라디언트로만 그린다.
+   무늬가 칸선보다 세면 칸을 셀 수 없게 되므로 전부 옅게 깐다 */
+.cell[data-floor='wood'] {
+  --floor-tint: #f4e7ce;
+  /* 딱딱한 선을 쓰면 칸선과 헷갈린다 — 흐린 결로 깐다 */
+  --floor-img: repeating-linear-gradient(0deg, #b9844218 0, #0000 7px, #b9844218 14px);
+}
+.cell[data-floor='tile'] {
+  --floor-tint: #eef4f2;
+  /* 무채색 체크는 '투명 배경' 그림처럼 보인다 — 청록 기를 넣어 타일로 읽히게 */
+  --floor-img: conic-gradient(#0000 0 25%, #6f9c9c26 0 50%, #0000 0 75%, #6f9c9c26 0);
+  --floor-size: 24px 24px;
+}
+.cell[data-floor='carpet'] {
+  --floor-tint: #f3e4e1;
+  --floor-img: radial-gradient(#00000010 1px, #0000 1.2px);
+  --floor-size: 5px 5px;
+}
+.cell[data-floor='grass'] {
+  --floor-tint: #e5efd4;
+  --floor-img: repeating-linear-gradient(45deg, #0000 0 4px, #2d6a3f1f 4px 5px);
+}
+.cell[data-floor='soil'] {
+  --floor-tint: #ecdcc3;
+  --floor-img: radial-gradient(#6b4a1f1f 1.2px, #0000 1.4px);
+  --floor-size: 8px 8px;
+}
+.cell[data-floor='straw'] {
+  --floor-tint: #f7edc9;
+  --floor-img: repeating-linear-gradient(-30deg, #0000 0 4px, #a9822d29 4px 5px);
+}
+
+/* 상태 표시는 배경을 갈아끼우는 대신 위에 덧칠한다 (바닥 무늬가 살아 있게) */
+@media (hover: hover) and (pointer: fine) {
+  .cell:hover {
+    box-shadow: inset 0 0 0 200px #0000000f;
+  }
+}
+.cell:focus-visible {
+  outline: 3px solid var(--accent);
+  outline-offset: -3px;
+  z-index: 4;
+}
+.cell.blocked {
+  box-shadow: inset 0 0 0 200px #0000000d;
+  cursor: not-allowed;
+}
+/* 설 수 없는 칸은 바닥 재질과 무관하게 빗금으로 읽히게 한다 */
+.cell.blocked::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: repeating-linear-gradient(45deg, #0000 0 6px, #23201c12 6px 8px);
+  pointer-events: none;
+}
+/* 가구 칸을 눌렀을 때: 흔들림 + 붉은 기 */
+.cell.denied {
+  box-shadow: inset 0 0 0 200px #c0392b2e;
+  animation: cell-nope 0.3s ease-out;
+  z-index: 3;
+}
+/* ponytail: 이름만 다른 쌍둥이 키프레임. 같은 칸을 연속으로 누를 때
+   animation-name 이 바뀌어야 흔들림이 처음부터 다시 돈다.
+   버튼을 재마운트하면 키보드 포커스를 잃으므로 이 방법을 쓴다. */
+.cell.denied.alt {
+  animation-name: cell-nope-alt;
+}
+@keyframes cell-nope {
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+  25% {
+    transform: translateX(-4px);
+  }
+  50% {
+    transform: translateX(4px);
+  }
+  75% {
+    transform: translateX(-2px);
+  }
+}
+@keyframes cell-nope-alt {
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+  25% {
+    transform: translateX(-4px);
+  }
+  50% {
+    transform: translateX(4px);
+  }
+  75% {
+    transform: translateX(-2px);
+  }
+}
+
+/* 가구는 칸을 채우는 판이 아니라 바닥에 얹힌 물건이다 — 배경 없이 그림자만 */
+.furniture {
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  display: grid;
+  place-items: center;
+  align-content: center;
+  gap: 1px;
+  pointer-events: none;
+  /* 2칸 가구가 옆 칸 배경에 가려지지 않게 positioned 레이어 위로 올린다 */
+  z-index: 1;
+  filter: drop-shadow(1.5px 2px 0 #23201c2e);
+}
+.fur-label {
+  font-size: clamp(8px, 1.5vw, 11px);
+  line-height: 1.4;
+  color: #3b342a;
+  font-weight: 700;
+  white-space: nowrap;
+  /* 잔디·흙 위에서도 읽히도록 종이 조각을 깔아준다 */
+  background: #fffdf7d9;
+  border-radius: 3px;
+  padding: 0 3px;
+}
+/* 러그·건초더미처럼 밟고 설 수 있는 건 납작하다 — 그림자도 얕게 */
+.furniture.standable {
+  filter: drop-shadow(1px 1px 0 #23201c24);
+}
+.art {
+  font-size: clamp(14px, 3.4vw, 26px);
+  line-height: 1;
+}
+svg.art {
+  width: clamp(18px, 4.2vw, 32px);
+  height: clamp(18px, 4.2vw, 32px);
+  /* 선은 여기서 한 번만 정한다 — 스프라이트 파일은 색·모양만 갖는다 */
+  fill: none;
+  stroke: var(--wall);
+  stroke-width: 1.6;
+  stroke-linejoin: round;
+  stroke-linecap: round;
+}
+img.art {
+  width: 80%;
+  height: 80%;
+  object-fit: contain;
+}
+
+/* 창문·문은 벽에 박힌 물건이라 칸을 막지 않는다 */
+.wall-item {
+  position: absolute;
+  display: grid;
+  place-items: center;
+  background: var(--paper);
+  border: 2px solid var(--wall);
+  border-radius: 3px;
+  pointer-events: none;
+  z-index: 3;
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 1;
+}
+.wall-item.window {
+  background: #d9ecfa;
+}
+.wall-item.door {
+  background: #efdcc4;
+}
+.wall-item .art {
+  font-size: 11px;
+}
+.wall-item svg.art {
+  width: 12px;
+  height: 12px;
+  stroke-width: 2.4;
+}
+.wall-item.top,
+.wall-item.bottom {
+  left: 50%;
+  translate: -50% 0;
+  width: clamp(22px, 40%, 40px);
+  height: 15px;
+}
+.wall-item.top {
+  top: 1px;
+}
+.wall-item.bottom {
+  bottom: 1px;
+}
+.wall-item.left,
+.wall-item.right {
+  top: 50%;
+  translate: 0 -50%;
+  height: clamp(22px, 40%, 40px);
+  width: 15px;
+}
+.wall-item.left {
+  left: 1px;
+}
+.wall-item.right {
+  right: 1px;
+}
+
+.room-label {
+  position: absolute;
+  right: 3px;
+  bottom: 3px;
+  font-size: 10px;
+  background: #fffdf7cc;
+  border: 1px solid var(--wall);
+  border-radius: 999px;
+  padding: 0 6px;
+  pointer-events: none;
+  z-index: 4;
+}
+
+.token {
+  position: relative;
+  z-index: 2;
+  width: 62%;
+  height: 62%;
+  border-radius: 50%;
+  border: 2px solid var(--wall);
+  background: #fffdf7;
+  display: grid;
+  place-items: center;
+  font-weight: 700;
+  font-size: clamp(12px, 2.6vw, 20px);
+}
+.token.solved {
+  border-width: 3px;
+}
+.mark-x {
+  position: relative;
+  z-index: 2;
+  font-size: clamp(16px, 4vw, 30px);
+  color: #4a453d;
+}

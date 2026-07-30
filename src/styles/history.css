@@ -1,0 +1,102 @@
+/* ---- 기록 ---- */
+.hint {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--muted);
+}
+.history ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.history li button {
+  width: 100%;
+  min-height: 40px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  text-align: left;
+  /* 패널 반경 18 - 패딩 12 = 6 */
+  border: 2px solid var(--tile-line);
+  border-radius: 6px;
+  background: var(--tile);
+  color: var(--ink);
+  font: inherit;
+  padding: 6px 9px;
+  cursor: pointer;
+  transition:
+    border-color var(--dur-fast) var(--ease-out),
+    background-color var(--dur-fast) var(--ease-out);
+}
+@media (hover: hover) and (pointer: fine) {
+  .history li button:hover {
+    border-color: var(--wall);
+    background: #fff;
+  }
+}
+.history li b {
+  font-size: 13px;
+}
+.history li small {
+  font-size: 11px;
+  color: var(--muted);
+}
+.sync {
+  border-top: 2px dashed var(--tile-line);
+  padding-top: 4px;
+}
+.sync > * + * {
+  margin-top: 8px;
+}
+.sync summary {
+  min-height: 40px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.sync code {
+  /* 22자라 좁은 화면에서 넘친다. 탭 한 번에 통째로 잡히게 */
+  display: block;
+  word-break: break-all;
+  -webkit-user-select: all;
+  user-select: all;
+}
+
+/* ---- 계정 ---- */
+.account {
+  border-top: 2px dashed var(--tile-line);
+  padding-top: 8px;
+}
+.account > * + * {
+  margin-top: 8px;
+}
+/* 아이디·비밀번호·버튼이 한 줄에 안 들어간다 */
+.account form {
+  flex-direction: column;
+}
+.account p {
+  margin: 0;
+  font-size: 13px;
+}
+.hint.error {
+  color: var(--accent);
+  font-weight: 700;
+}
+
+/* 결과는 자주 안 뜨는 상태 변화라 등장 모션이 값을 한다 */
+.verdict {
+  animation: verdict-in var(--dur-fast) var(--ease-out);
+}
+@keyframes verdict-in {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+}

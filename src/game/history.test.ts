@@ -1,0 +1,193 @@
+import { describe, expect, it } from 'vitest';
+import { DIFFICULTIES } from './generate';
+import worker from '../../worker/index';
+import { isCode, MAX_PLAYS, mergePlays, N_RANGE, sanitizePlays, type Play } from './history';
+
+describe('플레이 기록', () => {
+  const play = (over: Partial<Play> = {}): Play => ({
+    seed: 'a1b2c3',
+    n: 4,
+    at: 1000,
+    ok: true,
+    tries: 1,
+    title: '사라진 회중시계',
+    ...over,
+  });
+
+  it('N_RANGE 가 실제 난이도와 어긋나지 않는다', () => {
+    const ns = DIFFICULTIES.map((d) => d.n);
+    expect(Math.min(...ns)).toBe(N_RANGE.min);
+    expect(Math.max(...ns)).toBe(N_RANGE.max);
+  });
+
+  it('병합은 합집합이고 같은 기록은 한 번만 남는다', () => {
+    const a = play({ at: 1 });
+    const b = play({ at: 2 });
+    expect(mergePlays([a], [a, b])).toHaveLength(2);
+    expect(mergePlays([a, b], [a, b])).toHaveLength(2);
+  });
+
+  it('같은 시드라도 다시 풀면 별도 기록이다', () => {
+    expect(mergePlays([play({ at: 1 })], [play({ at: 2 })])).toHaveLength(2);
+  });
+
+  it('최근 기록이 앞에 오고 상한을 넘지 않는다', () => {
+    const many = Array.from({ length: MAX_PLAYS + 50 }, (_, i) => play({ at: i + 1 }));
+    const merged = mergePlays(many, [play({ at: 7 })]);
+
+    expect(merged).toHaveLength(MAX_PLAYS);
+    expect(merged[0].at).toBe(MAX_PLAYS + 50);
+    expect(merged.map((p) => p.at)).toEqual([...merged.map((p) => p.at)].sort((x, y) => y - x));
+  });
+
+  it('배열이 아니면 빈 목록이다', () => {
+    for (const bad of [null, undefined, 0, 'x', {}]) expect(sanitizePlays(bad)).toEqual([]);
+  });
+
+  it('망가진 레코드는 버린다', () => {
+    const bad = [
+      null,
+      'x',
+      play({ seed: '' }),
+      { ...play(), seed: 123 },
+      play({ n: 99 }),
+      play({ n: 4.5 }),
+      play({ at: 0 }),
+      play({ at: 5e12 }),
+      play({ tries: 0 }),
+      { ...play(), ok: 'true' },
+      play({ title: 'ㄱ'.repeat(200) }),
+      play({ seed: 'z'.repeat(200) }),
+    ];
+    expect(sanitizePlays(bad)).toEqual([]);
+    expect(sanitizePlays([...bad, play()])).toEqual([play()]);
+  });
+
+  it('모르는 필드는 저장하지 않는다', () => {
+    const [p] = sanitizePlays([{ ...play(), solution: 'A2', evil: '×'.repeat(9999) }]);
+    expect(Object.keys(p).sort()).toEqual(['at', 'n', 'ok', 'seed', 'title', 'tries']);
+  });
+
+  it('개수 상한을 넘겨 밀어넣을 수 없다', () => {
+    // 중복 제거는 mergePlays 몫이다. 여기서 막는 건 개수뿐
+    expect(sanitizePlays(Array.from({ length: 5000 }, () => play()))).toHaveLength(MAX_PLAYS);
+  });
+
+  it('기록 코드는 22자 소문자·숫자만 통과한다', () => {
+    expect(isCode('a'.repeat(22))).toBe(true);
+    for (const bad of ['', 'a'.repeat(21), 'a'.repeat(23), 'A'.repeat(22), '../'.repeat(7) + 'a'])
+      expect(isCode(bad)).toBe(false);
+  });
+});
+
+describe('기록 동기화 워커', () => {
+  const CODE = 'a'.repeat(22);
+  const play = (at: number) => ({
+    seed: 'a1b2c3',
+    n: 4,
+    at,
+    ok: true,
+    tries: 1,
+    title: '사라진 회중시계',
+  });
+
+  const env = () => {
+    const store = new Map<string, string>();
+    let writes = 0;
+    return {
+      HISTORY: {
+        get: async (k: string) => store.get(k) ?? null,
+        put: async (k: string, v: string) => {
+          writes++;
+          store.set(k, v);
+        },
+      },
+      ORIGIN: 'https://setosejin.github.io',
+      writes: () => writes,
+    };
+  };
+
+  const post = (e: ReturnType<typeof env>, path: string, body: unknown) =>
+    worker.fetch(
+      new Request(`https://w.dev${path}`, { method: 'POST', body: JSON.stringify(body) }),
+      e,
+    );
+
+  it('올린 기록을 돌려주고, 다른 기기는 빈 배열로 받아간다', async () => {
+    const e = env();
+    const up = await post(e, `/h/${CODE}`, [play(1)]);
+    expect(up.status).toBe(200);
+    expect(await up.json()).toEqual([play(1)]);
+
+    const down = await post(e, `/h/${CODE}`, []);
+    expect(await down.json()).toEqual([play(1)]);
+  });
+
+  it('두 기기의 기록이 합쳐진다', async () => {
+    const e = env();
+    await post(e, `/h/${CODE}`, [play(1)]);
+    const merged = await (await post(e, `/h/${CODE}`, [play(2)])).json();
+    expect(merged).toEqual([play(2), play(1)]);
+  });
+
+  it('불러오기만 하면 KV에 쓰지 않는다', async () => {
+    const e = env();
+    await post(e, `/h/${CODE}`, [play(1)]);
+    const before = e.writes();
+    await post(e, `/h/${CODE}`, []);
+    await post(e, `/h/${CODE}`, [play(1)]);
+    expect(e.writes()).toBe(before);
+  });
+
+  it('빈 기록은 저장하지 않는다', async () => {
+    // 신규 방문자마다 빈 항목이 생기면 쓰기 한도가 방문자 수에 물린다.
+    // 아무 코드나 찍어 한도를 태우는 것도 막힌다
+    const e = env();
+    for (let i = 0; i < 5; i++) await post(e, `/h/${'b'.repeat(22)}`, []);
+    expect(e.writes()).toBe(0);
+    expect(await (await post(e, `/h/${'b'.repeat(22)}`, [])).json()).toEqual([]);
+  });
+
+  it('기록 코드가 아니면 400이고 KV를 건드리지 않는다', async () => {
+    const e = env();
+    for (const path of ['/h/../secret', '/h/', '/h/short', `/other/${CODE}`, `/h/${CODE}x`]) {
+      expect((await post(e, path, [])).status).toBe(400);
+    }
+    expect(e.writes()).toBe(0);
+  });
+
+  it('POST 말고는 안 받고, OPTIONS 는 CORS 로 답한다', async () => {
+    const e = env();
+    const get = await worker.fetch(new Request(`https://w.dev/h/${CODE}`), e);
+    expect(get.status).toBe(405);
+
+    const pre = await worker.fetch(
+      new Request(`https://w.dev/h/${CODE}`, { method: 'OPTIONS' }),
+      e,
+    );
+    expect(pre.status).toBe(204);
+    expect(pre.headers.get('access-control-allow-origin')).toBe('https://setosejin.github.io');
+  });
+
+  it('너무 큰 본문은 413', async () => {
+    const e = env();
+    const res = await worker.fetch(
+      new Request(`https://w.dev/h/${CODE}`, { method: 'POST', body: 'x'.repeat(70_000) }),
+      e,
+    );
+    expect(res.status).toBe(413);
+    expect(e.writes()).toBe(0);
+  });
+
+  it('망가진 본문이 저장된 기록을 지우지 못한다', async () => {
+    const e = env();
+    await post(e, `/h/${CODE}`, [play(1)]);
+    for (const bad of ['찢어진 json', '{}', '[{"seed":1}]', 'null']) {
+      const res = await worker.fetch(
+        new Request(`https://w.dev/h/${CODE}`, { method: 'POST', body: bad }),
+        e,
+      );
+      expect(await res.json()).toEqual([play(1)]);
+    }
+  });
+});

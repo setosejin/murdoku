@@ -1,0 +1,173 @@
+/* ---- 피드백 모달 ---- */
+.feedback {
+  border: 3px solid var(--wall);
+  /* 안쪽 입력 6 + 패딩 16 = 22 */
+  border-radius: 22px;
+  background: #fffdf7;
+  color: var(--ink);
+  padding: 0;
+  width: min(440px, calc(100vw - 32px));
+  box-shadow: 4px 4px 0 var(--wall);
+  opacity: 1;
+  transform: scale(1);
+  transition: opacity 200ms var(--ease-out), transform 200ms var(--ease-out),
+    overlay 200ms allow-discrete,
+    display 200ms allow-discrete;
+}
+/* 닫힌 상태 = 열기 전의 시작값이자 닫힐 때의 목표값 */
+.feedback:not([open]) {
+  opacity: 0;
+  transform: scale(0.96);
+}
+@starting-style {
+  .feedback[open] {
+    opacity: 0;
+    transform: scale(0.96);
+  }
+}
+.feedback::backdrop {
+  background: rgb(35 32 28 / 0);
+  transition: background 200ms var(--ease-out), overlay 200ms allow-discrete,
+    display 200ms allow-discrete;
+}
+.feedback[open]::backdrop {
+  background: rgb(35 32 28 / 0.45);
+}
+@starting-style {
+  .feedback[open]::backdrop {
+    background: rgb(35 32 28 / 0);
+  }
+}
+.feedback form {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 16px;
+}
+.feedback h2 {
+  margin: 0;
+  font-size: 18px;
+}
+.fb-note {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--muted);
+}
+.feedback label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 13px;
+  font-weight: 700;
+}
+.feedback :is(input, select, textarea) {
+  width: 100%;
+  min-height: 40px;
+  border: 2px solid var(--wall);
+  border-radius: 6px;
+  padding: 6px 8px;
+  background: var(--tile);
+  font-weight: 400;
+}
+.feedback textarea {
+  resize: vertical;
+  line-height: 1.5;
+}
+.fb-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+/* ---- 버전 기록 모달 ---- */
+.changelog {
+  width: min(560px, calc(100vw - 32px));
+}
+.cl-body {
+  /* 22 = 안쪽 6 + 패딩 16 */
+  padding: 16px;
+  max-height: min(60vh, 520px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+.cl-body h3 {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 8px;
+  align-items: baseline;
+  margin: 22px 0 8px;
+  padding-bottom: 6px;
+  border-bottom: 3px solid var(--wall);
+  font-size: 16px;
+  font-variant-numeric: tabular-nums;
+}
+.cl-body h3:first-of-type {
+  margin-top: 12px;
+}
+.cl-body h4 {
+  margin: 14px 0 6px;
+  font-size: 13px;
+  letter-spacing: 0.04em;
+  color: var(--muted);
+}
+.cl-date {
+  font-size: 12px;
+  font-weight: 400;
+  color: var(--muted);
+}
+.cl-body ul {
+  margin: 0;
+  padding-left: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+.cl-body :is(li, p) {
+  font-size: 13px;
+  line-height: 1.6;
+}
+.cl-body p {
+  margin: 0 0 8px;
+  color: var(--muted);
+}
+.cl-body code {
+  border-radius: 4px;
+  padding: 0 4px;
+  background: var(--tile);
+  font-size: 0.92em;
+}
+.cl-actions {
+  border-top: 3px solid var(--wall);
+  padding: 12px 16px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  /* 기본은 전부 정지. 아래에서 이동 없는 피드백만 되살린다. */
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+  }
+  /* 새 정보가 나타났다는 신호는 남겨야 한다 — 이동 없이 투명도만 */
+  .notice,
+  .verdict {
+    animation: fade-in var(--dur-fast) var(--ease-out) !important;
+  }
+  .feedback,
+  .feedback:not([open]) {
+    transform: none !important;
+  }
+  .chip:hover,
+  .chip:active,
+  .brush:active {
+    transform: none;
+  }
+}
+
+@media (max-width: 760px) {
+  .play {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

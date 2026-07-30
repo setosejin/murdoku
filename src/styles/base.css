@@ -1,0 +1,43 @@
+:root {
+  --paper: #f7f1e3;
+  --ink: #23201c;
+  --wall: #23201c;
+  --tile: #fdfaf2;
+  --tile-line: #cec2a8;
+  --accent: #c0392b;
+  --muted: #7d7466;
+  --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+  --dur-press: 160ms;
+  --dur-fast: 180ms;
+  color-scheme: light;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: var(--paper);
+  color: var(--ink);
+  font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, 'Apple SD Gothic Neo',
+    'Noto Sans KR', system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  /* 한국어는 어절 중간에서 끊기면 읽기 나빠진다 */
+  word-break: keep-all;
+  overflow-wrap: break-word;
+  text-wrap: pretty;
+}
+
+button,
+select,
+input {
+  font: inherit;
+  color: inherit;
+}
+
+.app {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 24px 16px 64px;
+}
