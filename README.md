@@ -80,13 +80,16 @@ type Play = { seed; n; at; ok; tries; title };  // 약 80바이트
 
 ### 워커 배포
 
+KV 네임스페이스는 이미 만들어 `wrangler.toml` 에 박아뒀다. 배포만 하면 된다:
+
 ```bash
 cd worker
-npx wrangler kv namespace create HISTORY   # 출력된 id 를 wrangler.toml 에 붙인다
 npx wrangler deploy
 ```
 
-배포된 주소를 저장소 Settings → Secrets and variables → Actions → **Variables** 에 `VITE_SYNC_URL` 로 넣으면 다음 배포부터 동기화가 켜진다.
+처음이라면 Cloudflare 계정의 **이메일 인증이 끝나 있어야 한다.** 안 되어 있으면 업로드까지 다 하고 마지막에 `code: 10034` 로 떨어진다.
+
+배포되면 주소는 `https://murdoku-history.murdoku.workers.dev` 다. 이걸 저장소 Settings → Secrets and variables → Actions → **Variables** 에 `VITE_SYNC_URL` 로 넣으면 다음 Pages 배포부터 동기화가 켜진다.
 
 **시크릿이 아니라 variable 인 이유**: 정적 사이트라 이 주소는 어떻게 저장하든 빌드된 JS 에 그대로 박힌다. 시크릿으로 바꿔도 devtools 를 열면 보이니 숨기는 효과가 0 이다. 그래도 소스에 하드코딩하지 않는 이유는 보안이 아니라 두 가지다 — **포크한 저장소가 원본 워커로 요청을 보내지 않고**(variable 이 비어 로컬 전용으로 동작), 주소를 바꿀 때 코드를 안 고쳐도 된다.
 

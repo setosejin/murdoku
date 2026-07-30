@@ -2,12 +2,13 @@ name = "murdoku-history"
 main = "index.ts"
 compatibility_date = "2026-07-30"
 
-# 배포 전 한 번:
+# 네임스페이스는 계정당 한 번만 만든다:
 #   npx wrangler kv namespace create HISTORY
-# 출력된 id 를 아래에 붙이고 `npx wrangler deploy`.
+# id 는 계정 안의 자원 이름일 뿐 자격증명이 아니라 공개 저장소에 그대로 둔다
+# (API 토큰 없이는 아무것도 못 한다).
 [[kv_namespaces]]
 binding = "HISTORY"
-id = "PUT_KV_NAMESPACE_ID_HERE"
+id = "ee115f0bb41047bbb7fe3290fe63808a"
 
 # CORS 허용 오리진. 로컬 개발은 npx wrangler dev 로 별도 확인
 [vars]
