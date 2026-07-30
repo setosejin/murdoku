@@ -6,6 +6,7 @@ import Board from '../components/Board';
 import { indexScene, matchingCells, satisfies } from './clues';
 import { solve } from './solve';
 import type { Room, Furniture, WallItem } from './types';
+import { FURNITURE } from '../data/content';
 
 describe('generatePuzzle', () => {
   for (const n of [4, 5, 6]) {
@@ -56,6 +57,19 @@ describe('generatePuzzle', () => {
           perRoom.set(rm, (perRoom.get(rm) ?? 0) + 1);
         }
         expect([...perRoom.values()]).toEqual(Array(perRoom.size).fill(1));
+
+        // 방마다 가구가 최소 1개, 그리고 그 방에 어울리는 가구만
+        const specOf = new Map(FURNITURE.map((f) => [f.label, f]));
+        for (const room of p.rooms) {
+          const here = p.furniture.filter((f) =>
+            f.cells.some((c) => idx.roomAt[c.r][c.c] === room.id),
+          );
+          expect(here.length).toBeGreaterThan(0);
+          for (const f of here) {
+            const allowed = specOf.get(f.label)!.rooms;
+            if (allowed) expect(allowed).toContain(room.name);
+          }
+        }
       }
     });
   }

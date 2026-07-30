@@ -24,22 +24,24 @@ export type FurnitureSpec = {
   /** 차지하는 칸 수 (2면 방 안에서 세로/가로로 두 칸) */
   size: 1 | 2;
   standable: boolean;
+  /** 놓일 수 있는 방 이름. 없으면 아무 방이나 (러그·화분·스탠드) */
+  rooms?: readonly string[];
   image?: string;
 };
 
 export const FURNITURE: readonly FurnitureSpec[] = [
-  { kind: 'bed', label: '침대', emoji: '🛏️', size: 2, standable: true },
-  { kind: 'sofa', label: '소파', emoji: '🛋️', size: 2, standable: true },
+  { kind: 'bed', label: '침대', emoji: '🛏️', size: 2, standable: true, rooms: ['침실', '손님방'] },
+  { kind: 'sofa', label: '소파', emoji: '🛋️', size: 2, standable: true, rooms: ['거실', '서재', '손님방'] },
   { kind: 'rug', label: '러그', emoji: '🟫', size: 1, standable: true },
-  { kind: 'table', label: '탁자', emoji: '🪑', size: 1, standable: false },
-  { kind: 'piano', label: '피아노', emoji: '🎹', size: 1, standable: false },
+  { kind: 'table', label: '탁자', emoji: '🪑', size: 1, standable: false, rooms: ['거실', '주방', '다이닝룸', '손님방', '서재', '복도'] },
+  { kind: 'piano', label: '피아노', emoji: '🎹', size: 1, standable: false, rooms: ['거실', '서재', '작업실'] },
   { kind: 'plant', label: '화분', emoji: '🪴', size: 1, standable: false },
-  { kind: 'tv', label: 'TV', emoji: '📺', size: 1, standable: false },
-  { kind: 'bookshelf', label: '책장', emoji: '📚', size: 1, standable: false },
-  { kind: 'fridge', label: '냉장고', emoji: '🧊', size: 1, standable: false },
+  { kind: 'tv', label: 'TV', emoji: '📺', size: 1, standable: false, rooms: ['거실', '침실', '손님방'] },
+  { kind: 'bookshelf', label: '책장', emoji: '📚', size: 1, standable: false, rooms: ['서재', '침실', '거실', '작업실', '손님방'] },
+  { kind: 'fridge', label: '냉장고', emoji: '🧊', size: 1, standable: false, rooms: ['주방', '다이닝룸'] },
   { kind: 'lamp', label: '스탠드', emoji: '💡', size: 1, standable: false },
-  { kind: 'bathtub', label: '욕조', emoji: '🛁', size: 1, standable: false },
-  { kind: 'desk', label: '책상', emoji: '🗄️', size: 1, standable: false },
+  { kind: 'bathtub', label: '욕조', emoji: '🛁', size: 1, standable: false, rooms: ['욕실'] },
+  { kind: 'desk', label: '책상', emoji: '🗄️', size: 1, standable: false, rooms: ['서재', '침실', '작업실', '손님방'] },
 ];
 
 export const WALL_ITEMS = [

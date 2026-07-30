@@ -6,6 +6,7 @@ import {
   CASE_BRIEFS,
   CASE_TITLES,
   FURNITURE,
+  type FurnitureSpec,
   PERSON_COLORS,
   ROOM_NAMES,
   SUSPECT_NAMES,
@@ -54,21 +55,25 @@ function buildRooms(n: number, rand: () => number): Room[] {
   });
 }
 
-function placeFurniture(rooms: Room[], rand: () => number): Furniture[] {
+/** 방 이름에 맞는 가구를 방마다 1~2개. 빈 방이 남으면 null (호출부가 평면도를 다시 뽑는다) */
+function placeFurniture(rooms: Room[], rand: () => number): Furniture[] | null {
   const out: Furniture[] = [];
   // 증언이 "어느 탁자?"로 모호해지지 않게, 가구 종류는 퍼즐 전체에서 한 번씩만 쓴다
   const deck = shuffled(rand, FURNITURE);
-  for (const room of rooms) {
-    const taken = new Set<string>();
-    let blocking = 0;
+  const fits = (spec: FurnitureSpec, room: Room) => !spec.rooms || spec.rooms.includes(room.name);
+  const state = new Map(rooms.map((r) => [r.id, { taken: new Set<string>(), blocking: 0, count: 0 }]));
+
+  const put = (room: Room): void => {
+    const st = state.get(room.id)!;
     const budget = Math.floor(room.cells.length / 2);
-    const specs = deck.slice();
-    let placed = 0;
-    for (const spec of specs) {
-      if (placed >= 2) break;
+    // 그 방 전용 가구(욕실→욕조)를 범용 가구(화분·스탠드)보다 먼저 집는다
+    const candidates = deck
+      .filter((s) => fits(s, room))
+      .sort((a, b) => (a.rooms?.length ?? 99) - (b.rooms?.length ?? 99));
+    for (const spec of candidates) {
       const free = shuffled(
         rand,
-        room.cells.filter((c) => !taken.has(`${c.r},${c.c}`)),
+        room.cells.filter((c) => !st.taken.has(`${c.r},${c.c}`)),
       );
       let cells: Cell[] | null = null;
       if (spec.size === 1) {
@@ -88,13 +93,13 @@ function placeFurniture(rooms: Room[], rand: () => number): Furniture[] {
       // 렌더링 기준점이 되도록 왼쪽 위 칸이 항상 cells[0]
       cells.sort((a, b) => a.r - b.r || a.c - b.c);
       const cost = spec.standable ? 0 : cells.length;
-      if (blocking + cost > budget) continue;
+      if (st.blocking + cost > budget) continue;
       // 방에 설 수 있는 칸이 최소 1개는 남아야 한다
-      if (room.cells.length - (blocking + cost) < 1) continue;
-      blocking += cost;
-      placed++;
+      if (room.cells.length - (st.blocking + cost) < 1) continue;
+      st.blocking += cost;
+      st.count++;
       deck.splice(deck.indexOf(spec), 1);
-      for (const c of cells) taken.add(`${c.r},${c.c}`);
+      for (const c of cells) st.taken.add(`${c.r},${c.c}`);
       out.push({
         id: `${spec.kind}-${room.id}`,
         label: spec.label,
@@ -103,9 +108,17 @@ function placeFurniture(rooms: Room[], rand: () => number): Furniture[] {
         cells,
         standable: spec.standable,
       });
+      return;
     }
-  }
-  return out;
+  };
+
+  // 고를 수 있는 가구가 적은 방(욕실 같은)부터 채워야 빈 방이 안 생긴다
+  const order = rooms
+    .slice()
+    .sort((a, b) => deck.filter((s) => fits(s, a)).length - deck.filter((s) => fits(s, b)).length);
+  for (const room of order) put(room); // 1차: 모든 방에 하나씩
+  for (const room of order) put(room); // 2차: 자리가 남으면 하나 더
+  return rooms.every((r) => state.get(r.id)!.count > 0) ? out : null;
 }
 
 function placeWallItems(
@@ -203,6 +216,7 @@ export function generatePuzzle(n: number, seed = String(Date.now())): Puzzle {
   for (let sceneTry = 0; sceneTry < 300; sceneTry++) {
     const rooms = buildRooms(n, rand);
     const furniture = placeFurniture(rooms, rand);
+    if (!furniture) continue; // 가구를 못 받은 방이 있다 — 평면도부터 다시
     const wallItems = placeWallItems(n, furniture, rand);
     const scene: Scene = { n, rooms, furniture, wallItems };
     const idx = indexScene(scene);
