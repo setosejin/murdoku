@@ -7,6 +7,8 @@ import { isCode, MAX_PLAYS, mergePlays, N_RANGE, sanitizePlays, type Play } from
 import App from '../App';
 import Board from '../components/Board';
 import FeedbackDialog, { issueUrl } from '../components/FeedbackDialog';
+import ChangelogDialog, { renderMarkdown } from '../components/ChangelogDialog';
+import changelog from '../../CHANGELOG.md?raw';
 import { indexScene, matchingCells, satisfies } from './clues';
 import { solve } from './solve';
 import type { Room, Furniture, WallItem } from './types';
@@ -294,6 +296,47 @@ describe('FeedbackDialog', () => {
     expect(html).toContain('피드백');
     expect(html).toContain('required');
     expect(html).toContain('이슈로 열기');
+  });
+});
+
+describe('버전 기록', () => {
+  const md = [
+    '# 버전 기록',
+    '',
+    '## v9.9.9 — 2026-01-02',
+    '',
+    '### 고침',
+    '',
+    '- **굵게** 와 `코드` 와 [링크](https://example.dev/x)',
+    '- 그냥 한 줄',
+    '',
+    '남는 문단',
+  ].join('\n');
+
+  it('제목·목록·인라인 마크업을 그린다', () => {
+    const html = renderToStaticMarkup(createElement('div', null, ...renderMarkdown(md)));
+
+    expect(html).not.toContain('# '); // 파일 제목은 모달 제목이 대신한다
+    expect(html).toContain('<h3>v9.9.9 <span class="cl-date">2026-01-02</span></h3>');
+    expect(html).toContain('<h4>고침</h4>');
+    expect(html).toContain('<b>굵게</b>');
+    expect(html).toContain('<code>코드</code>');
+    expect(html).toContain('href="https://example.dev/x"');
+    expect(html).toContain('<li>그냥 한 줄</li>');
+    expect(html).toContain('<p>남는 문단</p>');
+    expect(html.match(/<ul>/g)).toHaveLength(1); // 연속한 항목은 한 목록으로 묶인다
+  });
+
+  it('버튼과 dialog 를 그린다', () => {
+    const html = renderToStaticMarkup(createElement(ChangelogDialog));
+    expect(html).toContain('<dialog');
+    expect(html).toContain(`v${import.meta.env.VITE_APP_VERSION}`);
+    expect(html).toContain('버전 기록');
+  });
+
+  // pre-push 훅과 같은 불변식. 훅은 --no-verify 로 넘길 수 있지만 CI 의 npm test 는 못 넘긴다.
+  it('CHANGELOG 에 현재 버전 항목이 있다', () => {
+    expect(changelog).toContain(`## v${import.meta.env.VITE_APP_VERSION} — `);
   });
 });
 

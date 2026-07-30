@@ -1,0 +1,46 @@
+#!/bin/sh
+# main 에 푸시하려면 package.json 버전이 origin/main 보다 높아야 하고,
+# CHANGELOG.md 에 그 버전 항목이 있어야 한다.
+#
+# 설치: npm install 이 package.json 의 prepare 로 core.hooksPath 를 여기로 맞춘다.
+# 우회: git push --no-verify (되도록 쓰지 말 것)
+#
+# ponytail: 버전을 grep 으로 뽑는다. package.json 최상위에만 "version" 키가 있어서
+# 이걸로 충분하다. 중첩 필드가 생기면 node -p 로 올린다.
+
+zero=0000000000000000000000000000000000000000
+
+ver() {
+	git show "$1:package.json" 2>/dev/null | grep -m1 '"version"' | cut -d'"' -f4
+}
+
+fail() {
+	printf '\n[pre-push] main 푸시 중단 — %s\n' "$1" >&2
+	printf '\n  1. CHANGELOG.md 맨 위에 "## v<새 버전> — %s" 항목을 쓰고 커밋\n' "$(date +%F)" >&2
+	printf '  2. npm version patch   # 또는 minor / major\n' >&2
+	printf '  3. git push --follow-tags\n\n' >&2
+	exit 1
+}
+
+# stdin: <local ref> <local sha> <remote ref> <remote sha>
+while read -r _ local_sha remote_ref remote_sha; do
+	[ "$remote_ref" = "refs/heads/main" ] || continue
+	[ "$local_sha" = "$zero" ] && continue
+
+	new=$(ver "$local_sha")
+	[ -n "$new" ] || fail 'package.json 에서 버전을 못 읽었다'
+
+	# 원격 커밋이 로컬에 없으면(=비교 불가) 통과시킨다. 막을 근거가 없다.
+	if [ "$remote_sha" = "$zero" ]; then old=''; else old=$(ver "$remote_sha"); fi
+
+	if [ -n "$old" ]; then
+		[ "$new" != "$old" ] || fail "버전이 그대로다 (v$old)"
+		[ "$(printf '%s\n%s\n' "$old" "$new" | sort -V | tail -1)" = "$new" ] ||
+			fail "버전이 내려갔다 (v$old → v$new)"
+	fi
+
+	git show "$local_sha:CHANGELOG.md" 2>/dev/null | grep -q "^## v$new" ||
+		fail "CHANGELOG.md 에 '## v$new' 항목이 없다"
+
+	printf '[pre-push] v%s 확인\n' "$new" >&2
+done

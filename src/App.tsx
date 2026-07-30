@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import Board, { Art, SpriteDefs } from './components/Board';
+import ChangelogDialog from './components/ChangelogDialog';
 import FeedbackDialog from './components/FeedbackDialog';
 import { DIFFICULTIES, generatePuzzle } from './game/generate';
 import {
@@ -337,7 +338,7 @@ export default function App() {
             GitHub
           </a>
         </p>
-        <p className="ver">v{import.meta.env.VITE_APP_VERSION}</p>
+        <ChangelogDialog />
       </footer>
     </div>
   );

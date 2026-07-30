@@ -47,6 +47,7 @@ npm run build   # 정적 빌드 (dist/)
 | `src/game/history.ts`      | 플레이 기록 — 검증·병합(순수) + localStorage + 동기화          |
 | `worker/index.ts`          | 기록 동기화 워커 (Cloudflare Workers + KV)                       |
 | `src/components/FeedbackDialog.tsx` | 피드백 모달 → GitHub 이슈 작성 폼 prefill                |
+| `src/components/ChangelogDialog.tsx` | 버전 기록 모달 — `CHANGELOG.md` 를 그대로 그린다        |
 
 증언은 `ON` / `NEXT_TO` / `IN_ROOM` 세 종류. 퍼즐은 매번 생성되며 항상 해가 하나뿐임이 보장된다.
 
@@ -102,6 +103,18 @@ npx wrangler deploy
 - 스프라이트에 `id="i-<kind>"` 로 `<symbol>` 을 넣으면 그 가구가 자동으로 그 아이콘을 쓴다. 선 색·굵기는 CSS 의 `svg.art` 가 한 번에 정하므로 심볼에는 모양과 색만 넣는다.
 - `Person` · `Furniture` · `WallItem` 의 `image?` 필드에 경로를 넣으면 그 이미지를 우선 그린다.
 - 둘 다 없으면 이모지로 떨어지므로, 아이콘 없는 가구를 추가해도 깨지지 않는다.
+
+## 버전 기록
+
+푸터의 버전 번호를 누르면 [`CHANGELOG.md`](CHANGELOG.md) 가 모달로 열린다.
+
+릴리스는 이 순서로만 한다. `main` 푸시는 버전을 올려야 통과한다 — `.githooks/pre-push` 가 `origin/main` 대비 버전과 `CHANGELOG.md` 항목을 확인하고, 훅을 넘겨도 CI 의 `npm test` 가 같은 걸 본다. 훅은 `npm install` 이 알아서 걸어준다.
+
+```bash
+# 1. CHANGELOG.md 맨 위에 "## v<새 버전> — <YYYY-MM-DD>" 를 쓰고 변경 내용과 함께 커밋
+npm version patch      # 또는 minor / major
+git push --follow-tags
+```
 
 ## 아직 없는 것
 

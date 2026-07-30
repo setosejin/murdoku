@@ -25,7 +25,23 @@ npx vitest run -t "Board"
 
 ## 버전
 
-버전은 `package.json` 한 곳에만 있다. `vite.config.ts` 의 `define` 이 그걸 `import.meta.env.VITE_APP_VERSION` 으로 심고, `App.tsx` 푸터에 저작권 표기와 함께 찍는다(배포된 빌드가 자기 버전을 말하게 하려고). 릴리스는 `npm version patch && git push --follow-tags` — 커밋과 태그를 npm 이 만든다. 버전 문자열을 다른 파일에 복제하지 말 것.
+버전은 `package.json` 한 곳에만 있다. `vite.config.ts` 의 `define` 이 그걸 `import.meta.env.VITE_APP_VERSION` 으로 심고, 푸터의 버전 버튼이 그 값을 찍는다(배포된 빌드가 자기 버전을 말하게 하려고). 버전 문자열을 다른 파일에 복제하지 말 것.
+
+릴리스 절차 — **`main` 푸시는 버전을 올려야만 통과한다.**
+
+```bash
+# 1. CHANGELOG.md 맨 위에 "## v<새 버전> — <YYYY-MM-DD>" 를 쓰고 변경 내용과 함께 커밋
+# 2. 버전 범프 (커밋과 태그는 npm 이 만든다)
+npm version patch      # 또는 minor / major
+git push --follow-tags
+```
+
+강제는 두 겹이다.
+
+- `.githooks/pre-push` — `main` 으로 가는 푸시에서 `origin/main` 대비 버전이 올랐는지, `CHANGELOG.md` 에 그 버전 항목이 있는지 본다. `npm install` 의 `prepare` 가 `core.hooksPath` 를 여기로 맞춘다. `--no-verify` 로 넘길 수 있다.
+- `game.test.ts` 의 "CHANGELOG 에 현재 버전 항목이 있다" — 훅을 넘겨도 CI 의 `npm test` 가 막는다.
+
+`CHANGELOG.md` 는 문서이자 화면이다. `ChangelogDialog.tsx` 가 `?raw` 로 읽어 푸터 버전 버튼을 누르면 모달로 그린다. 렌더러는 `##`/`###`/`-`/`**굵게**`/`` `코드` ``/`[링크](url)` 만 안다 — 표나 중첩 목록을 쓰면 조용히 문단으로 떨어진다.
 
 ## 구조
 
@@ -37,6 +53,7 @@ npx vitest run -t "Board"
 | `src/game/generate.ts` | BSP 평면도 → 가구 → 배치 → 증언 → 유일해 검증 재시도 루프 |
 | `src/data/content.ts` | 이름·가구·방 이름·사건 제목 풀 |
 | `src/components/Board.tsx` | 격자·방 경계·가구·메모 렌더 |
+| `src/components/ChangelogDialog.tsx` | `CHANGELOG.md` 를 읽어 모달로 그린다 (마크다운 부분집합 렌더러) |
 | `src/index.css` | 전체 스타일 (플레인 CSS + 커스텀 프로퍼티, 프레임워크 없음) |
 
 ### 생성 파이프라인
