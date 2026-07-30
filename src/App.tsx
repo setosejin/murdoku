@@ -13,6 +13,8 @@ export default function App() {
   const [brush, setBrush] = useState('X');
   const [accused, setAccused] = useState('');
   const [result, setResult] = useState<'correct' | 'wrong' | null>(null);
+  // 같은 결과를 다시 지목해도 등장 모션이 재생되도록 key 를 갈아끼우는 카운터
+  const [attempt, setAttempt] = useState(0);
   const [revealed, setRevealed] = useState(false);
 
   const puzzle = useMemo(() => generatePuzzle(n, seed), [n, seed]);
@@ -42,6 +44,7 @@ export default function App() {
     if (!accused) return;
     const ok = accused === puzzle.culpritId;
     setResult(ok ? 'correct' : 'wrong');
+    setAttempt((attemptCount) => attemptCount + 1);
     if (ok) setRevealed(true);
   };
 
@@ -173,12 +176,12 @@ export default function App() {
               지목하기
             </button>
             {result === 'correct' && (
-              <p className="verdict ok" role="status">
+              <p key={attempt} className="verdict ok" role="status">
                 정답! 범인은 {puzzle.people.find((p) => p.id === puzzle.culpritId)!.name}!
               </p>
             )}
             {result === 'wrong' && (
-              <p className="verdict no" role="status">
+              <p key={attempt} className="verdict no" role="status">
                 아니야… 다시 생각해봐.
               </p>
             )}
