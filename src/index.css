@@ -102,8 +102,10 @@ input {
   cursor: pointer;
   font-size: 14px;
 }
-.chip:hover {
-  transform: translateY(-1px);
+@media (hover: hover) and (pointer: fine) {
+  .chip:hover {
+    transform: translateY(-1px);
+  }
 }
 .chip.on {
   background: var(--wall);
@@ -257,6 +259,13 @@ input {
   from {
     opacity: 0;
     transform: translate(-50%, 6px);
+  }
+}
+
+/* reduced-motion 에서 등장 모션을 대체한다. 이동만 빼고 투명도는 남긴다. */
+@keyframes fade-in {
+  from {
+    opacity: 0;
   }
 }
 
@@ -619,11 +628,17 @@ img.art {
 }
 
 @media (prefers-reduced-motion: reduce) {
+  /* 기본은 전부 정지. 아래에서 이동 없는 피드백만 되살린다. */
   *,
   *::before,
   *::after {
     animation-duration: 0.01ms !important;
-    transition-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+  }
+  /* 새 정보가 나타났다는 신호는 남겨야 한다 — 이동 없이 투명도만 */
+  .notice,
+  .verdict {
+    animation: fade-in var(--dur-fast) var(--ease-out) !important;
   }
   .chip:hover,
   .chip:active,
