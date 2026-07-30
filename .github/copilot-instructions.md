@@ -25,7 +25,7 @@ npx vitest run -t "Board"
 
 ## 버전
 
-버전은 `package.json` 한 곳에만 있다. `vite.config.ts` 의 `define` 이 그걸 `import.meta.env.VITE_APP_VERSION` 으로 심고, `App.tsx` 제목 옆에 찍는다(배포된 빌드가 자기 버전을 말하게 하려고). 릴리스는 `npm version patch && git push --follow-tags` — 커밋과 태그를 npm 이 만든다. 버전 문자열을 다른 파일에 복제하지 말 것.
+버전은 `package.json` 한 곳에만 있다. `vite.config.ts` 의 `define` 이 그걸 `import.meta.env.VITE_APP_VERSION` 으로 심고, `App.tsx` 푸터에 저작권 표기와 함께 찍는다(배포된 빌드가 자기 버전을 말하게 하려고). 릴리스는 `npm version patch && git push --follow-tags` — 커밋과 태그를 npm 이 만든다. 버전 문자열을 다른 파일에 복제하지 말 것.
 
 ## 구조
 
