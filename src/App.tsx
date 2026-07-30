@@ -13,6 +13,7 @@ import {
   sync,
   type Play,
 } from './game/history';
+import { getUser, login, MIN_PW, setUser as saveUser, signup, syncEnabled } from './game/auth';
 
 const newSeed = () => Math.random().toString(36).slice(2, 8);
 
@@ -33,6 +34,12 @@ export default function App() {
   const [plays, setPlays] = useState<Play[]>(loadPlays);
   const [code, setCode] = useState(getCode);
   const [codeInput, setCodeInput] = useState('');
+  const [user, setUser] = useState(getUser);
+  const [authMode, setAuthMode] = useState<'login' | 'signup'>('login');
+  const [authId, setAuthId] = useState('');
+  const [authPw, setAuthPw] = useState('');
+  const [authError, setAuthError] = useState('');
+  const [authBusy, setAuthBusy] = useState(false);
 
   // 기록 코드가 정해지거나 바뀌면 서버와 합친다. 실패는 sync 안에서 삼켜진다
   useEffect(() => {
@@ -91,11 +98,38 @@ export default function App() {
 
   // ponytail: 서버 사본은 남지만 코드를 새로 뽑아 도달할 수 없게 만든다.
   // 진짜 삭제가 필요해지면 워커에 DELETE 라우트를 붙인다
-  const forgetPlays = () => {
+  //
+  // 로그아웃도 결국 같은 동작이다 — 이 기기를 게스트로 되돌린다.
+  // 다만 로그인 중이었다면 계정에 사본이 남아 다시 로그인하면 그대로 돌아온다
+  const resetDevice = () => {
     clearPlays();
     saveCode('');
+    saveUser('');
+    setUser('');
     setPlays([]);
     setCode(getCode());
+    setAuthError('');
+  };
+
+  // 로그인/가입은 코드를 받아오는 게 전부다. code 가 바뀌면
+  // 위의 useEffect 가 알아서 이 기기 기록과 계정 기록을 합친다
+  const submitAuth = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (authBusy) return;
+    setAuthBusy(true);
+    setAuthError('');
+    const res = await (authMode === 'signup' ? signup : login)(authId, authPw);
+    setAuthBusy(false);
+    if (!res.ok) {
+      setAuthError(res.error);
+      return;
+    }
+    saveCode(res.code);
+    saveUser(authId);
+    setUser(authId);
+    setCode(res.code);
+    setAuthId('');
+    setAuthPw('');
   };
 
   return (
@@ -297,11 +331,71 @@ export default function App() {
               </ul>
             )}
 
+            {syncEnabled() &&
+              (user ? (
+                <div className="account">
+                  <p>
+                    <b>{user}</b> 로 로그인했어. 기록이 기기를 따라다닌다.
+                  </p>
+                  <button type="button" className="link" onClick={resetDevice}>
+                    로그아웃
+                  </button>
+                  <p className="hint">로그아웃하면 이 기기에서는 기록이 사라지지만, 다시 로그인하면 돌아와.</p>
+                </div>
+              ) : (
+                <details className="sync account">
+                  <summary>로그인하고 기록 잇기</summary>
+                  <p className="hint">
+                    아이디와 비밀번호만 있으면 어느 기기에서든 기록이 따라와. 이메일을 안 받아서
+                    비밀번호를 잊으면 되살릴 방법이 없으니, 아래 복구 키를 적어둬.
+                  </p>
+                  <form onSubmit={submitAuth}>
+                    <input
+                      value={authId}
+                      onChange={(e) => setAuthId(e.target.value.trim().toLowerCase())}
+                      placeholder="아이디"
+                      aria-label="아이디"
+                      autoComplete="username"
+                      pattern="[a-z0-9_]{3,20}"
+                      required
+                    />
+                    <input
+                      type="password"
+                      value={authPw}
+                      onChange={(e) => setAuthPw(e.target.value)}
+                      placeholder="비밀번호"
+                      aria-label="비밀번호"
+                      autoComplete={authMode === 'signup' ? 'new-password' : 'current-password'}
+                      minLength={MIN_PW}
+                      required
+                    />
+                    <button type="submit" className="chip primary" disabled={authBusy}>
+                      {authBusy ? '확인 중…' : authMode === 'signup' ? '가입' : '로그인'}
+                    </button>
+                  </form>
+                  {authError && (
+                    <p className="hint error" role="alert">
+                      {authError}
+                    </p>
+                  )}
+                  <button
+                    type="button"
+                    className="link"
+                    onClick={() => {
+                      setAuthMode(authMode === 'signup' ? 'login' : 'signup');
+                      setAuthError('');
+                    }}
+                  >
+                    {authMode === 'signup' ? '이미 계정이 있어' : '계정 만들기'}
+                  </button>
+                </details>
+              ))}
+
             <details className="sync">
-              <summary>다른 기기와 잇기</summary>
+              <summary>복구 키</summary>
               <p className="hint">
-                아래 코드를 다른 기기에 입력하면 기록이 따라와. 코드를 아는 사람은 기록을 보고 바꿀
-                수 있으니 아무한테나 주지 마.
+                기록은 이 코드에 묶여 있어. 비밀번호를 잊었거나 로그인 없이 다른 기기로 옮길 때
+                쓴다. 코드를 아는 사람은 기록을 보고 바꿀 수 있으니 아무한테나 주지 마.
               </p>
               <code>{code}</code>
               <form onSubmit={linkCode}>
@@ -317,9 +411,13 @@ export default function App() {
                   잇기
                 </button>
               </form>
-              <button type="button" className="link" onClick={forgetPlays}>
-                이 기기에서 기록 지우기
-              </button>
+              {/* 로그인 중이면 이 버튼은 로그아웃과 똑같이 동작하는데, 계정 사본이 남아
+                  "지우기"가 거짓말이 된다. 그래서 게스트일 때만 보여준다 */}
+              {!user && (
+                <button type="button" className="link" onClick={resetDevice}>
+                  이 기기에서 기록 지우기
+                </button>
+              )}
             </details>
           </div>
         </div>

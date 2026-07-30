@@ -35,7 +35,7 @@ const MAX_AT = 4e12;
 
 const CODE_RE = /^[a-z0-9]{22}$/;
 
-export const isCode = (s: string) => CODE_RE.test(s);
+export const isCode = (v: unknown): v is string => typeof v === 'string' && CODE_RE.test(v);
 
 const playKey = (p: Play) => `${p.seed}:${p.n}:${p.at}`;
 
@@ -78,13 +78,19 @@ export function mergePlays(a: readonly Play[], b: readonly Play[]): Play[] {
   return [...byKey.values()].sort((x, y) => y.at - x.at).slice(0, MAX_PLAYS);
 }
 
+const ALPHABET = 'abcdefghijklmnopqrstuvwxyz0123456789';
+
+/** 새 기록 코드. 계정 가입 때 워커도 이걸 부른다 — 코드 생성기가 두 벌이면 안 된다 */
+export const newCode = () =>
+  [...crypto.getRandomValues(new Uint8Array(22))].map((b) => ALPHABET[b % 36]).join('');
+
 // ── 여기서부터는 브라우저 전용 ──
 
 const PLAYS_KEY = 'murdoku.history';
 const CODE_KEY = 'murdoku.code';
 
 // ponytail: 사파리 프라이빗 모드에선 localStorage 접근 자체가 throw 한다. 기록을 못 남겨도 게임은 굴러가야 한다.
-function readLS(key: string): string | null {
+export function readLS(key: string): string | null {
   try {
     return localStorage.getItem(key);
   } catch {
@@ -92,7 +98,7 @@ function readLS(key: string): string | null {
   }
 }
 
-function writeLS(key: string, value: string) {
+export function writeLS(key: string, value: string) {
   try {
     localStorage.setItem(key, value);
   } catch {
@@ -123,11 +129,6 @@ export function addPlay(play: Play): Play[] {
 export function clearPlays() {
   savePlays([]);
 }
-
-const ALPHABET = 'abcdefghijklmnopqrstuvwxyz0123456789';
-
-const newCode = () =>
-  [...crypto.getRandomValues(new Uint8Array(22))].map((b) => ALPHABET[b % 36]).join('');
 
 /** 이 기기의 기록 코드. 없으면 만들어 저장한다 */
 export function getCode(): string {

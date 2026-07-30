@@ -840,6 +840,27 @@ img.art {
   user-select: all;
 }
 
+/* ---- 계정 ---- */
+.account {
+  border-top: 2px dashed var(--tile-line);
+  padding-top: 8px;
+}
+.account > * + * {
+  margin-top: 8px;
+}
+/* 아이디·비밀번호·버튼이 한 줄에 안 들어간다 */
+.account form {
+  flex-direction: column;
+}
+.account p {
+  margin: 0;
+  font-size: 13px;
+}
+.hint.error {
+  color: var(--accent);
+  font-weight: 700;
+}
+
 /* 결과는 자주 안 뜨는 상태 변화라 등장 모션이 값을 한다 */
 .verdict {
   animation: verdict-in var(--dur-fast) var(--ease-out);
