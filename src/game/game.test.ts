@@ -166,6 +166,13 @@ describe('Board 렌더링', () => {
     expect((html.match(/token solved/g) ?? []).length).toBe(5);
   });
 
+  it('설 수 없는 가구 칸은 blocked로 표시되고 이유가 라벨에 들어간다', () => {
+    const { p, html } = render(false);
+    const cnt = p.furniture.filter((f) => !f.standable).reduce((s, f) => s + f.cells.length, 0);
+    expect((html.match(/class="cell blocked"/g) ?? []).length).toBe(cnt);
+    expect((html.match(/가구라 설 수 없음/g) ?? []).length).toBe(cnt);
+  });
+
   it('메모는 공개 전에만 보인다', () => {
     expect(render(false, { '0,0': 'X' }).html).toContain('✕');
     expect(render(true, { '0,0': 'X' }).html).not.toContain('✕');

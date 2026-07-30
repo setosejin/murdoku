@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react';
 import type { Puzzle } from '../game/types';
 import { indexScene } from '../game/clues';
 
@@ -22,6 +23,14 @@ export default function Board({ puzzle, marks, onCell, revealed }: Props) {
   const { n, rooms, furniture, wallItems, people } = puzzle;
   const idx = indexScene(puzzle);
   const roomAt = idx.roomAt;
+
+  // 가구 칸을 눌렀을 때 잠깐 띄우는 거절 표시
+  const [denied, setDenied] = useState<{ key: string; text: string } | null>(null);
+  useEffect(() => {
+    if (!denied) return;
+    const t = setTimeout(() => setDenied(null), 1600);
+    return () => clearTimeout(t);
+  }, [denied]);
 
   const furnAt = new Map<string, { f: (typeof furniture)[number]; first: boolean }>();
   for (const f of furniture)
@@ -58,9 +67,13 @@ export default function Board({ puzzle, marks, onCell, revealed }: Props) {
         <button
           key={k}
           type="button"
-          className={`cell${blocked ? ' blocked' : ''}`}
-          aria-label={desc}
-          onClick={() => onCell(k)}
+          className={`cell${blocked ? ' blocked' : ''}${denied?.key === k ? ' denied' : ''}`}
+          aria-label={blocked ? `${desc} (가구라 설 수 없음)` : desc}
+          onClick={() =>
+            blocked
+              ? setDenied({ key: k, text: `${fur?.f.label ?? '가구'} 위에는 설 수 없어` })
+              : onCell(k)
+          }
           style={{
             borderTopWidth: r === 0 ? 0 : roomAt[r - 1][c] !== roomAt[r][c] ? 3 : 1,
             borderLeftWidth: c === 0 ? 0 : roomAt[r][c - 1] !== roomAt[r][c] ? 3 : 1,
@@ -111,8 +124,15 @@ export default function Board({ puzzle, marks, onCell, revealed }: Props) {
   }
 
   return (
-    <div className="board" style={{ ['--n' as string]: n }}>
-      {cells}
+    <div className="board-wrap">
+      <div className="board" style={{ ['--n' as string]: n }}>
+        {cells}
+      </div>
+      {denied && (
+        <p className="notice" role="status">
+          🚫 {denied.text}
+        </p>
+      )}
     </div>
   );
 }

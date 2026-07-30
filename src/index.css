@@ -208,6 +208,37 @@ input {
   align-items: start;
 }
 
+.board-wrap {
+  position: relative;
+}
+
+/* 스크롤 위치와 무관하게 늘 보이도록 뷰포트에 고정 */
+.notice {
+  position: fixed;
+  left: 50%;
+  bottom: 20px;
+  transform: translateX(-50%);
+  margin: 0;
+  max-width: calc(100% - 24px);
+  padding: 8px 14px;
+  border-radius: 999px;
+  background: #2f2a24;
+  color: #fdf6e6;
+  font-size: 14px;
+  font-weight: 600;
+  white-space: nowrap;
+  box-shadow: 0 6px 18px rgb(47 42 36 / 0.28);
+  pointer-events: none;
+  z-index: 6;
+  animation: notice-in 0.18s ease-out;
+}
+@keyframes notice-in {
+  from {
+    opacity: 0;
+    transform: translate(-50%, 6px);
+  }
+}
+
 .board {
   display: grid;
   grid-template-columns: repeat(var(--n), 1fr);
@@ -243,6 +274,28 @@ input {
 }
 .cell.blocked {
   background: #f3eee1;
+  cursor: not-allowed;
+}
+/* 가구 칸을 눌렀을 때: 흔들림 + 붉은 기 */
+.cell.denied {
+  background: #f7e2dc;
+  animation: cell-nope 0.3s ease-out;
+  z-index: 3;
+}
+@keyframes cell-nope {
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+  25% {
+    transform: translateX(-4px);
+  }
+  50% {
+    transform: translateX(4px);
+  }
+  75% {
+    transform: translateX(-2px);
+  }
 }
 
 .furniture {
