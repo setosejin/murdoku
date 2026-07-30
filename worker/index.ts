@@ -57,8 +57,11 @@ export default {
     const merged = mergePlays(parse(stored), parse(raw));
     const body = JSON.stringify(merged);
 
-    // 바뀐 게 없으면 쓰지 않는다. 불러오기만 하는 요청은 KV 쓰기 한도(1천/일)를 안 먹는다
-    if (body !== stored) await env.HISTORY.put(code, body);
+    // 남길 게 있고 바뀌었을 때만 쓴다.
+    // - 불러오기만 하는 요청은 KV 쓰기 한도(1천/일)를 안 먹는다
+    // - 처음 방문한 사람이 빈 기록을 올려도 빈 항목이 생기지 않는다.
+    //   이게 없으면 신규 방문자 수만큼 쓰기가 나가고, 아무나 랜덤 코드로 한도를 태울 수 있다
+    if (merged.length > 0 && body !== stored) await env.HISTORY.put(code, body);
 
     return new Response(body, {
       status: 200,

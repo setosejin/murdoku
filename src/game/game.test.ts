@@ -416,6 +416,15 @@ describe('기록 동기화 워커', () => {
     expect(e.writes()).toBe(before);
   });
 
+  it('빈 기록은 저장하지 않는다', async () => {
+    // 신규 방문자마다 빈 항목이 생기면 쓰기 한도가 방문자 수에 물린다.
+    // 아무 코드나 찍어 한도를 태우는 것도 막힌다
+    const e = env();
+    for (let i = 0; i < 5; i++) await post(e, `/h/${'b'.repeat(22)}`, []);
+    expect(e.writes()).toBe(0);
+    expect(await (await post(e, `/h/${'b'.repeat(22)}`, [])).json()).toEqual([]);
+  });
+
   it('기록 코드가 아니면 400이고 KV를 건드리지 않는다', async () => {
     const e = env();
     for (const path of ['/h/../secret', '/h/', '/h/short', `/other/${CODE}`, `/h/${CODE}x`]) {
