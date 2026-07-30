@@ -254,7 +254,15 @@ input {
   pointer-events: none;
   z-index: 6;
   animation: notice-in var(--dur-fast) var(--ease-out);
+  transition: opacity 200ms var(--ease-out);
 }
+@starting-style {
+  .notice {
+    opacity: 0;
+  }
+}
+/* ponytail: 퇴장 페이드는 없다. React 가 노드를 즉시 제거하기 때문.
+   필요해지면 Board.tsx 에서 exiting 상태를 두고 200ms 뒤 언마운트할 것. */
 @keyframes notice-in {
   from {
     opacity: 0;
@@ -581,9 +589,35 @@ img.art {
   padding: 0;
   width: min(440px, calc(100vw - 32px));
   box-shadow: 4px 4px 0 var(--wall);
+  opacity: 1;
+  transform: scale(1);
+  transition: opacity 200ms var(--ease-out), transform 200ms var(--ease-out),
+    overlay 200ms allow-discrete,
+    display 200ms allow-discrete;
+}
+/* 닫힌 상태 = 열기 전의 시작값이자 닫힐 때의 목표값 */
+.feedback:not([open]) {
+  opacity: 0;
+  transform: scale(0.96);
+}
+@starting-style {
+  .feedback[open] {
+    opacity: 0;
+    transform: scale(0.96);
+  }
 }
 .feedback::backdrop {
+  background: rgb(35 32 28 / 0);
+  transition: background 200ms var(--ease-out), overlay 200ms allow-discrete,
+    display 200ms allow-discrete;
+}
+.feedback[open]::backdrop {
   background: rgb(35 32 28 / 0.45);
+}
+@starting-style {
+  .feedback[open]::backdrop {
+    background: rgb(35 32 28 / 0);
+  }
 }
 .feedback form {
   display: flex;
@@ -639,6 +673,10 @@ img.art {
   .notice,
   .verdict {
     animation: fade-in var(--dur-fast) var(--ease-out) !important;
+  }
+  .feedback,
+  .feedback:not([open]) {
+    transform: none !important;
   }
   .chip:hover,
   .chip:active,
