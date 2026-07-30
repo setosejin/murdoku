@@ -141,6 +141,9 @@ input {
 .brush:focus-visible,
 .accuse select:focus-visible,
 .seedbox input:focus-visible,
+.sync input:focus-visible,
+.sync summary:focus-visible,
+.history li button:focus-visible,
 .feedback :is(input, select, textarea):focus-visible {
   outline: 3px solid var(--accent);
   outline-offset: 2px;
@@ -726,18 +729,21 @@ img.art {
 .verdict.no {
   color: var(--accent);
 }
-.seedbox code {
+.seedbox code,
+.sync code {
   font-size: 13px;
   background: #efe8d7;
   padding: 2px 6px;
   border-radius: 4px;
   align-self: flex-start;
 }
-.seedbox form {
+.seedbox form,
+.sync form {
   display: flex;
   gap: 6px;
 }
-.seedbox input {
+.seedbox input,
+.sync input {
   flex: 1;
   min-width: 0;
   min-height: 40px;
@@ -745,6 +751,77 @@ img.art {
   border-radius: 6px;
   padding: 5px 8px;
   background: var(--tile);
+}
+
+/* ---- 기록 ---- */
+.hint {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--muted);
+}
+.history ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.history li button {
+  width: 100%;
+  min-height: 40px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  text-align: left;
+  /* 패널 반경 18 - 패딩 12 = 6 */
+  border: 2px solid var(--tile-line);
+  border-radius: 6px;
+  background: var(--tile);
+  color: var(--ink);
+  font: inherit;
+  padding: 6px 9px;
+  cursor: pointer;
+  transition:
+    border-color var(--dur-fast) var(--ease-out),
+    background-color var(--dur-fast) var(--ease-out);
+}
+@media (hover: hover) and (pointer: fine) {
+  .history li button:hover {
+    border-color: var(--wall);
+    background: #fff;
+  }
+}
+.history li b {
+  font-size: 13px;
+}
+.history li small {
+  font-size: 11px;
+  color: var(--muted);
+}
+.sync {
+  border-top: 2px dashed var(--tile-line);
+  padding-top: 4px;
+}
+.sync > * + * {
+  margin-top: 8px;
+}
+.sync summary {
+  min-height: 40px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.sync code {
+  /* 22자라 좁은 화면에서 넘친다. 탭 한 번에 통째로 잡히게 */
+  display: block;
+  word-break: break-all;
+  -webkit-user-select: all;
+  user-select: all;
 }
 
 /* 결과는 자주 안 뜨는 상태 변화라 등장 모션이 값을 한다 */

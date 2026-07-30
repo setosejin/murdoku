@@ -1,0 +1,14 @@
+name = "murdoku-history"
+main = "index.ts"
+compatibility_date = "2026-07-30"
+
+# 배포 전 한 번:
+#   npx wrangler kv namespace create HISTORY
+# 출력된 id 를 아래에 붙이고 `npx wrangler deploy`.
+[[kv_namespaces]]
+binding = "HISTORY"
+id = "PUT_KV_NAMESPACE_ID_HERE"
+
+# CORS 허용 오리진. 로컬 개발은 npx wrangler dev 로 별도 확인
+[vars]
+ORIGIN = "https://setosejin.github.io"

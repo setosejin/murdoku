@@ -1,9 +1,22 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import Board, { Art, SpriteDefs } from './components/Board';
 import FeedbackDialog from './components/FeedbackDialog';
 import { DIFFICULTIES, generatePuzzle } from './game/generate';
+import {
+  addPlay,
+  clearPlays,
+  getCode,
+  isCode,
+  loadPlays,
+  setCode as saveCode,
+  sync,
+  type Play,
+} from './game/history';
 
 const newSeed = () => Math.random().toString(36).slice(2, 8);
+
+const fmtDate = (at: number) =>
+  new Date(at).toLocaleDateString('ko-KR', { month: 'long', day: 'numeric' });
 
 export default function App() {
   const [n, setN] = useState(4);
@@ -16,6 +29,14 @@ export default function App() {
   // 같은 결과를 다시 지목해도 등장 모션이 재생되도록 key 를 갈아끼우는 카운터
   const [attempt, setAttempt] = useState(0);
   const [revealed, setRevealed] = useState(false);
+  const [plays, setPlays] = useState<Play[]>(loadPlays);
+  const [code, setCode] = useState(getCode);
+  const [codeInput, setCodeInput] = useState('');
+
+  // 기록 코드가 정해지거나 바뀌면 서버와 합친다. 실패는 sync 안에서 삼켜진다
+  useEffect(() => {
+    sync(code, loadPlays()).then(setPlays);
+  }, [code]);
 
   const puzzle = useMemo(() => generatePuzzle(n, seed), [n, seed]);
   const suspects = puzzle.people.filter((p) => !p.isVictim);
@@ -29,6 +50,8 @@ export default function App() {
     setAccused('');
     setResult(null);
     setRevealed(false);
+    // 지목 횟수는 사건마다 새로 센다. 안 그러면 기록의 tries 에 이전 사건 지목까지 딸려온다
+    setAttempt(0);
   };
 
   const onCell = (key: string) => {
@@ -43,9 +66,35 @@ export default function App() {
   const accuse = () => {
     if (!accused) return;
     const ok = accused === puzzle.culpritId;
+    const tries = attempt + 1;
     setResult(ok ? 'correct' : 'wrong');
-    setAttempt((attemptCount) => attemptCount + 1);
-    if (ok) setRevealed(true);
+    setAttempt(tries);
+    if (!ok) return;
+    setRevealed(true);
+    // 이미 푼 사건을 다시 지목해도 기록은 한 번만
+    if (result === 'correct') return;
+    const next = addPlay({ seed, n, at: Date.now(), ok: true, tries, title: puzzle.title });
+    setPlays(next);
+    sync(code, next).then(setPlays);
+  };
+
+  const linkCode = (e: React.FormEvent) => {
+    e.preventDefault();
+    const next = codeInput.trim();
+    if (isCode(next)) {
+      saveCode(next);
+      setCode(next);
+    }
+    setCodeInput('');
+  };
+
+  // ponytail: 서버 사본은 남지만 코드를 새로 뽑아 도달할 수 없게 만든다.
+  // 진짜 삭제가 필요해지면 워커에 DELETE 라우트를 붙인다
+  const forgetPlays = () => {
+    clearPlays();
+    saveCode('');
+    setPlays([]);
+    setCode(getCode());
   };
 
   return (
@@ -226,6 +275,51 @@ export default function App() {
                 열기
               </button>
             </form>
+          </div>
+
+          <div className="panel history">
+            <b>기록</b>
+            {plays.length === 0 ? (
+              <p className="hint">사건을 해결하면 여기 쌓인다.</p>
+            ) : (
+              <ul>
+                {plays.slice(0, 20).map((p) => (
+                  <li key={`${p.seed}:${p.n}:${p.at}`}>
+                    <button type="button" onClick={() => reset(p.n, p.seed)}>
+                      <b>{p.title}</b>
+                      <small>
+                        {p.seed} · {fmtDate(p.at)} · {p.n}x{p.n} · {p.tries}번 만에 해결
+                      </small>
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
+
+            <details className="sync">
+              <summary>다른 기기와 잇기</summary>
+              <p className="hint">
+                아래 코드를 다른 기기에 입력하면 기록이 따라와. 코드를 아는 사람은 기록을 보고 바꿀
+                수 있으니 아무한테나 주지 마.
+              </p>
+              <code>{code}</code>
+              <form onSubmit={linkCode}>
+                <input
+                  value={codeInput}
+                  onChange={(e) => setCodeInput(e.target.value.trim().toLowerCase())}
+                  placeholder="기록 코드 붙여넣기"
+                  aria-label="기록 코드 입력"
+                  pattern="[a-z0-9]{22}"
+                  required
+                />
+                <button type="submit" className="chip">
+                  잇기
+                </button>
+              </form>
+              <button type="button" className="link" onClick={forgetPlays}>
+                이 기기에서 기록 지우기
+              </button>
+            </details>
           </div>
         </div>
       </section>
