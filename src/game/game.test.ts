@@ -2,12 +2,13 @@ import { describe, expect, it } from 'vitest';
 import { createElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { generatePuzzle } from './generate';
+import App from '../App';
 import Board from '../components/Board';
 import FeedbackDialog, { issueUrl } from '../components/FeedbackDialog';
 import { indexScene, matchingCells, satisfies } from './clues';
 import { solve } from './solve';
 import type { Room, Furniture, WallItem } from './types';
-import { FURNITURE } from '../data/content';
+import { THEMES } from '../data/content';
 
 describe('generatePuzzle', () => {
   for (const n of [4, 5, 6]) {
@@ -60,7 +61,7 @@ describe('generatePuzzle', () => {
         expect([...perRoom.values()]).toEqual(Array(perRoom.size).fill(1));
 
         // 방마다 가구가 최소 1개, 그리고 그 방에 어울리는 가구만
-        const specOf = new Map(FURNITURE.map((f) => [f.label, f]));
+        const specOf = new Map(p.theme.furniture.map((f) => [f.label, f]));
         for (const room of p.rooms) {
           const here = p.furniture.filter((f) =>
             f.cells.some((c) => idx.roomAt[c.r][c.c] === room.id),
@@ -71,12 +72,53 @@ describe('generatePuzzle', () => {
             if (allowed) expect(allowed).toContain(room.name);
           }
         }
+
+        // 방·가구·직업이 전부 한 테마 풀에서만 나온다
+        const roomNames = new Set(p.theme.rooms.map((r) => r.name));
+        for (const room of p.rooms) expect(roomNames).toContain(room.name);
+        const wallLabels = new Set(p.theme.wallItems.map((w) => w.label));
+        for (const w of p.wallItems) expect(wallLabels).toContain(w.label);
+        for (const pe of p.people) expect(p.theme.roles).toContain(pe.role);
+        expect(p.theme.titles).toContain(p.title);
+
+        // 방은 끊기지 않고 이어져 있다 (지터로 L자가 되어도)
+        for (const room of p.rooms) {
+          const want = new Set(room.cells.map((c) => `${c.r},${c.c}`));
+          const seen = new Set([`${room.cells[0].r},${room.cells[0].c}`]);
+          const queue = [room.cells[0]];
+          while (queue.length) {
+            const cur = queue.shift()!;
+            for (const [dr, dc] of [[-1, 0], [1, 0], [0, -1], [0, 1]]) {
+              const k = `${cur.r + dr},${cur.c + dc}`;
+              if (want.has(k) && !seen.has(k)) {
+                seen.add(k);
+                queue.push({ r: cur.r + dr, c: cur.c + dc });
+              }
+            }
+          }
+          expect(seen.size, `${room.name} 이 끊겼다`).toBe(room.cells.length);
+        }
       }
     });
   }
 
   it('같은 시드는 같은 퍼즐을 만든다', () => {
     expect(generatePuzzle(5, 'fixed')).toEqual(generatePuzzle(5, 'fixed'));
+  });
+
+  // generatePuzzle 은 실패해도 조용히 300×20×60 회 되던지다 맨 끝에서야 throw 한다.
+  // 제약을 하나 잘못 넣으면 특정 난이도가 에러 없이 영구 실패하므로 넓게 훑어 잡는다.
+  // ponytail: 재시도 횟수를 따로 세지 않는다 — 폭증하면 이 테스트가 타임아웃으로 먼저 터진다.
+  // (기준선: 난이도당 60시드에 27·32·102ms)
+  it('모든 난이도 × 60시드에서 빠짐없이 생성된다', () => {
+    const seen = new Set<string>();
+    for (const n of [4, 5, 6])
+      for (let i = 0; i < 60; i++) {
+        expect(() => generatePuzzle(n, `sweep-${n}-${i}`), `n=${n} seed=${i}`).not.toThrow();
+        seen.add(generatePuzzle(n, `sweep-${n}-${i}`).theme.id);
+      }
+    // 테마 하나가 조용히 생성 불가가 되면 여기서 잡힌다
+    expect([...seen].sort()).toEqual(THEMES.map((t) => t.id).sort());
   });
 });
 
@@ -88,12 +130,12 @@ describe('matchingCells', () => {
     return out;
   };
   const rooms: Room[] = [
-    { id: 0, name: '거실', cells: cellsOf(0, 1) },
-    { id: 1, name: '침실', cells: cellsOf(2, 3) },
+    { id: 0, name: '거실', floor: 'wood', cells: cellsOf(0, 1) },
+    { id: 1, name: '침실', floor: 'carpet', cells: cellsOf(2, 3) },
   ];
   const furniture: Furniture[] = [
-    { id: 'table', label: '탁자', emoji: '🪑', cells: [{ r: 1, c: 1 }], standable: false },
-    { id: 'bed', label: '침대', emoji: '🛏️', cells: [{ r: 2, c: 1 }, { r: 3, c: 1 }], standable: true },
+    { id: 'table', kind: 'table', label: '탁자', emoji: '🪑', cells: [{ r: 1, c: 1 }], standable: false },
+    { id: 'bed', kind: 'bed', label: '침대', emoji: '🛏️', cells: [{ r: 2, c: 1 }, { r: 3, c: 1 }], standable: true },
   ];
   const wallItems: WallItem[] = [
     { id: 'win', kind: 'window', label: '창문', emoji: '🪟', cell: { r: 2, c: 3 }, side: 'right' },
@@ -130,8 +172,8 @@ describe('matchingCells', () => {
   });
 
   describe('solve 방 제약', () => {
-    const suspect = (id: string) => ({ id, name: id, color: '#000', isVictim: false });
-    const victim = { id: 'V', name: 'V', color: '#000', isVictim: true };
+    const suspect = (id: string) => ({ id, name: id, role: '집사', color: '#000', isVictim: false });
+    const victim = { id: 'V', name: 'V', role: '집사', color: '#000', isVictim: true };
 
     it('용의자 수가 방 수보다 많으면 해가 없다 (방마다 한 명까지)', () => {
       const people = [suspect('A'), suspect('B'), suspect('C'), victim];
@@ -188,9 +230,30 @@ describe('Board 렌더링', () => {
     expect((html.match(/가구라 설 수 없음/g) ?? []).length).toBe(cnt);
   });
 
+  it('칸마다 방 바닥 재질이 붙는다', () => {
+    const { p, html } = render(false);
+    const floors = new Set(p.rooms.map((r) => r.floor));
+    for (const f of floors) expect(html).toContain(`data-floor="${f}"`);
+    expect((html.match(/data-floor="/g) ?? []).length).toBe(25);
+  });
+
   it('메모는 공개 전에만 보인다', () => {
     expect(render(false, { '0,0': 'X' }).html).toContain('✕');
     expect(render(true, { '0,0': 'X' }).html).not.toContain('✕');
+  });
+});
+
+describe('App 렌더링', () => {
+  const html = renderToStaticMarkup(createElement(App));
+
+  it('범례가 이번 사건의 가구를 빠짐없이 설명한다', () => {
+    const furniture = (html.match(/fur-label">/g) ?? []).length;
+    expect(furniture).toBeGreaterThan(0);
+    expect((html.match(/<em>설 수 (있|없)음<\/em>/g) ?? []).length).toBe(furniture);
+  });
+
+  it('아이콘 스프라이트를 한 번만 심는다', () => {
+    expect((html.match(/id="i-bed"/g) ?? []).length).toBe(1);
   });
 });
 

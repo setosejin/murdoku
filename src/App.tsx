@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import Board from './components/Board';
+import Board, { Art, SpriteDefs } from './components/Board';
 import FeedbackDialog from './components/FeedbackDialog';
 import { DIFFICULTIES, generatePuzzle } from './game/generate';
 
@@ -50,6 +50,7 @@ export default function App() {
 
   return (
     <div className="app">
+      <SpriteDefs />
       <header className="topbar">
         <h1>
           murdoku <span className="sub">머도쿠</span>
@@ -75,7 +76,7 @@ export default function App() {
 
       <section className="case">
         <div className="case-head">
-          <span className="case-no">CASE</span>
+          <span className="case-no">{puzzle.theme.label}</span>
           <h2>{puzzle.title}</h2>
         </div>
         <p className="brief">{puzzle.brief}</p>
@@ -83,21 +84,23 @@ export default function App() {
         <div className="cards">
           {suspects.map((p) => (
             <article key={p.id} className="card">
-              <div className="avatar" style={{ background: p.color }}>
-                {p.image ? <img src={p.image} alt={p.name} /> : <span>{p.id}</span>}
+              <span className="badge">{p.id}</span>
+              <div className="portrait" style={{ background: p.color }}>
+                <Art emoji="🙂" image={p.image} icon="person" label={p.name} />
               </div>
-              <b>
-                {p.id} · {p.name}
-              </b>
-              <p>{clueOf(p.id)}</p>
+              <b>{p.name}</b>
+              <small>{p.role}</small>
+              <p className="bubble">{clueOf(p.id)}</p>
             </article>
           ))}
           <article className="card victim">
-            <div className="avatar" style={{ background: victim.color }}>
-              {victim.image ? <img src={victim.image} alt={victim.name} /> : <span>V</span>}
+            <span className="badge">V</span>
+            <div className="portrait" style={{ background: victim.color }}>
+              <Art emoji="🙂" image={victim.image} icon="person" label={victim.name} />
             </div>
-            <b>V · {victim.name}</b>
-            <p>마지막 남은 자리에 있어…</p>
+            <b>{victim.name}</b>
+            <small>{victim.role} · 피해자</small>
+            <p className="bubble">마지막 남은 자리에 있어…</p>
           </article>
         </div>
       </section>
@@ -113,9 +116,22 @@ export default function App() {
               <li>한 칸에는 한 사람만 있을 수 있다</li>
               <li>한 방에 용의자는 한 명까지</li>
               <li>'옆'은 같은 방에서 인접해 있다는 뜻</li>
-              <li>가구 위에는 설 수 없다 (침대·소파·러그는 예외)</li>
+              <li>가구 위에는 설 수 없다 (예외는 범례에)</li>
               <li>피해자와 같은 방에 있던 사람이 범인</li>
             </ol>
+          </div>
+
+          <div className="panel legend">
+            <b>범례</b>
+            <ul>
+              {puzzle.furniture.map((f) => (
+                <li key={f.id} className={f.standable ? 'ok' : 'no'}>
+                  <Art emoji={f.emoji} image={f.image} icon={f.kind} label={f.label} />
+                  <span>{f.label}</span>
+                  <em>{f.standable ? '설 수 있음' : '설 수 없음'}</em>
+                </li>
+              ))}
+            </ul>
           </div>
 
           <div className="panel palette">

@@ -1,11 +1,35 @@
 import { useEffect, useState } from 'react';
 import type { Puzzle } from '../game/types';
 import { indexScene } from '../game/clues';
+import sprite from '../assets/sprite.svg?raw';
 
-export function Art({ emoji, image, label }: { emoji: string; image?: string; label: string }) {
-  return image ? (
-    <img className="art" src={image} alt={label} />
-  ) : (
+/** 스프라이트에 실제로 들어 있는 아이콘 이름. 없는 가구는 이모지로 떨어진다 */
+const ICONS = new Set([...sprite.matchAll(/id="i-([\w-]+)"/g)].map((m) => m[1]));
+
+/** 아이콘 정의. 앱에 한 번만 그려두면 `<use>` 가 어디서든 참조한다 */
+export function SpriteDefs() {
+  return <span hidden dangerouslySetInnerHTML={{ __html: sprite }} />;
+}
+
+export function Art({
+  emoji,
+  image,
+  label,
+  icon,
+}: {
+  emoji: string;
+  image?: string;
+  label: string;
+  icon?: string;
+}) {
+  if (image) return <img className="art" src={image} alt={label} />;
+  if (icon && ICONS.has(icon))
+    return (
+      <svg className="art" viewBox="0 0 24 24" role="img" aria-label={label}>
+        <use href={`#i-${icon}`} />
+      </svg>
+    );
+  return (
     <span className="art" role="img" aria-label={label}>
       {emoji}
     </span>
@@ -37,6 +61,7 @@ export default function Board({ puzzle, marks, onCell, revealed }: Props) {
     f.cells.forEach((c, i) => furnAt.set(`${c.r},${c.c}`, { f, first: i === 0 }));
 
   const wallAt = new Map(wallItems.map((w) => [`${w.cell.r},${w.cell.c}`, w]));
+  const roomById = new Map(rooms.map((r) => [r.id, r]));
   const labelAt = new Map(rooms.map((r) => [`${r.cells[r.cells.length - 1].r},${r.cells[r.cells.length - 1].c}`, r]));
   const personAt = new Map(
     people.map((p) => [`${puzzle.solution[p.id].r},${puzzle.solution[p.id].c}`, p]),
@@ -52,10 +77,11 @@ export default function Board({ puzzle, marks, onCell, revealed }: Props) {
       const mark = revealed ? undefined : marks[k];
       const person = revealed ? personAt.get(k) : undefined;
       const blocked = !idx.free[r][c];
+      const here = roomById.get(roomAt[r][c])!;
 
       const desc = [
         `${r + 1}행 ${c + 1}열`,
-        rooms.find((x) => x.id === roomAt[r][c])?.name,
+        here.name,
         fur?.f.label,
         wall?.label,
         mark ? `표시 ${mark}` : '빈 칸',
@@ -67,6 +93,7 @@ export default function Board({ puzzle, marks, onCell, revealed }: Props) {
         <button
           key={k}
           type="button"
+          data-floor={here.floor}
           className={`cell${blocked ? ' blocked' : ''}${
             denied?.key === k ? (denied.n % 2 ? ' denied alt' : ' denied') : ''
           }`}
@@ -96,17 +123,13 @@ export default function Board({ puzzle, marks, onCell, revealed }: Props) {
                 height: `calc(${fur.f.cells.some((x) => x.r !== fur.f.cells[0].r) ? 200 : 100}% - 6px)`,
               }}
             >
-              <Art emoji={fur.f.emoji} image={fur.f.image} label={fur.f.label} />
+              <Art emoji={fur.f.emoji} image={fur.f.image} icon={fur.f.kind} label={fur.f.label} />
               <span className="fur-label">{fur.f.label}</span>
             </span>
           )}
           {wall && (
             <span className={`wall-item ${wall.side} ${wall.kind}`} title={wall.label}>
-              {wall.image ? (
-                <Art emoji={wall.emoji} image={wall.image} label={wall.label} />
-              ) : (
-                wall.label[0]
-              )}
+              <Art emoji={wall.emoji} image={wall.image} icon={wall.kind} label={wall.label} />
             </span>
           )}
           {room && <span className="room-label">{room.name}</span>}

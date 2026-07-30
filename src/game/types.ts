@@ -1,13 +1,21 @@
+import type { Theme } from '../data/content';
+
 export type Cell = { r: number; c: number };
+
+/** 방 바닥 재질. 판정에는 안 쓰이고 그림에만 쓴다 */
+export type FloorKind = 'wood' | 'tile' | 'carpet' | 'grass' | 'soil' | 'straw';
 
 export type Room = {
   id: number;
   name: string;
+  floor: FloorKind;
   cells: Cell[];
 };
 
 export type Furniture = {
   id: string;
+  /** FurnitureSpec.kind — 스프라이트 아이콘 이름이기도 하다 */
+  kind: string;
   label: string;
   emoji: string;
   image?: string;
@@ -30,6 +38,8 @@ export type WallItem = {
 export type Person = {
   id: string;
   name: string;
+  /** 직업. 사건 테마마다 다르다 */
+  role: string;
   color: string;
   image?: string;
   isVictim: boolean;
@@ -48,6 +58,8 @@ export type Clue = {
 export type Puzzle = {
   n: number;
   seed: string;
+  /** 사건 테마(저택·농장). 방·가구·제목 풀이 여기 묶여 있다 */
+  theme: Theme;
   title: string;
   brief: string;
   rooms: Room[];

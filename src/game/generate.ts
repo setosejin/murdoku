@@ -3,19 +3,27 @@ import { pick, rng, shuffled } from './types';
 import { clueText, indexScene, matchingCells, type Scene, type SceneIndex } from './clues';
 import { solve } from './solve';
 import {
-  CASE_BRIEFS,
-  CASE_TITLES,
-  FURNITURE,
-  type FurnitureSpec,
   PERSON_COLORS,
-  ROOM_NAMES,
   SUSPECT_NAMES,
+  THEMES,
+  type FurnitureSpec,
+  type Theme,
   VICTIM_COLOR,
   VICTIM_NAMES,
-  WALL_ITEMS,
 } from '../data/content';
 
 const MAX_ROOM_AREA = 6;
+/** 지터로 방이 이보다 작아지지는 않는다 (가구 1개 + 설 자리 1칸은 남아야 한다) */
+const MIN_ROOM_AREA = 3;
+/** 지터로 방이 이보다 커지지도 않는다 */
+const MAX_JITTER_AREA = 9;
+
+const DIRS = [
+  [-1, 0],
+  [1, 0],
+  [0, -1],
+  [0, 1],
+] as const;
 
 type Rect = { r0: number; c0: number; r1: number; c1: number };
 
@@ -43,23 +51,83 @@ function splitRect(rect: Rect, rand: () => number, out: Rect[]): void {
   }
 }
 
-function buildRooms(n: number, rand: () => number): Room[] {
+function buildRooms(n: number, rand: () => number, theme: Theme): Room[] {
   const rects: Rect[] = [];
   splitRect({ r0: 0, c0: 0, r1: n - 1, c1: n - 1 }, rand, rects);
-  const names = shuffled(rand, ROOM_NAMES);
-  return rects.map((rect, i) => {
+  const specs = shuffled(rand, theme.rooms);
+  const rooms = rects.map((rect, i) => {
     const cells: Cell[] = [];
     for (let r = rect.r0; r <= rect.r1; r++)
       for (let c = rect.c0; c <= rect.c1; c++) cells.push({ r, c });
-    return { id: i, name: names[i] ?? `${names[i % names.length]} ${Math.floor(i / names.length) + 1}`, cells };
+    const spec = specs[i % specs.length];
+    const name = i < specs.length ? spec.name : `${spec.name} ${Math.floor(i / specs.length) + 1}`;
+    return { id: i, name, floor: spec.floor, cells };
   });
+  jitterRooms(rooms, n, rand);
+  return rooms;
+}
+
+/** 칸 목록이 상하좌우로 하나로 이어져 있는가 */
+function connected(cells: Cell[]): boolean {
+  const want = new Set(cells.map((c) => `${c.r},${c.c}`));
+  const seen = new Set([`${cells[0].r},${cells[0].c}`]);
+  const stack = [cells[0]];
+  while (stack.length) {
+    const cur = stack.pop()!;
+    for (const [dr, dc] of DIRS) {
+      const next = { r: cur.r + dr, c: cur.c + dc };
+      const k = `${next.r},${next.c}`;
+      if (want.has(k) && !seen.has(k)) {
+        seen.add(k);
+        stack.push(next);
+      }
+    }
+  }
+  return seen.size === cells.length;
+}
+
+/**
+ * BSP 가 만든 직사각형 방의 경계 칸을 이웃 방에 넘겨 L자 방을 만든다.
+ * 연결이 끊기거나 방이 너무 작아지는 이동은 그냥 건너뛴다 — 방 개수는 항상 그대로다.
+ * (방 개수가 줄면 "한 방에 용의자 한 명" 배치가 불가능해져 생성이 조용히 실패한다)
+ */
+function jitterRooms(rooms: Room[], n: number, rand: () => number): void {
+  const roomAt = Array.from({ length: n }, () => new Array<number>(n).fill(-1));
+  for (const room of rooms) for (const c of room.cells) roomAt[c.r][c.c] = room.id;
+  const byId = new Map(rooms.map((r) => [r.id, r]));
+
+  // 무작위 칸을 찍으면 대부분 방 안쪽이라 헛돈다. 경계 칸만 모아서 섞는다
+  const edges: { r: number; c: number; nr: number; nc: number }[] = [];
+  for (let r = 0; r < n; r++)
+    for (let c = 0; c < n; c++)
+      for (const [dr, dc] of DIRS) {
+        const nr = r + dr;
+        const nc = c + dc;
+        if (nr < 0 || nc < 0 || nr >= n || nc >= n) continue;
+        if (roomAt[nr][nc] !== roomAt[r][c]) edges.push({ r, c, nr, nc });
+      }
+
+  for (const { r, c, nr, nc } of shuffled(rand, edges).slice(0, rooms.length)) {
+    const from = byId.get(roomAt[r][c])!;
+    const to = byId.get(roomAt[nr][nc])!;
+    if (from.id === to.id) continue; // 앞선 이동으로 같은 방이 됐다
+    if (from.cells.length <= MIN_ROOM_AREA || to.cells.length >= MAX_JITTER_AREA) continue;
+
+    const rest = from.cells.filter((x) => x.r !== r || x.c !== c);
+    if (!connected(rest)) continue;
+
+    from.cells = rest;
+    // 받는 쪽은 붙어 있는 칸을 더하는 거라 연결은 저절로 유지된다
+    to.cells = [...to.cells, { r, c }].sort((a, b) => a.r - b.r || a.c - b.c);
+    roomAt[r][c] = to.id;
+  }
 }
 
 /** 방 이름에 맞는 가구를 방마다 1~2개. 빈 방이 남으면 null (호출부가 평면도를 다시 뽑는다) */
-function placeFurniture(rooms: Room[], rand: () => number): Furniture[] | null {
+function placeFurniture(rooms: Room[], rand: () => number, theme: Theme): Furniture[] | null {
   const out: Furniture[] = [];
   // 증언이 "어느 탁자?"로 모호해지지 않게, 가구 종류는 퍼즐 전체에서 한 번씩만 쓴다
-  const deck = shuffled(rand, FURNITURE);
+  const deck = shuffled(rand, theme.furniture);
   const fits = (spec: FurnitureSpec, room: Room) => !spec.rooms || spec.rooms.includes(room.name);
   const state = new Map(rooms.map((r) => [r.id, { taken: new Set<string>(), blocking: 0, count: 0 }]));
 
@@ -102,6 +170,7 @@ function placeFurniture(rooms: Room[], rand: () => number): Furniture[] | null {
       for (const c of cells) st.taken.add(`${c.r},${c.c}`);
       out.push({
         id: `${spec.kind}-${room.id}`,
+        kind: spec.kind,
         label: spec.label,
         emoji: spec.emoji,
         image: spec.image,
@@ -125,6 +194,7 @@ function placeWallItems(
   n: number,
   furniture: Furniture[],
   rand: () => number,
+  theme: Theme,
 ): WallItem[] {
   const blocked = new Set<string>();
   for (const f of furniture) for (const c of f.cells) blocked.add(`${c.r},${c.c}`);
@@ -135,14 +205,14 @@ function placeWallItems(
       if ((r === 0 || c === 0 || r === n - 1 || c === n - 1) && !blocked.has(`${r},${c}`))
         border.push({ r, c });
 
-  const chosen = shuffled(rand, border).slice(0, WALL_ITEMS.length);
+  const chosen = shuffled(rand, border).slice(0, theme.wallItems.length);
   return chosen.map((cell, i) => {
     const sides: WallItem['side'][] = [];
     if (cell.r === 0) sides.push('top');
     if (cell.r === n - 1) sides.push('bottom');
     if (cell.c === 0) sides.push('left');
     if (cell.c === n - 1) sides.push('right');
-    const spec = WALL_ITEMS[i];
+    const spec = theme.wallItems[i];
     return {
       id: `${spec.kind}-${i}`,
       kind: spec.kind,
@@ -212,12 +282,14 @@ export const DIFFICULTIES: Difficulty[] = [
 
 export function generatePuzzle(n: number, seed = String(Date.now())): Puzzle {
   const rand = rng(seed);
+  // 테마는 재시도와 무관하게 시드로 한 번만 정한다
+  const theme = pick(rand, THEMES);
 
   for (let sceneTry = 0; sceneTry < 300; sceneTry++) {
-    const rooms = buildRooms(n, rand);
-    const furniture = placeFurniture(rooms, rand);
+    const rooms = buildRooms(n, rand, theme);
+    const furniture = placeFurniture(rooms, rand, theme);
     if (!furniture) continue; // 가구를 못 받은 방이 있다 — 평면도부터 다시
-    const wallItems = placeWallItems(n, furniture, rand);
+    const wallItems = placeWallItems(n, furniture, rand, theme);
     const scene: Scene = { n, rooms, furniture, wallItems };
     const idx = indexScene(scene);
 
@@ -235,15 +307,18 @@ export function generatePuzzle(n: number, seed = String(Date.now())): Puzzle {
 
       const suspectCells = shuffled(rand, cells.filter((c) => c !== victimCell));
       const names = shuffled(rand, SUSPECT_NAMES);
+      const roles = shuffled(rand, theme.roles);
       const people: Person[] = suspectCells.map((_, i) => ({
         id: String.fromCharCode(65 + i),
         name: names[i],
+        role: roles[i % roles.length],
         color: PERSON_COLORS[i % PERSON_COLORS.length],
         isVictim: false,
       }));
       const victim: Person = {
         id: 'V',
         name: pick(rand, VICTIM_NAMES),
+        role: roles[roles.length - 1],
         color: VICTIM_COLOR,
         isVictim: true,
       };
@@ -271,8 +346,9 @@ export function generatePuzzle(n: number, seed = String(Date.now())): Puzzle {
         return {
           n,
           seed,
-          title: pick(rand, CASE_TITLES),
-          brief: pick(rand, CASE_BRIEFS),
+          theme,
+          title: pick(rand, theme.titles),
+          brief: pick(rand, theme.briefs),
           rooms,
           furniture,
           wallItems,
