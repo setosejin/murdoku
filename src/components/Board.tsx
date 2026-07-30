@@ -25,7 +25,7 @@ export default function Board({ puzzle, marks, onCell, revealed }: Props) {
   const roomAt = idx.roomAt;
 
   // 가구 칸을 눌렀을 때 잠깐 띄우는 거절 표시
-  const [denied, setDenied] = useState<{ key: string; text: string } | null>(null);
+  const [denied, setDenied] = useState<{ key: string; text: string; n: number } | null>(null);
   useEffect(() => {
     if (!denied) return;
     const t = setTimeout(() => setDenied(null), 1600);
@@ -67,11 +67,17 @@ export default function Board({ puzzle, marks, onCell, revealed }: Props) {
         <button
           key={k}
           type="button"
-          className={`cell${blocked ? ' blocked' : ''}${denied?.key === k ? ' denied' : ''}`}
+          className={`cell${blocked ? ' blocked' : ''}${
+            denied?.key === k ? (denied.n % 2 ? ' denied alt' : ' denied') : ''
+          }`}
           aria-label={blocked ? `${desc} (가구라 설 수 없음)` : desc}
           onClick={() =>
             blocked
-              ? setDenied({ key: k, text: `${fur?.f.label ?? '가구'} 위에는 설 수 없어` })
+              ? setDenied((prev) => ({
+                  key: k,
+                  text: `${fur?.f.label ?? '가구'} 위에는 설 수 없어`,
+                  n: (prev?.n ?? 0) + 1,
+                }))
               : onCell(k)
           }
           style={{
@@ -129,7 +135,7 @@ export default function Board({ puzzle, marks, onCell, revealed }: Props) {
         {cells}
       </div>
       {denied && (
-        <p className="notice" role="status">
+        <p key={denied.n} className="notice" role="status">
           🚫 {denied.text}
         </p>
       )}

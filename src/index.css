@@ -303,7 +303,28 @@ input {
   animation: cell-nope 0.3s ease-out;
   z-index: 3;
 }
+/* ponytail: 이름만 다른 쌍둥이 키프레임. 같은 칸을 연속으로 누를 때
+   animation-name 이 바뀌어야 흔들림이 처음부터 다시 돈다.
+   버튼을 재마운트하면 키보드 포커스를 잃으므로 이 방법을 쓴다. */
+.cell.denied.alt {
+  animation-name: cell-nope-alt;
+}
 @keyframes cell-nope {
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+  25% {
+    transform: translateX(-4px);
+  }
+  50% {
+    transform: translateX(4px);
+  }
+  75% {
+    transform: translateX(-2px);
+  }
+}
+@keyframes cell-nope-alt {
   0%,
   100% {
     transform: translateX(0);
