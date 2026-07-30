@@ -1,6 +1,6 @@
 # 005 — 피드백 모달과 거절 토스트에 등장·퇴장 모션을 넣는다
 
-- **Status**: TODO
+- **Status**: DONE
 - **Commit**: a1516a1
 - **Severity**: MEDIUM
 - **Category**: 8 누락된 기회 / 3 물리성 / 4 상호중단성

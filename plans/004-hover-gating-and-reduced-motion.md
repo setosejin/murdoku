@@ -1,6 +1,6 @@
 # 004 — 터치에서 hover 가 눌러붙는 문제와 과잉 reduced-motion 을 고친다
 
-- **Status**: TODO
+- **Status**: DONE
 - **Commit**: a1516a1
 - **Severity**: MEDIUM
 - **Category**: 6 접근성

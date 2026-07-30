@@ -9,8 +9,33 @@
 | [001](001-motion-tokens-and-press-feedback.md) | 모션 토큰을 만들고 누름 피드백을 하나로 합친다 | LOW | 7 응집 / 2 이징 | `index.css` | **DONE** `1a2b43b` |
 | [002](002-verdict-retrigger.md) | 같은 오답을 다시 지목해도 판정이 다시 뜨게 한다 | **HIGH** | 4 상호중단성 | `App.tsx` | **DONE** `3088fde` |
 | [003](003-denied-cell-retrigger.md) | 같은 가구 칸을 다시 눌러도 거절 피드백이 다시 재생되게 한다 | **HIGH** | 4 상호중단성 | `Board.tsx`, `index.css` | **DONE** `771cf73` |
-| [004](004-hover-gating-and-reduced-motion.md) | 터치에서 hover 가 눌러붙는 문제와 과잉 reduced-motion 을 고친다 | MEDIUM | 6 접근성 | `index.css` | TODO |
-| [005](005-modal-and-toast-transitions.md) | 피드백 모달과 거절 토스트에 등장·퇴장 모션을 넣는다 | MEDIUM | 8 누락 / 3 물리성 | `index.css` | TODO |
+| [004](004-hover-gating-and-reduced-motion.md) | 터치에서 hover 가 눌러붙는 문제와 과잉 reduced-motion 을 고친다 | MEDIUM | 6 접근성 | `index.css` | **DONE** `4d5708c` |
+| [005](005-modal-and-toast-transitions.md) | 피드백 모달과 거절 토스트에 등장·퇴장 모션을 넣는다 | MEDIUM | 8 누락 / 3 물리성 | `index.css` | **DONE** `8b32988` |
+
+**계획 5건 모두 완료.** 감사에서 나온 발견 8건이 전부 반영됐다.
+
+## 004·005 실행 결과 (완료)
+
+두 계획은 같은 `@media (prefers-reduced-motion: reduce)` 블록을 만지므로 **순차로** 실행했다(병렬 금지 사유가 그것). worktree 격리는 쓰지 않았다 — 동시 편집이 없으면 필요 없다.
+
+검증은 lint·build·test(19개) 통과에 더해 Playwright 로 실측했다:
+
+| 확인 | 수정 전 | 수정 후 |
+|---|---|---|
+| 모달 열기 → 전환 이벤트 | **0건** | `opacity` + `transform` + `::backdrop background-color` |
+| 열기 40ms 시점 중간값 | — | `opacity 0.588`, `scale 0.9835` (실제로 보간 중) |
+| 모달 닫기 → 전환 이벤트 | 즉시 사라짐 | `display` · `overlay` 포함 5종 → `allow-discrete` 작동 |
+| 닫기 40ms 시점 | — | `open=false` 인데 `opacity 0.30` 으로 아직 화면에 (퇴장 재생 중) |
+| 데스크톱 hover 시 칩 | `translateY(-1px)` | **그대로** `matrix(1,0,0,1,0,-1)` |
+| `.chip:hover` 규칙 위치 | 전역 | `@media (hover: hover) and (pointer: fine)` **안에만** |
+| reduced-motion `*` 규칙의 선언 | `animation-duration` + **`transition-duration`** | `animation-duration` + `animation-iteration-count` — **transition 을 더 이상 죽이지 않음** |
+| reduced-motion `.notice/.verdict` | (없음) | `fade-in var(--dur-fast) var(--ease-out)` |
+| 파싱된 `@starting-style` 블록 | 0개 | **3개** (모달·backdrop·토스트) |
+| 001–003 회귀 (칸 3연타/토스트/재지목 2연타) | — | **3 / 3 / 2 회 전부 재생** |
+
+CSSOM 으로 규칙을 직접 읽어 검증했다 — CSS 문법 오류는 빌드를 통과해도 조용히 규칙을 통째로 날리기 때문에, 파싱된 미디어 쿼리·선택자·선언을 눈으로 확인하는 게 유일하게 확실한 방법이다.
+
+**reduced-motion 의 실제 렌더링은 실측하지 못했다.** 쓸 수 있는 브라우저 도구에 `prefers-reduced-motion` 에뮬레이션이 없었다. 대신 규칙이 올바르게 파싱됐고 의도한 선언만 남았음을 CSSOM 으로 확인했다. 눈으로 한 번 볼 거면 DevTools → Rendering → `Emulate CSS media feature prefers-reduced-motion` 으로 확인하면 된다.
 
 ## 001·002·003 실행 결과 (완료)
 
@@ -28,25 +53,13 @@
 | 빈 칸 메모 찍기 (회귀 확인) | 정상 | **정상**, `denied` 클래스 누출 없음 |
 
 
-## 남은 실행 순서
+## 남은 작업
 
-001·002·003 은 완료됐다. 남은 건 **004 → 005** 순서다.
+없다. 계획 5건 모두 실행·검증·커밋됐다.
 
-001 이 이미 적용됐으므로 004 와 005 의 "토큰 사용 여부 확인" 단계는 **토큰이 있는 경로**를 탄다 — `--ease-out` / `--dur-fast` 를 쓰면 된다.
+다음에 손댈 거리는 아래 "계획으로 만들지 않은 것" 의 **누락된 기회 2건**이다. 이건 교정이 아니라 추가라서 감사에서 의도적으로 계획을 쓰지 않았다. 필요해지면 `improve-animations plan <설명>` 으로 개별 작성하면 된다.
 
-004 와 005 는 둘 다 `src/index.css` 의 `@media (prefers-reduced-motion: reduce)` 블록을 건드린다. **동시에(다른 워크트리에서 병렬로) 실행하지 말 것** — 충돌한다. 004 → 005 순서를 권한다.
-
-> 004·005 의 계획 본문에 적힌 행 번호는 커밋 `a1516a1` 기준이다. 001·003 이 `src/index.css` 에 34줄을 추가했으므로 **행 번호가 아래로 밀렸다.** 실행 시 행 번호가 아니라 **인용된 코드 내용**으로 위치를 찾아라. 계획이 인용한 코드 자체는 그대로 유효하다.
-
-## 의존성 요약
-
-| 계획 | 선행 | 파일 충돌 |
-|---|---|---|
-| ~~001~~ | ~~없음~~ | 완료 |
-| ~~002~~ | ~~없음~~ | 완료 |
-| ~~003~~ | ~~없음~~ | 완료 |
-| 004 | 001 (완료됨) | `index.css` reduced-motion 블록 — 005 와 겹침 |
-| 005 | 001 (완료됨) | `index.css` reduced-motion 블록 — 004 와 겹침 |
+> 004·005 의 계획 본문에 적힌 행 번호는 커밋 `a1516a1` 기준이라 실행 시점에는 이미 밀려 있었다. 실행할 때 인용된 **코드 내용**으로 위치를 찾게 해서 문제없이 적용됐다. 앞으로 이 문서들을 다시 읽을 때도 행 번호는 신뢰하지 말 것.
 
 ## 계획으로 만들지 않은 것
 
