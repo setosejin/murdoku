@@ -46,8 +46,8 @@ export default function FeedbackDialog({ seed, n }: Props) {
         <form onSubmit={submit}>
           <h2 id="fb-title">피드백 보내기</h2>
           <p className="fb-note">
-            GitHub 이슈 작성 화면이 새 탭에서 열려. 마지막 <b>Create</b> 버튼은 거기서 눌러야 등록돼
-            (GitHub 로그인 필요).
+            GitHub 이슈 작성 화면이 새 탭에서 열려. 마지막 <b>Create</b> 버튼은 거기서 눌러야
+            등록돼. GitHub 로그인이 필요해.
           </p>
 
           <label>
@@ -80,7 +80,7 @@ export default function FeedbackDialog({ seed, n }: Props) {
             />
           </label>
 
-          <p className="fb-note">시드·난이도·버전은 자동으로 붙는다.</p>
+          <p className="fb-note">시드·난이도·버전은 자동으로 붙어.</p>
 
           <div className="fb-actions">
             <button type="button" className="chip" onClick={() => ref.current?.close()}>
