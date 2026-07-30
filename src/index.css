@@ -353,7 +353,7 @@ input {
 
 .board {
   display: grid;
-  grid-template-columns: repeat(var(--n), 1fr);
+  /* grid-template-columns 는 Board.tsx 가 인라인으로 넣는다 (Safari 가 var() 를 캐싱한다) */
   /* 위계: 외벽 5px > 방 경계 3px > 칸선 1px */
   border: 5px solid var(--wall);
   border-radius: 4px;

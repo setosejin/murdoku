@@ -70,6 +70,20 @@ buildRooms(BSP) → placeFurniture → placeWallItems → indexScene
 - 2칸 가구는 `cells[0]` 에서 한 번만 그리고 `width/height: 200%` 로 옆 칸을 덮는다.
 - 창문·문은 절대 위치 부착물이라 칸을 막지 않는다. `~앞` 은 그 칸을 뜻한다.
 - 가구 타일에는 이모지와 한국어 라벨을 **함께** 그린다. 증언이 가구 이름을 부르기 때문에 이름 없이는 매칭이 안 된다.
+- **격자 열 수는 CSS 변수로 넘기지 않는다.** `Board.tsx` 가 인라인 `grid-template-columns: repeat(n, minmax(0, 1fr))` 로 직접 박는다. `repeat(var(--n), 1fr)` 로 되돌리면 Safari 에서 보드가 잘린다(아래 참조).
+
+### Safari 함정
+
+**Chromium 에서 멀쩡한 레이아웃 버그는 대부분 Safari 전용이다. Chromium 으로 "재현 안 됨"을 확인했다고 없는 문제로 넘기지 말 것.**
+
+실제로 겪은 것 — `repeat(var(--n), 1fr)`: WebKit 은 `repeat()` 안의 `var()` 를 computed-value 시점에 한 번 펼쳐 캐싱한다([webkit#202259](https://bugs.webkit.org/show_bug.cgi?id=202259)). 난이도를 바꿨다 되돌아오면 트랙 *개수*만 갱신되고 *폭*은 옛 값이라 6×6 이 4열 폭으로 깔리고 `.board { overflow: hidden }` 이 넘친 열을 잘라 4×6 처럼 보였다. 첫 진입에는 멀쩡하고 왕복해야 터져서 "종종" 나는 것처럼 보인다. 값이 바뀌는 곳에 `var()` 를 `repeat()`·`calc()` 안쪽으로 넣지 말고 인라인 스타일로 계산해서 넘길 것.
+
+Safari 를 실측하는 법 (이 저장소에서 실제로 통한 유일한 경로):
+
+- Playwright MCP·`safaridriver` 는 이 환경에서 막힌다. `osascript -l JavaScript` 로 `WKWebView` 를 직접 띄우면 된다 (시스템 WebKit = 진짜 Safari 엔진).
+- **WKWebView 를 `NSWindow` 에 넣어야 한다.** 화면 밖 webview 는 `setTimeout` 이 아예 안 돌아서 어떤 측정 스크립트도 조용히 멈춘다.
+- 결과는 `document.title` 에 JSON 을 넣고 JXA 쪽에서 런루프를 돌리며 `wv.title` 을 폴링해 꺼낸다. `evaluateJavaScript` 는 JXA 블록 브리지에서 터진다.
+- 잘림 판정은 `scrollWidth > clientWidth` 로 본다. `overflow: hidden` 때문에 눈으로는 그냥 열이 적어 보인다.
 
 ## 규약
 
