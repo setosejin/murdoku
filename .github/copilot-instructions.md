@@ -39,9 +39,55 @@ git push --follow-tags
 강제는 두 겹이다.
 
 - `.githooks/pre-push` — `main` 으로 가는 푸시에서 `origin/main` 대비 버전이 올랐는지, `CHANGELOG.md` 에 그 버전 항목이 있는지 본다. `npm install` 의 `prepare` 가 `core.hooksPath` 를 여기로 맞춘다. `--no-verify` 로 넘길 수 있다.
-- `game.test.ts` 의 "CHANGELOG 에 현재 버전 항목이 있다" — 훅을 넘겨도 CI 의 `npm test` 가 막는다.
+- `render.test.ts` 의 "CHANGELOG 에 현재 버전 항목이 있다" — 훅을 넘겨도 CI 의 `npm test` 가 막는다.
 
 `CHANGELOG.md` 는 문서이자 화면이다. `ChangelogDialog.tsx` 가 `?raw` 로 읽어 푸터 버전 버튼을 누르면 모달로 그린다. 렌더러는 `##`/`###`/`-`/`**굵게**`/`` `코드` ``/`[링크](url)` 만 안다 — 표나 중첩 목록을 쓰면 조용히 문단으로 떨어진다.
+
+## 커밋·푸시·PR 은 저장소 주인 계정으로
+
+**이 저장소에 남기는 커밋·푸시·PR 은 전부 저장소 주인 계정이어야 한다.**
+
+에이전트 환경이 주입하는 GitHub 자격증명은 **주인 계정이 아닐 수 있다.** 그러면 이렇게 터진다.
+
+| 하려던 것 | 증상 |
+|---|---|
+| `git push` | 403 `Permission to ... denied` |
+| `create_pull_request` 툴 | 403 `you cannot access this content` |
+| `git commit` | author 가 엉뚱한 이름·주소로 조용히 들어간다 |
+
+**커밋 신원**은 `.git/config`(워크트리 공유)에 이미 박혀 있다. 지우지 말 것. 그래도 잘못 들어갔으면 되돌린다:
+
+```bash
+git --no-pager log origin/main..HEAD --format='%h %an <%ae>'   # 먼저 확인
+git rebase --exec 'git commit --amend --no-edit --reset-author' origin/main
+# 태그가 걸려 있으면 git tag -d 후 git tag -a 로 다시 건다
+```
+
+**푸시·PR 은 주입된 토큰을 벗겨야 한다.** 그래야 키체인에 로그인된 주인 계정이 활성으로 잡힌다.
+
+```bash
+env -u GH_TOKEN -u GITHUB_TOKEN gh auth status    # 활성 계정이 주인인지 먼저 확인
+env -u GH_TOKEN -u GITHUB_TOKEN gh pr create ...
+env -u GH_TOKEN -u GITHUB_TOKEN gh pr merge <n> --merge
+```
+
+`git push` 는 환경이 명령줄로 주입한 credential 헬퍼를 그 명령에서만 비운다:
+
+```bash
+env -u GH_TOKEN -u GITHUB_TOKEN \
+git -c credential.https://github.com.helper= \
+    -c credential.https://github.com.helper='!gh auth git-credential' \
+    -c credential.interactive=auto \
+    push -u origin <branch> --follow-tags
+```
+
+**`create_pull_request` 툴은 이 저장소에서 못 쓴다.** 주입된 토큰이 고정이라 우회가 없다. `gh pr create` 를 쓸 것. `gh auth status` 가 주인 계정을 아예 모른다고 하면 사람이 `gh auth login` 을 해야 하는 시점이다 — **포크를 떠서 우회하지 말 것.** PR 작성자가 엉뚱한 계정이 된다.
+
+**브랜치 이름에도 계정명이 새어 나간다.** 워크트리가 자동으로 짓는 이름을 그대로 쓰지 말고 `rename_branch` 로 내용에 맞는 이름을 붙일 것 — 브랜치명은 PR 메타데이터에 영구히 남고 저장소는 public 이다.
+
+머지는 **squash 가 아니라 머지 커밋**이다. 릴리스 태그(`v0.2.0` 등)가 브랜치의 버전 커밋을 가리키는데, squash·rebase 는 그 커밋을 다시 써서 태그를 `main` 히스토리 밖으로 떨어뜨린다.
+
+> 어느 계정이 주입되는지, 왜 권한이 없는지 같은 **구체적인 신원 정보는 저장소에 두지 않는다.** 로컬 메모는 `.github/copilot-instructions.local.md` 에 있고 gitignore 된다. 그 내용을 커밋·PR 본문·브랜치명·커밋 메시지 어디에도 옮기지 말 것.
 
 ## 구조
 
