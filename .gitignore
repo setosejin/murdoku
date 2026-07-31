@@ -15,6 +15,10 @@ dist-ssr
 # wrangler dev 의 로컬 KV·상태
 .wrangler
 
+# 로컬 전용 파일 — 저장소에 두면 안 되는 신원·계정 메모, 개인 설정
+# (`.github/copilot-instructions.local.md`, `.impeccable/config.local.json` 등)
+*.local.*
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
