@@ -1,0 +1,138 @@
+/* ---- 바텀시트 ---- */
+.sheet {
+  /* dialog 는 inset:0 + margin:auto 로 가운데 온다. 아래쪽 margin 만 0 으로 눌러 바닥에 붙인다 */
+  margin: auto auto 0;
+  width: 100%;
+  max-width: 560px;
+  max-height: 88dvh;
+  border: 3px solid var(--wall);
+  border-bottom: 0;
+  /* 안쪽 패널 18 + 패딩 12 = 동심 반경 30 */
+  border-radius: 30px 30px 0 0;
+  background: #fffdf7;
+  color: var(--ink);
+  padding: 0;
+  /* 열렸을 때의 값. 닫히면 아래에서 display:none 으로 되돌린다 —
+     `display` 를 여기서만 정하면 브라우저 기본(dialog:not([open]){display:none}) 을
+     덮어써서 닫힌 시트 4개가 그대로 화면에 쌓인다 */
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  box-shadow: 0 -6px 24px rgb(35 32 28 / 0.18);
+  translate: 0 0;
+  opacity: 1;
+  transition:
+    translate 220ms var(--ease-out),
+    opacity 180ms var(--ease-out),
+    overlay 220ms allow-discrete,
+    display 220ms allow-discrete;
+}
+/* 닫힌 상태 = 열기 전의 시작값이자 닫힐 때의 목표값.
+   display 는 allow-discrete 라 퇴장 모션이 끝난 뒤에야 none 으로 넘어간다 */
+.sheet:not([open]) {
+  display: none;
+  translate: 0 100%;
+  opacity: 0;
+}
+@starting-style {
+  .sheet[open] {
+    translate: 0 100%;
+    opacity: 0;
+  }
+}
+.sheet::backdrop {
+  background: rgb(35 32 28 / 0);
+  transition:
+    background 220ms var(--ease-out),
+    overlay 220ms allow-discrete,
+    display 220ms allow-discrete;
+}
+.sheet[open]::backdrop {
+  background: rgb(35 32 28 / 0.45);
+}
+@starting-style {
+  .sheet[open]::backdrop {
+    background: rgb(35 32 28 / 0);
+  }
+}
+
+.sheet-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px 10px 16px;
+  border-bottom: 3px solid var(--wall);
+}
+.sheet-head h2 {
+  margin: 0;
+  flex: 1;
+  min-width: 0;
+  font-size: 17px;
+  text-wrap: balance;
+}
+.sheet-x {
+  flex: none;
+  width: 40px;
+  height: 40px;
+  border: 2px solid var(--wall);
+  border-radius: 50%;
+  background: var(--tile);
+  cursor: pointer;
+  font-size: 15px;
+  line-height: 1;
+}
+.sheet-x:focus-visible {
+  outline: 3px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.sheet-body {
+  padding: 12px;
+  padding-bottom: calc(12px + env(safe-area-inset-bottom, 0px));
+  overflow-y: auto;
+  /* 시트 안에서 끝까지 스크롤해도 뒤 페이지가 따라 움직이지 않게 */
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+/* 열릴 때 포커스를 받는 컨테이너다. 시트 자체가 이미 눈에 띄므로 링은 그리지 않는다 */
+.sheet-body:focus {
+  outline: none;
+}
+/* 시트 본문의 카드 그리드는 폭이 좁으니 2열까지만 */
+.sheet-body .cards {
+  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+  margin-top: 4px;
+}
+.sheet-body .brief {
+  margin: 0;
+}
+/* 패널 껍데기(제목·테두리) 없이 알맹이만 들어오는 자리 */
+.sheet-body .bare {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.mwide {
+  width: 100%;
+}
+.mmenu-foot {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  justify-content: space-between;
+  color: var(--muted);
+  font-size: 13px;
+}
+.mmenu-copy {
+  margin: 0;
+  text-align: center;
+  color: var(--muted);
+  font-size: 12px;
+}
+.mmenu-copy .link {
+  min-height: 0;
+  font-size: inherit;
+}

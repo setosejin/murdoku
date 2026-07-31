@@ -78,6 +78,14 @@ describe('Board 렌더링', () => {
 describe('App 렌더링', () => {
   const html = renderToStaticMarkup(createElement(App));
 
+  // matchMedia 가 없는 환경(SSR·테스트)에서는 데스크톱 셸이 기본이다.
+  // 모바일 셸이 기본이 되면 아래 데스크톱 불변식들이 조용히 무의미해진다
+  it('기본은 데스크톱 셸이다', () => {
+    expect(html).toContain('class="topbar"');
+    expect(html).toContain('class="side"');
+    expect(html).not.toContain('class="mshell"');
+  });
+
   it('범례가 이번 사건의 가구를 빠짐없이 설명한다', () => {
     const furniture = (html.match(/fur-label">/g) ?? []).length;
     expect(furniture).toBeGreaterThan(0);

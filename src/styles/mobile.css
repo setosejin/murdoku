@@ -1,0 +1,299 @@
+/* ---- 모바일 셸 ----
+   한 화면 안에 다 들어오게 한다. 붙박이는 셋뿐 — 보드, 증언 목록(= 메모 브러시), 하단 액션바.
+   나머지는 전부 바텀시트로 들어가고, 스크롤은 시트 안에서만 생긴다.
+
+   아래 미디어 쿼리는 `src/hooks/useMediaQuery.ts` 의 MOBILE_QUERY 와 글자까지 같아야 한다.
+   어긋나면 마크업은 모바일인데 스타일은 데스크톱이 된다. 테스트가 일치를 검사한다. */
+@media (max-width: 760px), (max-height: 540px) and (pointer: coarse) {
+  /* 페이지가 아니라 앱 화면이다 — 바깥 스크롤과 고무줄 튕김을 없앤다 */
+  html,
+  body,
+  #root {
+    height: 100%;
+    overflow: hidden;
+    overscroll-behavior-y: none;
+  }
+
+  .mshell {
+    height: 100vh; /* dvh 를 모르는 브라우저용 */
+    height: 100dvh;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    overflow: hidden;
+    padding-top: max(8px, env(safe-area-inset-top, 0px));
+    padding-right: max(10px, env(safe-area-inset-right, 0px));
+    padding-bottom: max(8px, env(safe-area-inset-bottom, 0px));
+    padding-left: max(10px, env(safe-area-inset-left, 0px));
+  }
+
+  /* ---- 상단바 ---- */
+  .mtop {
+    flex: none;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .mtitle {
+    flex: 1;
+    min-width: 0;
+    min-height: 44px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    border: 2px solid var(--wall);
+    border-radius: 999px;
+    background: var(--tile);
+    color: inherit;
+    font: inherit;
+    text-align: left;
+    padding: 4px 12px 4px 6px;
+    cursor: pointer;
+  }
+  .mtitle .case-no {
+    flex: none;
+  }
+  .mtitle b {
+    flex: 1;
+    min-width: 0;
+    font-size: 14px;
+    /* 제목이 길어도 상단바는 한 줄을 넘지 않는다 — 전체는 사건 시트에서 본다 */
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .mtitle-more {
+    flex: none;
+    color: var(--muted);
+    font-size: 13px;
+    line-height: 1;
+  }
+  .micon {
+    flex: none;
+    width: 44px;
+    height: 44px;
+    border: 2px solid var(--wall);
+    border-radius: 12px;
+    background: var(--tile);
+    color: inherit;
+    font-size: 17px;
+    line-height: 1;
+    cursor: pointer;
+  }
+
+  /* ---- 보드: 폭과 높이 중 작은 쪽에 맞춘 정사각 ---- */
+  .mplay {
+    flex: 1 1 auto;
+    /* 증언 목록이 먼저 줄어들고 보드는 여기까지만 작아진다 */
+    min-height: 240px;
+    display: grid;
+    place-items: center;
+    container-type: size;
+  }
+  .mplay .board-wrap {
+    width: min(100cqw, 100cqh);
+    height: min(100cqw, 100cqh);
+  }
+  .mplay .board {
+    width: 100%;
+    height: 100%;
+    max-width: none;
+    margin: 0;
+    /* 보드 높이가 확정이라 fr 이 균등하게 갈린다. 칸의 aspect-ratio 는 여기서 무시된다 */
+    grid-auto-rows: minmax(0, 1fr);
+  }
+  /* Safari 15 이하: 컨테이너 쿼리가 없으면 예전처럼 폭에만 맞추고 넘치면 스크롤한다 */
+  @supports not (container-type: size) {
+    .mplay {
+      display: block;
+      overflow: auto;
+    }
+    .mplay .board-wrap {
+      width: 100%;
+      height: auto;
+    }
+    .mplay .board {
+      height: auto;
+      grid-auto-rows: auto;
+    }
+  }
+
+  /* 토스트가 하단 액션바에 가리지 않게 띄운다 (액션바 48 + 셸 패딩 8 + 여유 20) */
+  .notice {
+    bottom: calc(env(safe-area-inset-bottom, 0px) + 76px);
+  }
+
+  /* ---- 증언 목록 = 메모 브러시 ---- */
+  .clue-list {
+    flex: 0 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+  .clue-row {
+    width: 100%;
+    min-height: 40px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    text-align: left;
+    border: 2px solid var(--tile-line);
+    border-radius: 10px;
+    background: var(--tile);
+    color: inherit;
+    font: inherit;
+    padding: 4px 10px;
+    cursor: pointer;
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+    transition:
+      border-color var(--dur-fast) var(--ease-out),
+      background-color var(--dur-fast) var(--ease-out);
+  }
+  /* 테두리를 굵히는 만큼 패딩에서 빼서 선택해도 줄이 밀리지 않는다 */
+  .clue-row.on {
+    border-width: 3px;
+    border-color: var(--wall);
+    background: #fff;
+    padding: 3px 9px;
+  }
+  .clue-row:focus-visible {
+    outline: 3px solid var(--accent);
+    outline-offset: 2px;
+  }
+  .clue-badge {
+    flex: none;
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    border: 2px solid var(--wall);
+    display: grid;
+    place-items: center;
+    font-size: 12px;
+    font-weight: 700;
+  }
+  .clue-row b {
+    flex: none;
+    font-size: 13px;
+  }
+  .clue-text {
+    flex: 1;
+    min-width: 0;
+    font-size: 13px;
+    color: var(--muted);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .clue-row.on .clue-text {
+    color: var(--ink);
+  }
+
+  /* ---- 하단 액션바 ---- */
+  .mbar {
+    flex: none;
+    display: flex;
+    gap: 8px;
+  }
+  .mbar-btn {
+    flex: 1;
+    min-height: 48px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    border: 3px solid var(--wall);
+    border-radius: 14px;
+    background: var(--tile);
+    color: inherit;
+    font: inherit;
+    font-weight: 700;
+    font-size: 14px;
+    cursor: pointer;
+    touch-action: manipulation;
+    transition:
+      transform var(--dur-press) var(--ease-out),
+      background var(--dur-fast) var(--ease-out);
+  }
+  .mbar-btn:active {
+    transform: scale(0.97);
+  }
+  .mbar-btn.on {
+    background: var(--wall);
+    color: var(--paper);
+  }
+  .mbar-btn.primary {
+    flex: 1.5;
+    background: var(--accent);
+    border-color: var(--accent);
+    color: #fff;
+  }
+  .mbar-btn:focus-visible {
+    outline: 3px solid var(--accent);
+    outline-offset: 2px;
+  }
+  /* 빨강 위의 빨강 링은 안 보인다 */
+  .mbar-btn.primary:focus-visible {
+    outline-color: var(--wall);
+  }
+
+  /* 낮은 화면(iPhone SE 등)에서는 붙박이를 눌러 보드 자리를 지킨다 */
+  @media (max-height: 700px) {
+    .mshell {
+      gap: 6px;
+    }
+    .clue-row {
+      min-height: 34px;
+    }
+    .clue-list {
+      gap: 3px;
+    }
+    .mtitle,
+    .micon {
+      min-height: 40px;
+      height: 40px;
+    }
+    .mbar-btn {
+      min-height: 44px;
+    }
+  }
+}
+
+/* ---- 가로로 누운 폰: 보드 왼쪽, 나머지 오른쪽 ----
+   세로로 쌓으면 보드에 100px 밖에 안 남는다. 조건은 MOBILE_QUERY 의 둘째 항 + 가로. */
+@media (orientation: landscape) and (max-height: 540px) and (pointer: coarse) {
+  .mshell {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(190px, 300px);
+    grid-template-rows: auto minmax(0, 1fr) auto;
+    grid-template-areas:
+      'board top'
+      'board clues'
+      'board bar';
+    gap: 8px;
+  }
+  .mtop {
+    grid-area: top;
+  }
+  .mplay {
+    grid-area: board;
+    min-height: 0;
+    min-width: 0;
+  }
+  .clue-list {
+    grid-area: clues;
+  }
+  .mbar {
+    grid-area: bar;
+  }
+  /* 가로에서는 시트가 화면을 거의 다 덮으므로 위쪽 여백을 줄인다 */
+  .sheet {
+    max-height: 92dvh;
+  }
+}
