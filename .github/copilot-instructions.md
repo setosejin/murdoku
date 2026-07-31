@@ -52,11 +52,27 @@ git push --follow-tags
 | `src/game/solve.ts` | 백트래킹 솔버 + 유일해 판정 |
 | `src/game/generate.ts` | BSP 평면도 → 가구 → 배치 → 증언 → 유일해 검증 재시도 루프 |
 | `src/data/content.ts` | 이름·가구·방 이름·사건 제목 풀 |
+| `src/hooks/useGame.ts` | 게임 상태 전부. 두 셸이 나눠 쓴다 |
+| `src/hooks/useMediaQuery.ts` | `MOBILE_QUERY` + 미디어 쿼리 구독 (셸 선택) |
+| `src/App.tsx` | 데스크톱 셸 + 모바일/데스크톱 갈림길 |
+| `src/components/MobileShell.tsx` | 모바일 셸 — 한 화면 레이아웃 + 바텀시트 4종 |
+| `src/components/ClueList.tsx` | 증언 목록 겸 메모 브러시 (모바일) |
+| `src/components/Sheet.tsx` | 바텀시트 `<dialog>` 래퍼 |
 | `src/components/Board.tsx` | 격자·방 경계·가구·메모 렌더 |
+| `src/components/CaseCards.tsx` | 용의자·피해자 카드 그리드 (두 셸 공용) |
+| `src/components/GamePanels.tsx` | 기본 정보·범례·메모·지목·시드 패널 (두 셸 공용) |
 | `src/components/ChangelogDialog.tsx` | `CHANGELOG.md` 를 읽어 모달로 그린다 (마크다운 부분집합 렌더러) |
 | `src/components/HistoryPanel.tsx` | 기록 목록 + 계정(로그인/가입) + 복구 키 패널 |
 | `src/game/auth.ts` | 계정 — 아이디/`dk` 검증(워커와 공용) + 브라우저 PBKDF2 |
 | `src/index.css` | `@import` 진입점. 실제 규칙은 `src/styles/*.css` (플레인 CSS, 프레임워크 없음) |
+
+### 셸이 둘이다
+
+`App.tsx` 가 `useMediaQuery(MOBILE_QUERY)` 로 데스크톱 셸과 `MobileShell` 중 하나를 고른다. **상태(`useGame`)와 패널 컴포넌트는 둘이 함께 쓴다** — 마크업을 복제하면 두 화면이 갈라진다. 상태를 셸 안으로 내리면 창 크기를 바꿀 때 메모가 날아간다.
+
+모바일은 **스크롤이 없다.** 붙박이는 상단바·보드·증언 목록(= 메모 브러시)·하단 액션바 넷뿐이고 나머지는 전부 시트로 들어간다. 새 UI 를 모바일 메인 화면에 붙이려면 그만큼 보드가 작아진다는 뜻이다 — 시트를 먼저 고려할 것.
+
+`src/hooks/useMediaQuery.ts` 의 `MOBILE_QUERY` 와 `src/styles/mobile.css` 의 미디어 쿼리는 **글자까지 같아야 한다**. 어긋나면 마크업은 모바일인데 스타일은 데스크톱이 된다. `mobile.test.ts` 가 일치를 검사한다.
 
 ### 생성 파이프라인
 
@@ -77,7 +93,7 @@ buildRooms(BSP) → placeFurniture → placeWallItems → indexScene
 1. `clues.ts` `matchingCells` — 증언 판정의 **유일한 출처**. 솔버·생성기·테스트가 전부 이 함수를 부른다. 판정 로직을 다른 데 복제하지 말 것.
 2. `solve.ts` — 배치 제약(행/열 비트마스크, 방마다 용의자 1명, 피해자 방에 용의자 정확히 1명). 여기 없는 규칙은 유일해 판정에 반영되지 않는다.
 3. `generate.ts` `randomPlacement` — 같은 제약을 만족하는 정답 배치를 만든다. 솔버에만 넣으면 해가 0개가 되어 생성이 실패한다.
-4. `App.tsx` 의 `기본 정보` 패널 + `README.md` — 플레이어에게 보여주는 규칙.
+4. `GamePanels.tsx` 의 `RulesPanel` + `README.md` — 플레이어에게 보여주는 규칙.
 
 ### 기하학적 함정
 
@@ -89,7 +105,16 @@ buildRooms(BSP) → placeFurniture → placeWallItems → indexScene
 - 2칸 가구는 `cells[0]` 에서 한 번만 그리고 `width/height: 200%` 로 옆 칸을 덮는다.
 - 창문·문은 절대 위치 부착물이라 칸을 막지 않는다. `~앞` 은 그 칸을 뜻한다.
 - 가구 타일에는 이모지와 한국어 라벨을 **함께** 그린다. 증언이 가구 이름을 부르기 때문에 이름 없이는 매칭이 안 된다.
-- **격자 열 수는 CSS 변수로 넘기지 않는다.** `Board.tsx` 가 인라인 `grid-template-columns: repeat(n, minmax(0, 1fr))` 로 직접 박는다. `repeat(var(--n), 1fr)` 로 되돌리면 Safari 에서 보드가 잘린다(아래 참조).
+- **격자 열 수는 CSS 변수로 넘기지 않는다.** `Board.tsx` 가 인라인 `grid-template-columns: repeat(n, minmax(0, 1fr))` 로 직접 박는다. `repeat(var(--n), 1fr)` 로 되돌리면 Safari 에서 보드가 잘린다(아래 참조). `repo.test.ts` 가 CSS 전체에서 `repeat(var(` 를 금지한다.
+- **보드 안의 글자·아이콘 크기는 `vw` 가 아니라 `cqw` 로 잰다.** `.board { container-type: inline-size }` 가 기준이다. 모바일에서 보드는 **높이**에 맞춰 줄어드는데, `vw` 기준이면 글리프만 안 줄어 칸을 넘친다.
+- 모바일에서 보드는 `min(100cqw, 100cqh)` 로 남는 공간의 짧은 변에 맞춘다. 행은 `grid-auto-rows: minmax(0, 1fr)` — 데스크톱은 그대로 `.cell { aspect-ratio: 1 }` 이 정한다.
+
+### 바텀시트
+
+`Sheet.tsx` 는 네이티브 `<dialog>` 다. 두 가지가 쉽게 깨진다.
+
+- **`.sheet` 에 `display` 를 무조건 주면 안 된다.** 브라우저 기본 `dialog:not([open]) { display: none }` 을 덮어써서 닫힌 시트 4개가 화면에 그대로 쌓인다(실제로 겪었다 — 페이지가 1494px 로 늘어났다). `display` 는 `:not([open])` 에서 `none` 으로 되돌리고, `transition` 에 `display ... allow-discrete` 를 넣어 퇴장 모션을 살린다.
+- 열 때 포커스를 `.sheet-body` 로 직접 옮긴다. 그냥 두면 닫기 버튼이 첫 포커스라 열자마자 빨간 `focus-visible` 링이 뜬다. React 의 `autoFocus` 는 마운트 시점에 `focus()` 를 부르는 거라 여기선 안 먹는다.
 
 ### Safari 함정
 
@@ -97,19 +122,27 @@ buildRooms(BSP) → placeFurniture → placeWallItems → indexScene
 
 실제로 겪은 것 — `repeat(var(--n), 1fr)`: WebKit 은 `repeat()` 안의 `var()` 를 computed-value 시점에 한 번 펼쳐 캐싱한다([webkit#202259](https://bugs.webkit.org/show_bug.cgi?id=202259)). 난이도를 바꿨다 되돌아오면 트랙 *개수*만 갱신되고 *폭*은 옛 값이라 6×6 이 4열 폭으로 깔리고 `.board { overflow: hidden }` 이 넘친 열을 잘라 4×6 처럼 보였다. 첫 진입에는 멀쩡하고 왕복해야 터져서 "종종" 나는 것처럼 보인다. 값이 바뀌는 곳에 `var()` 를 `repeat()`·`calc()` 안쪽으로 넣지 말고 인라인 스타일로 계산해서 넘길 것.
 
-Safari 를 실측하는 법 (이 저장소에서 실제로 통한 유일한 경로):
+Safari 를 실측하는 법 — **환경마다 되는 경로가 다르다. 아래를 위에서부터 시도할 것.**
 
-- Playwright MCP·`safaridriver` 는 이 환경에서 막힌다. `osascript -l JavaScript` 로 `WKWebView` 를 직접 띄우면 된다 (시스템 WebKit = 진짜 Safari 엔진).
-- **WKWebView 를 `NSWindow` 에 넣어야 한다.** 화면 밖 webview 는 `setTimeout` 이 아예 안 돌아서 어떤 측정 스크립트도 조용히 멈춘다.
-- 결과는 `document.title` 에 JSON 을 넣고 JXA 쪽에서 런루프를 돌리며 `wv.title` 을 폴링해 꺼낸다. `evaluateJavaScript` 는 JXA 블록 브리지에서 터진다.
-- 잘림 판정은 `scrollWidth > clientWidth` 로 본다. `overflow: hidden` 때문에 눈으로는 그냥 열이 적어 보인다.
+1. **Playwright 의 `webkit`** (2026-07 기준 이 저장소에서 실제로 통한 경로). Playwright MCP 는 막히지만 라이브러리는 쓸 수 있다. 저장소에 의존성을 넣지 말고 `/tmp` 에 따로 설치한다:
+   `mkdir -p /tmp/pw && cd /tmp/pw && npm init -y && npm i playwright && npx playwright install webkit chromium`
+   `hasTouch: true` 를 줘야 `pointer: coarse` 미디어 쿼리가 맞는다. 진짜 Safari 는 아니지만 같은 WebKit 엔진이다.
+2. `osascript -l JavaScript` 로 `WKWebView` 를 직접 띄우기 (시스템 WebKit = 진짜 Safari 엔진). **2026-07 시도에서는 콘텐츠 프로세스가 안 떠서 `estimatedProgress` 가 0.1 에서 멈췄다** — 되면 가장 정확하지만 안 될 수 있다.
+   - **WKWebView 를 `NSWindow` 에 넣어야 한다.** 화면 밖 webview 는 `setTimeout` 이 아예 안 돌아서 어떤 측정 스크립트도 조용히 멈춘다.
+   - 결과는 `document.title` 에 JSON 을 넣고 JXA 쪽에서 런루프를 돌리며 `wv.title` 을 폴링해 꺼낸다. `evaluateJavaScript` 는 JXA 블록 브리지에서 터진다.
+
+무엇으로 재든 판정 기준은 같다:
+
+- 잘림은 `scrollWidth > clientWidth` 로 본다. `overflow: hidden` 때문에 눈으로는 그냥 열이 적어 보인다.
+- 모바일 무스크롤은 `document.scrollingElement.scrollHeight <= clientHeight` 로 본다. `html { overflow: hidden }` 이면 스크롤은 안 되지만 넘치는 건 그대로 넘친다.
+- 난이도 4↔6 을 **왕복**한 뒤 다시 잰다. webkit#202259 는 첫 진입에는 안 터진다.
 
 ## 규약
 
 - **파일은 500줄을 넘기지 않는다.** 넘을 것 같으면 **컴포넌트 관점으로** 쪼갠다 — 화면의 한 덩어리(패널·모달·보드)가 자기 상태와 마크업을 같이 들고 `src/components/` 로 나간다. 줄 수를 맞추려고 아무 데나 자르는 건 더 나쁘다. 경계가 안 보이면 쪼개지 말고 그대로 두되, 그 이유를 남긴다.
   - 스타일은 `src/index.css` 가 `@import` 목록이고 실제 규칙은 `src/styles/<컴포넌트>.css` 에 있다. **import 순서가 곧 캐스케이드 순서**라 아무 데나 넣으면 안 된다.
   - 테스트도 대상별로 나눠 둔다(아래 참고).
-- **결정성**: 게임 로직에서 `Math.random()` 을 부르지 않는다. `rng(seed)` 가 만든 `rand` 를 인자로 넘긴다. 같은 시드 = 같은 사건이 유일한 저장 수단이다. (새 시드 문자열을 만드는 `App.tsx` 만 예외)
+- **결정성**: 게임 로직에서 `Math.random()` 을 부르지 않는다. `rng(seed)` 가 만든 `rand` 를 인자로 넘긴다. 같은 시드 = 같은 사건이 유일한 저장 수단이다. (새 시드 문자열을 만드는 `useGame.ts` 만 예외)
 - **가구 종류는 퍼즐당 한 번**: "탁자 옆"이 모호해지지 않게 `placeFurniture` 가 덱에서 빼서 쓴다. 가구·벽부착물·방 이름이 유일한지 테스트가 검사한다.
 - **가구는 방 이름과 맞아야 한다**: `FurnitureSpec.rooms` 가 허용 방 이름 목록이다(없으면 아무 방이나 — 러그·화분·스탠드). `placeFurniture` 는 선택지가 적은 방부터, 각 방에서는 전용 가구부터 집고, **모든 방에 최소 1개**를 못 채우면 `null` 을 돌려 평면도를 다시 뽑게 한다. 방 이름을 늘리면 그 이름을 쓸 가구도 같이 넣을 것 — 안 그러면 그 방은 범용 가구 3종만 놓고 생성 실패율이 오른다.
 - **증언 문구는 `clueText` 에서만** 만든다. 문자열을 다른 데서 조립하지 않는다.
@@ -127,10 +160,20 @@ Safari 를 실측하는 법 (이 저장소에서 실제로 통한 유일한 경�
 | `src/game/clues.test.ts` | `matchingCells` 판정 (ON·NEXT_TO·IN_ROOM) |
 | `src/game/history.test.ts` | 기록 검증·병합 + 동기화 워커 라우트 |
 | `src/game/auth.test.ts` | 계정 검증·워커 라우트·로그인 UI |
-| `src/components/render.test.ts` | 보드·앱·모달 렌더링 |
+| `src/components/render.test.ts` | 보드·앱(데스크톱 셸)·모달 렌더링 |
+| `src/components/mobile.test.ts` | 모바일 셸·증언 목록·시트 + `mobile.css` 불변식 |
+| `src/repo.test.ts` | 500줄 규약 + CSS 전역 금지 패턴(`repeat(var(`) |
 
 렌더링은 jsdom 없이 `react-dom/server` 의 `renderToStaticMarkup` 으로 HTML 문자열을 확인한다. **문자열이 아니라 마크업으로 단언할 것** — 버전 기록 모달이 `CHANGELOG.md` 를 그대로 그려서 UI 문구를 인용하면 거짓 양성이 난다.
 
+`App` 은 `matchMedia` 가 없는 환경(테스트)에서 **데스크톱 셸**을 그린다(`useMediaQuery` 의 fallback). 모바일 셸은 `MobileShell` 을 직접 그려서 검사한다.
+
+스타일 원문을 읽는 테스트는 `vite.config.ts` 의 `test: { css: true }` 에 기대고 있다. Vitest 기본값(`css: false`)은 CSS 를 빈 스텁으로 바꿔서 `?raw` 까지 빈 문자열이 되고, **검사가 조용히 아무것도 안 하게 된다**. `repo.test.ts` 가 그 구멍을 직접 막는다.
+
 ### 스타일
 
-`src/index.css` 는 `@import` 목록이고 규칙은 `src/styles/<컴포넌트>.css` 에 있다. Vite 가 빌드 때 그 순서대로 인라인하므로 **import 순서 = 캐스케이드 순서**다. 컴포넌트를 추가하면 파일을 만들고 진입점에 한 줄 넣는다. 지켜온 것들: 동심 반경(바깥 = 안쪽 + 패딩), 컨트롤 최소 40px 히트영역, `focus-visible` 링, `prefers-reduced-motion` 대응, 한국어 `word-break: keep-all`, `transition` 은 속성을 명시(`all` 금지). 두꺼운 잉크 테두리 + `4px 4px 0` 하드 섀도가 이 UI의 디자인 언어다.
+`src/index.css` 는 `@import` 목록이고 규칙은 `src/styles/<컴포넌트>.css` 에 있다. Vite 가 빌드 때 그 순서대로 인라인하므로 **import 순서 = 캐스케이드 순서**다. 컴포넌트를 추가하면 파일을 만들고 진입점에 한 줄 넣는다. `mobile.css` 는 데스크톱 규칙을 덮어야 하므로 늦게, `motion.css`(`prefers-reduced-motion`)는 전부를 덮어야 하므로 **맨 마지막**이다.
+
+지켜온 것들: 동심 반경(바깥 = 안쪽 + 패딩), 컨트롤 최소 40px 히트영역, `focus-visible` 링, `prefers-reduced-motion` 대응, 한국어 `word-break: keep-all`, `transition` 은 속성을 명시(`all` 금지). 두꺼운 잉크 테두리 + `4px 4px 0` 하드 섀도가 이 UI의 디자인 언어다.
+
+전역 클래스(`.chip`·`.link`·`.ver`)를 **부모 선택자로 묶지 말 것**. `.footer .ver` 로 묶여 있던 탓에 같은 버튼이 모바일 메뉴 시트에서는 스타일이 통째로 빠져 브라우저 기본 버튼으로 나왔다.

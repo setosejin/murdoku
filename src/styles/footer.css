@@ -14,7 +14,9 @@
 .footer p {
   margin: 0;
 }
-.footer .ver {
+/* 푸터에도, 모바일 메뉴 시트에도 쓰인다 — `.footer` 하위로 묶으면
+   시트 안에서 스타일이 통째로 빠져 브라우저 기본 버튼이 튀어나온다 */
+.ver {
   font-variant-numeric: tabular-nums;
   font-weight: 600;
   /* 히트영역 40px 을 채우되 푸터 높이는 그대로 두려고 패딩만큼 마진을 뺀다 */
@@ -30,7 +32,7 @@
   text-underline-offset: 3px;
   cursor: pointer;
 }
-.footer .ver:hover {
+.ver:hover {
   color: var(--ink);
   text-decoration-style: solid;
 }
@@ -83,6 +85,7 @@
 /* 커스텀 테두리 위에선 브라우저 기본 링이 잘 안 보인다 */
 .chip:focus-visible,
 .link:focus-visible,
+.ver:focus-visible,
 .brush:focus-visible,
 .accuse select:focus-visible,
 .seedbox input:focus-visible,

@@ -1,0 +1,32 @@
+/* ---- 모션 조절 ----
+   맨 마지막에 인라인되어야 앞선 모든 규칙을 덮을 수 있다.
+   전부 끄지는 않는다 — 이동만 없애고 "뭔가 바뀌었다" 는 신호는 남긴다. */
+@media (prefers-reduced-motion: reduce) {
+  /* 기본은 전부 정지. 아래에서 이동 없는 피드백만 되살린다. */
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+  }
+  /* 새 정보가 나타났다는 신호는 남겨야 한다 — 이동 없이 투명도만 */
+  .notice,
+  .verdict {
+    animation: fade-in var(--dur-fast) var(--ease-out) !important;
+  }
+  .feedback,
+  .feedback:not([open]) {
+    transform: none !important;
+  }
+  /* 시트도 미끄러져 올라오지 않고 그 자리에서 나타난다 */
+  .sheet,
+  .sheet:not([open]) {
+    translate: none !important;
+  }
+  .chip:hover,
+  .chip:active,
+  .brush:active,
+  .mbar-btn:active {
+    transform: none;
+  }
+}

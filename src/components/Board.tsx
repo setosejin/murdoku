@@ -155,7 +155,9 @@ export default function Board({ puzzle, marks, onCell, revealed }: Props) {
   return (
     <div className="board-wrap">
       {/* repeat() 안에 var() 를 쓰면 Safari 가 난이도를 바꿔도 트랙 크기를 옛 값으로 붙잡는다
-          (webkit#202259) — 열 개수는 여기서 직접 박는다 */}
+          (webkit#202259) — 열 개수는 여기서 직접 박는다.
+          행 높이는 CSS 가 정한다: 데스크톱은 칸의 aspect-ratio, 모바일은 `grid-auto-rows: 1fr`
+          (보드 높이가 확정이라 fr 이 균등하게 갈린다) */}
       <div className="board" style={{ gridTemplateColumns: `repeat(${n}, minmax(0, 1fr))` }}>
         {cells}
       </div>

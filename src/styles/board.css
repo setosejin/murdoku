@@ -24,7 +24,9 @@
   color: #fdf6e6;
   font-size: 14px;
   font-weight: 600;
-  white-space: nowrap;
+  /* 좁은 화면에서 nowrap 이면 가구 이름이 긴 문구가 통째로 잘렸다 */
+  text-align: center;
+  text-wrap: balance;
   box-shadow: 0 6px 18px rgb(47 42 36 / 0.28);
   pointer-events: none;
   z-index: 6;
@@ -64,6 +66,9 @@
   max-width: 620px;
   width: 100%;
   margin: 0 auto;
+  /* 안쪽 글리프가 뷰포트가 아니라 보드 폭을 따라가게 한다.
+     모바일에서 보드는 높이에 맞춰 줄어드는데, vw 기준이면 글자만 안 줄어 칸을 넘친다 */
+  container-type: inline-size;
 }
 
 .cell {
@@ -79,6 +84,9 @@
   display: grid;
   place-items: center;
   aspect-ratio: 1;
+  /* iOS 더블탭 확대를 끈다 — 메모를 연속으로 찍을 때 300ms 씩 밀리던 것 */
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
 }
 
 /* 방마다 다른 바닥 재질. 이미지 없이 그라디언트로만 그린다.
@@ -194,7 +202,7 @@
   filter: drop-shadow(1.5px 2px 0 #23201c2e);
 }
 .fur-label {
-  font-size: clamp(8px, 1.5vw, 11px);
+  font-size: clamp(8px, 2cqw, 11px);
   line-height: 1.4;
   color: #3b342a;
   font-weight: 700;
@@ -209,12 +217,12 @@
   filter: drop-shadow(1px 1px 0 #23201c24);
 }
 .art {
-  font-size: clamp(14px, 3.4vw, 26px);
+  font-size: clamp(12px, 4.2cqw, 26px);
   line-height: 1;
 }
 svg.art {
-  width: clamp(18px, 4.2vw, 32px);
-  height: clamp(18px, 4.2vw, 32px);
+  width: clamp(14px, 5.2cqw, 32px);
+  height: clamp(14px, 5.2cqw, 32px);
   /* 선은 여기서 한 번만 정한다 — 스프라이트 파일은 색·모양만 갖는다 */
   fill: none;
   stroke: var(--wall);
@@ -249,19 +257,19 @@ img.art {
   background: #efdcc4;
 }
 .wall-item .art {
-  font-size: 11px;
+  font-size: clamp(8px, 1.9cqw, 11px);
 }
 .wall-item svg.art {
-  width: 12px;
-  height: 12px;
+  width: clamp(8px, 2cqw, 12px);
+  height: clamp(8px, 2cqw, 12px);
   stroke-width: 2.4;
 }
 .wall-item.top,
 .wall-item.bottom {
   left: 50%;
   translate: -50% 0;
-  width: clamp(22px, 40%, 40px);
-  height: 15px;
+  width: clamp(18px, 40%, 40px);
+  height: clamp(10px, 2.6cqw, 15px);
 }
 .wall-item.top {
   top: 1px;
@@ -273,8 +281,8 @@ img.art {
 .wall-item.right {
   top: 50%;
   translate: 0 -50%;
-  height: clamp(22px, 40%, 40px);
-  width: 15px;
+  height: clamp(18px, 40%, 40px);
+  width: clamp(10px, 2.6cqw, 15px);
 }
 .wall-item.left {
   left: 1px;
@@ -287,7 +295,7 @@ img.art {
   position: absolute;
   right: 3px;
   bottom: 3px;
-  font-size: 10px;
+  font-size: clamp(8px, 1.8cqw, 10px);
   background: #fffdf7cc;
   border: 1px solid var(--wall);
   border-radius: 999px;
@@ -307,7 +315,7 @@ img.art {
   display: grid;
   place-items: center;
   font-weight: 700;
-  font-size: clamp(12px, 2.6vw, 20px);
+  font-size: clamp(11px, 3.2cqw, 20px);
 }
 .token.solved {
   border-width: 3px;
@@ -315,6 +323,6 @@ img.art {
 .mark-x {
   position: relative;
   z-index: 2;
-  font-size: clamp(16px, 4vw, 30px);
+  font-size: clamp(14px, 4.8cqw, 30px);
   color: #4a453d;
 }

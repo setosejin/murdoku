@@ -9,3 +9,7 @@
 @import './styles/panels.css';
 @import './styles/history.css';
 @import './styles/dialog.css';
+@import './styles/sheet.css';
+@import './styles/mobile.css';
+/* 모션 조절은 앞선 모든 규칙을 덮어야 하므로 맨 마지막 */
+@import './styles/motion.css';

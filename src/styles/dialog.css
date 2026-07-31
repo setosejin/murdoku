@@ -141,33 +141,3 @@
   border-top: 3px solid var(--wall);
   padding: 12px 16px;
 }
-
-@media (prefers-reduced-motion: reduce) {
-  /* 기본은 전부 정지. 아래에서 이동 없는 피드백만 되살린다. */
-  *,
-  *::before,
-  *::after {
-    animation-duration: 0.01ms !important;
-    animation-iteration-count: 1 !important;
-  }
-  /* 새 정보가 나타났다는 신호는 남겨야 한다 — 이동 없이 투명도만 */
-  .notice,
-  .verdict {
-    animation: fade-in var(--dur-fast) var(--ease-out) !important;
-  }
-  .feedback,
-  .feedback:not([open]) {
-    transform: none !important;
-  }
-  .chip:hover,
-  .chip:active,
-  .brush:active {
-    transform: none;
-  }
-}
-
-@media (max-width: 760px) {
-  .play {
-    grid-template-columns: minmax(0, 1fr);
-  }
-}
