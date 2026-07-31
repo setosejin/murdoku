@@ -23,6 +23,7 @@ body {
   font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, 'Apple SD Gothic Neo',
     'Noto Sans KR', system-ui, sans-serif;
   -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
   /* 한국어는 어절 중간에서 끊기면 읽기 나빠진다 */
   word-break: keep-all;
   overflow-wrap: break-word;

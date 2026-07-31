@@ -18,14 +18,17 @@
   .feedback:not([open]) {
     transform: none !important;
   }
-  /* 시트도 미끄러져 올라오지 않고 그 자리에서 나타난다 */
+  /* 시트도 미끄러져 올라오지 않고 그 자리에서 나타난다.
+     퇴장은 Sheet.tsx 가 transitionend 를 기다리므로 opacity 는 살려둔다 */
   .sheet,
-  .sheet:not([open]) {
+  .sheet:not([open]),
+  .sheet[data-closing] {
     translate: none !important;
   }
   .chip:hover,
   .chip:active,
   .brush:active,
+  .clue-row:active,
   .mbar-btn:active {
     transform: none;
   }

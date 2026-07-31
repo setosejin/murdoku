@@ -138,7 +138,7 @@
   }
   .clue-row {
     width: 100%;
-    min-height: 40px;
+    min-height: 44px;
     display: flex;
     align-items: center;
     gap: 8px;
@@ -153,8 +153,14 @@
     touch-action: manipulation;
     -webkit-tap-highlight-color: transparent;
     transition:
+      transform var(--dur-press) var(--ease-out),
       border-color var(--dur-fast) var(--ease-out),
       background-color var(--dur-fast) var(--ease-out);
+  }
+  /* 형제 컨트롤(칩·브러시·액션바)과 같은 누름 피드백. 증언 줄만 빠져 있으면
+     같은 화면에서 어떤 건 반응하고 어떤 건 안 하는 것처럼 느껴진다 */
+  .clue-row:active {
+    transform: scale(0.96);
   }
   /* 테두리를 굵히는 만큼 패딩에서 빼서 선택해도 줄이 밀리지 않는다 */
   .clue-row.on {
@@ -195,6 +201,29 @@
     color: var(--ink);
   }
 
+  /* 시트 안팎의 공용 컨트롤은 터치 기준 44px 로 올린다. 데스크톱 규약인 40px 은
+     마우스 기준이고, 여기선 전부 손가락으로 누른다.
+     전역 클래스를 부모로 묶지 않는다 — 묶으면 다른 자리에서 스타일이 빠진다 */
+  .chip,
+  .link,
+  .ver,
+  .sheet-x,
+  .accuse select,
+  .seedbox input,
+  .sync input,
+  .sync summary,
+  .history li button {
+    min-height: 44px;
+  }
+  .sheet-x {
+    width: 44px;
+    height: 44px;
+  }
+  /* 문장 안에 섞인 링크는 별개다 — 44px 로 키우면 줄이 벌어진다 */
+  .mmenu-copy .link {
+    min-height: 0;
+  }
+
   /* ---- 하단 액션바 ---- */
   .mbar {
     flex: none;
@@ -222,7 +251,7 @@
       background var(--dur-fast) var(--ease-out);
   }
   .mbar-btn:active {
-    transform: scale(0.97);
+    transform: scale(0.96);
   }
   .mbar-btn.on {
     background: var(--wall);
@@ -243,21 +272,19 @@
     outline-color: var(--wall);
   }
 
-  /* 낮은 화면(iPhone SE 등)에서는 붙박이를 눌러 보드 자리를 지킨다 */
+  /* 낮은 화면(iPhone SE 등)에서는 붙박이를 눌러 보드 자리를 지킨다.
+     다만 터치 타깃을 40px 아래로는 내리지 않는다 — 증언 줄은 이 화면에서
+     가장 자주 누르는 컨트롤이라 여기서 아끼면 오탭이 는다.
+     상단바는 44px 를 지키고, 줄어드는 몫은 간격에서 뺀다. */
   @media (max-height: 700px) {
     .mshell {
       gap: 6px;
     }
     .clue-row {
-      min-height: 34px;
+      min-height: 40px;
     }
     .clue-list {
       gap: 3px;
-    }
-    .mtitle,
-    .micon {
-      min-height: 40px;
-      height: 40px;
     }
     .mbar-btn {
       min-height: 44px;
