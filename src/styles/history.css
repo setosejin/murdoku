@@ -44,6 +44,9 @@
 .history li small {
   font-size: 11px;
   color: var(--muted);
+  /* 날짜·격자 크기·시도 횟수가 세로로 줄지어 선다. 비례폭이면 기록이 쌓이거나
+     동기화로 목록이 다시 그려질 때 숫자가 흔들린다 */
+  font-variant-numeric: tabular-nums;
 }
 .sync {
   border-top: 2px dashed var(--tile-line);

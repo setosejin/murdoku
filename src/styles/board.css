@@ -223,9 +223,11 @@
 svg.art {
   width: clamp(14px, 5.2cqw, 32px);
   height: clamp(14px, 5.2cqw, 32px);
-  /* 선은 여기서 한 번만 정한다 — 스프라이트 파일은 색·모양만 갖는다 */
+  /* 선은 여기서 한 번만 정한다 — 스프라이트 파일은 색·모양만 갖는다.
+     currentColor 라 어떤 자리에 놓든 그 자리의 글자색을 따라간다
+     (어두운 배경 위에 뒤집힌 컨트롤이 생겨도 아이콘이 사라지지 않는다) */
   fill: none;
-  stroke: var(--wall);
+  stroke: currentColor;
   stroke-width: 1.6;
   stroke-linejoin: round;
   stroke-linecap: round;
@@ -234,6 +236,15 @@ img.art {
   width: 80%;
   height: 80%;
   object-fit: contain;
+}
+
+/* 그림 에셋을 붙였을 때 가장자리가 배경에 녹지 않게 한 겹 두른다.
+   잉크색(--wall)이 아니라 순수 검정이어야 한다 — 색이 섞이면 그림 가장자리가
+   때처럼 보인다. outline 은 레이아웃을 안 건드리므로 크기가 그대로다 */
+img.art,
+.portrait img {
+  outline: 1px solid oklch(0 0 0 / 0.1);
+  outline-offset: -1px;
 }
 
 /* 창문·문은 벽에 박힌 물건이라 칸을 막지 않는다 */

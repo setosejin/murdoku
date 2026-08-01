@@ -34,6 +34,18 @@
   translate: 0 100%;
   opacity: 0;
 }
+/* 퇴장 중. WebKit 이 dialog 를 닫을 때 allow-discrete 를 안 지켜서(Chromium 은 지킨다)
+   Sheet.tsx 가 [open] 을 유지한 채 이 상태를 거쳐 간다 — 두 엔진이 같은 길을 탄다.
+   퇴장은 등장보다 짧고, 떠나는 시트에 탭이 얹히지 않게 입력을 끊는다 */
+.sheet[data-closing] {
+  translate: 0 100%;
+  opacity: 0;
+  pointer-events: none;
+  transition-duration: 180ms;
+}
+.sheet[data-closing]::backdrop {
+  background: rgb(35 32 28 / 0);
+}
 @starting-style {
   .sheet[open] {
     translate: 0 100%;
