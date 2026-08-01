@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { getUser, login, MIN_PW, setUser as saveUser, signup, syncEnabled } from '../game/auth';
 import { clearPlays, getCode, isCode, setCode as saveCode, type Play } from '../game/history';
 
@@ -29,6 +29,11 @@ export default function HistoryPanel({
   const [pw, setPw] = useState('');
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
+  // 새로 들어온 기록만 등장 모션을 받게 하는 빗장. 이게 없으면 이미 쌓여 있던 기록이
+  // 페이지를 열 때마다 우르르 나타난다 — `@starting-style` 은 첫 마운트면 무조건 걸린다.
+  // 첫 페인트 뒤에 켜므로 그때 이미 있던 행은 그냥 놓이고, 이후 추가되는 행만 움직인다
+  const [ready, setReady] = useState(false);
+  useEffect(() => setReady(true), []);
 
   const linkCode = (e: React.FormEvent) => {
     e.preventDefault();
@@ -80,7 +85,7 @@ export default function HistoryPanel({
       {plays.length === 0 ? (
         <p className="hint">사건을 해결하면 여기 쌓인다.</p>
       ) : (
-        <ul>
+        <ul className={ready ? 'ready' : undefined}>
           {plays.slice(0, 20).map((p) => (
             <li key={`${p.seed}:${p.n}:${p.at}`}>
               <button type="button" onClick={() => onOpen(p.n, p.seed)}>

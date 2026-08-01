@@ -63,7 +63,16 @@ export default function App() {
       </section>
 
       <section className="play">
-        <Board puzzle={puzzle} marks={game.marks} onCell={game.onCell} revealed={game.revealed} />
+        {/* key 로 사건마다 새 보드를 만들어 크로스페이드를 건다.
+            seed:n 이어야 한다 — puzzle 이나 marks 를 넣으면 메모를 찍을 때마다
+            보드가 통째로 재마운트되면서 키보드 포커스가 날아간다 */}
+        <Board
+          key={`${game.seed}:${game.n}`}
+          puzzle={puzzle}
+          marks={game.marks}
+          onCell={game.onCell}
+          revealed={game.revealed}
+        />
 
         <div className="side">
           <RulesPanel />
