@@ -69,6 +69,17 @@
   /* 안쪽 글리프가 뷰포트가 아니라 보드 폭을 따라가게 한다.
      모바일에서 보드는 높이에 맞춰 줄어드는데, vw 기준이면 글자만 안 줄어 칸을 넘친다 */
   container-type: inline-size;
+  /* 사건이 바뀌면 보드가 통째로 갈리므로(4x4 -> 6x6 이면 칸 수까지) 페이드로 잇는다.
+     App.tsx·MobileShell.tsx 의 key 가 새 보드를 만들고 @starting-style 이 시작값을 준다.
+     opacity 만 건드린다 — 모바일 보드는 min(100cqw, 100cqh) 로 크기가 잡혀 있어서
+     움직이면 그 계산과 싸운다 */
+  transition: opacity 150ms var(--ease-out);
+}
+/* 첫 진입에도 한 번 페이드된다. 사건이 열리는 장면이라 그대로 둔다 */
+@starting-style {
+  .board {
+    opacity: 0;
+  }
 }
 
 .cell {
@@ -330,6 +341,19 @@ img.art,
 }
 .token.solved {
   border-width: 3px;
+  /* 사건을 푼 순간의 보상 장면. 여기만 딜라이트 예산을 쓴다 — 나머지 보드 동작
+     (메모 찍기·칸 hover)은 고빈도라 일부러 즉시 반응이다.
+     한 번만 도는 연출이라 transition 이 아니라 keyframe 이다. 공개를 껐다 켜면
+     토큰이 언마운트·재마운트되므로 재생은 저절로 다시 걸린다.
+     `backwards` 가 없으면 자기 차례를 기다리는 동안 토큰이 이미 보여서 스태거가 무의미해진다.
+     딜레이는 Board.tsx 가 인라인으로 넣는다 (webkit#202259 회피) */
+  animation: token-in var(--dur-fast) var(--ease-out) backwards;
+}
+@keyframes token-in {
+  from {
+    opacity: 0;
+    transform: scale(0.92);
+  }
 }
 .mark-x {
   position: relative;

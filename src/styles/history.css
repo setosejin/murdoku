@@ -13,6 +13,22 @@
   flex-direction: column;
   gap: 6px;
 }
+/* 사건을 풀면 새 기록이 목록 맨 위에 붙는다(mergePlays 가 최신순 정렬). 위에서 내려온다.
+   `.ready` 는 첫 페인트 뒤에 붙는다 — 페이지를 열 때 이미 있던 기록까지 우르르
+   나타나지 않게 하는 빗장이다 (HistoryPanel.tsx 참고).
+   행 key 가 `seed:n:at` 로 안정적이라 sync 응답으로 목록이 다시 그려져도
+   기존 행은 재마운트되지 않는다 — key 를 인덱스로 바꾸면 동기화마다 전체가 다시 재생된다 */
+.history ul.ready li {
+  transition:
+    opacity var(--dur-fast) var(--ease-out),
+    transform var(--dur-fast) var(--ease-out);
+}
+@starting-style {
+  .history ul.ready li {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+}
 .history li button {
   width: 100%;
   min-height: 40px;

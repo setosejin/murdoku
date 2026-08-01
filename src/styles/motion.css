@@ -14,6 +14,17 @@
   .verdict {
     animation: fade-in var(--dur-fast) var(--ease-out) !important;
   }
+  /* 정답 공개도 같은 규칙을 따른다. 배율과 스태거는 죽이되 등장 자체는 남긴다 —
+     보드가 통째로 갈리는 순간이라 아무 신호도 없으면 오히려 더 놀란다.
+     인라인 animation-delay 는 명시도가 높아서 !important 로 눌러야 한다 */
+  .token.solved {
+    animation: fade-in var(--dur-fast) var(--ease-out) !important;
+    animation-delay: 0ms !important;
+  }
+  /* 사건 교체 페이드와 기록 항목 등장은 이동만 뺀다 */
+  .history ul.ready li {
+    transform: none !important;
+  }
   .feedback,
   .feedback:not([open]) {
     transform: none !important;

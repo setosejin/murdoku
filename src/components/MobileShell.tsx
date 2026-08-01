@@ -50,7 +50,10 @@ export default function MobileShell({ game }: { game: Game }) {
       </header>
 
       <main className="mplay">
+        {/* key 규칙은 App.tsx 의 데스크톱 셸과 같다 — seed:n 이어야 메모를 찍을 때
+            보드가 재마운트되지 않는다 */}
         <Board
+          key={`${game.seed}:${game.n}`}
           puzzle={puzzle}
           marks={game.marks}
           onCell={game.onCell}

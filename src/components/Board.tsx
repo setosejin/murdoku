@@ -68,6 +68,8 @@ export default function Board({ puzzle, marks, onCell, revealed }: Props) {
   );
 
   const cells = [];
+  // 정답 공개 스태거용 행우선 순번. 읽는 방향대로 토큰이 훑고 지나가게 한다
+  let revealIndex = 0;
   for (let r = 0; r < n; r++) {
     for (let c = 0; c < n; c++) {
       const k = `${r},${c}`;
@@ -134,7 +136,15 @@ export default function Board({ puzzle, marks, onCell, revealed }: Props) {
           )}
           {room && <span className="room-label">{room.name}</span>}
           {person ? (
-            <span className="token solved" style={{ background: person.color }}>
+            <span
+              className="token solved"
+              style={{
+                background: person.color,
+                // calc(var(--i) * …) 로 넘기면 WebKit 이 값을 캐싱한다 (webkit#202259).
+                // 산수는 여기서 끝내고 완성된 값만 넘긴다
+                animationDelay: `${revealIndex++ * 40}ms`,
+              }}
+            >
               {person.id}
             </span>
           ) : mark === 'X' ? (
