@@ -219,8 +219,9 @@
   left: 3px;
   display: grid;
   place-items: center;
-  align-content: center;
+  align-content: end;
   gap: 1px;
+  padding-bottom: 2px;
   pointer-events: none;
   /* 2칸 가구가 옆 칸 배경에 가려지지 않게 positioned 레이어 위로 올린다 */
   z-index: 1;
@@ -240,6 +241,17 @@
 /* 러그·건초더미처럼 밟고 설 수 있는 건 납작하다 — 그림자도 얕게 */
 .furniture.standable {
   filter: drop-shadow(1px 1px 0 #23201c24);
+}
+/* 그림은 흐름에서 빼서 발자국 한가운데 놓는다. 크기·회전은 Board.tsx 가 인라인으로
+   준다(칸 수에 따라 값이 변해서 — webkit#202259). 흐름에 두면 90도 눕힌 세로 가구가
+   라벨을 밀어낸다. 라벨은 가구 발치에 깔린다 */
+.furniture > .art {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  translate: -50% -50%;
+  display: grid;
+  place-items: center;
 }
 .art {
   font-size: clamp(12px, 4.2cqw, 26px);
@@ -272,7 +284,7 @@ img.art,
   outline-offset: -1px;
 }
 
-/* 창문·문은 벽에 박힌 물건이라 칸을 막지 않는다 */
+/* 창문·문·울타리·대문은 벽(또는 경계)에 박힌 물건이라 칸을 막지 않는다 */
 .wall-item {
   position: absolute;
   display: grid;
@@ -291,6 +303,13 @@ img.art,
 }
 .wall-item.door {
   background: #efdcc4;
+}
+/* 야외 경계 — 하늘이 뚫린 칸에는 창문 대신 울타리, 문 대신 대문이 선다 */
+.wall-item.fence {
+  background: #dfe9d4;
+}
+.wall-item.gate {
+  background: #e8dcc0;
 }
 .wall-item .art {
   font-size: clamp(8px, 1.9cqw, 11px);

@@ -3,6 +3,7 @@ import { pick, rng, shuffled } from './types';
 import { clueText, indexScene, matchingCells, type Scene, type SceneIndex } from './clues';
 import { solve } from './solve';
 import {
+  OUTDOOR_FLOORS,
   PERSON_COLORS,
   SUSPECT_NAMES,
   THEMES,
@@ -123,6 +124,25 @@ function jitterRooms(rooms: Room[], n: number, rand: () => number): void {
   }
 }
 
+/**
+ * 가구가 차지하는 모양. 2·3 칸은 가로/세로 일자, 4 칸은 2×2.
+ * ponytail: ㄱ자 같은 꺾인 모양은 없다. 넣으려면 회전 4방향마다 그림이 따로 필요하고
+ * (지금 그림은 가로로 하나 그려서 세로일 때 90도 돌려 쓴다), 방을 가로막지 않는지도
+ * 따로 봐야 한다. 꺾인 소파가 정말 필요해지면 그때 모양별 심볼과 함께 올릴 것.
+ */
+const SHAPES: Record<number, ReadonlyArray<ReadonlyArray<readonly [number, number]>>> = {
+  1: [[[0, 0]]],
+  2: [
+    [[0, 0], [0, 1]],
+    [[0, 0], [1, 0]],
+  ],
+  3: [
+    [[0, 0], [0, 1], [0, 2]],
+    [[0, 0], [1, 0], [2, 0]],
+  ],
+  4: [[[0, 0], [0, 1], [1, 0], [1, 1]]],
+};
+
 /** 방 이름에 맞는 가구를 방마다 1~2개. 빈 방이 남으면 null (호출부가 평면도를 다시 뽑는다) */
 function placeFurniture(rooms: Room[], rand: () => number, theme: Theme): Furniture[] | null {
   const out: Furniture[] = [];
@@ -143,20 +163,17 @@ function placeFurniture(rooms: Room[], rand: () => number, theme: Theme): Furnit
         rand,
         room.cells.filter((c) => !st.taken.has(`${c.r},${c.c}`)),
       );
-      let cells: Cell[] | null = null;
-      if (spec.size === 1) {
-        if (free.length) cells = [free[0]];
-      } else {
-        for (const a of free) {
-          const b = free.find(
-            (x) => Math.abs(x.r - a.r) + Math.abs(x.c - a.c) === 1,
-          );
-          if (b) {
-            cells = [a, b];
-            break;
-          }
-        }
-      }
+      // 모양이 통째로 들어가는 자리를 찾는다. 없으면 다음 가구로 — 큰 가구는
+      // 넉넉한 방에만 놓이고 좁은 방은 작은 가구가 받는다
+      const freeAt = new Set(free.map((c) => `${c.r},${c.c}`));
+      const fit = (): Cell[] | null => {
+        for (const a of free)
+          for (const shape of shuffled(rand, SHAPES[spec.size]))
+            if (shape.every(([dr, dc]) => freeAt.has(`${a.r + dr},${a.c + dc}`)))
+              return shape.map(([dr, dc]) => ({ r: a.r + dr, c: a.c + dc }));
+        return null;
+      };
+      const cells = fit();
       if (!cells) continue;
       // 렌더링 기준점이 되도록 왼쪽 위 칸이 항상 cells[0]
       cells.sort((a, b) => a.r - b.r || a.c - b.c);
@@ -192,12 +209,19 @@ function placeFurniture(rooms: Room[], rand: () => number, theme: Theme): Furnit
 
 function placeWallItems(
   n: number,
+  rooms: Room[],
   furniture: Furniture[],
   rand: () => number,
   theme: Theme,
 ): WallItem[] {
   const blocked = new Set<string>();
   for (const f of furniture) for (const c of f.cells) blocked.add(`${c.r},${c.c}`);
+
+  // 하늘이 뚫린 칸. 목초지 한복판에 창문이 떠 있으면 안 된다
+  const outdoor = new Set<string>();
+  for (const room of rooms)
+    if (OUTDOOR_FLOORS.has(room.floor))
+      for (const c of room.cells) outdoor.add(`${c.r},${c.c}`);
 
   const border: Cell[] = [];
   for (let r = 0; r < n; r++)
@@ -212,7 +236,10 @@ function placeWallItems(
     if (cell.r === n - 1) sides.push('bottom');
     if (cell.c === 0) sides.push('left');
     if (cell.c === n - 1) sides.push('right');
-    const spec = theme.wallItems[i];
+    // 자리 순서가 같아서 두 목록 중 무엇을 골라도 라벨은 서로 다르다
+    const list =
+      (outdoor.has(`${cell.r},${cell.c}`) && theme.outdoorItems) || theme.wallItems;
+    const spec = list[i];
     return {
       id: `${spec.kind}-${i}`,
       kind: spec.kind,
@@ -289,7 +316,7 @@ export function generatePuzzle(n: number, seed = String(Date.now())): Puzzle {
     const rooms = buildRooms(n, rand, theme);
     const furniture = placeFurniture(rooms, rand, theme);
     if (!furniture) continue; // 가구를 못 받은 방이 있다 — 평면도부터 다시
-    const wallItems = placeWallItems(n, furniture, rand, theme);
+    const wallItems = placeWallItems(n, rooms, furniture, rand, theme);
     const scene: Scene = { n, rooms, furniture, wallItems };
     const idx = indexScene(scene);
 

@@ -1,10 +1,31 @@
 import { useEffect, useState, type CSSProperties } from 'react';
-import type { Puzzle } from '../game/types';
+import type { Furniture, Puzzle } from '../game/types';
 import { indexScene } from '../game/clues';
 import sprite from '../assets/sprite.svg?raw';
 
 /** 스프라이트에 실제로 들어 있는 아이콘 이름. 없는 가구는 이모지로 떨어진다 */
 const ICONS = new Set([...sprite.matchAll(/id="i-([\w-]+)"/g)].map((m) => m[1]));
+
+/* 가구 그림은 자기 발자국을 채운다. 두 칸을 차지하면 그림도 두 칸치 —
+   침대와 스탠드가 같은 크기로 그려지면 몇 칸짜리 가구인지 그림만 봐선 알 수 없다.
+   한 칸치 = 칸의 68%. `.board` 가 container 라 cqw 가 곧 보드 폭이고, 한 칸은 100cqw/n 이다.
+   `calc(68cqw / var(--n))` 로 넘기면 WebKit 이 값을 캐싱하므로(webkit#202259)
+   나눗셈은 여기서 끝내고 완성된 문자열만 넘긴다 */
+const unitOf = (n: number) => `${(68 / n).toFixed(3)}cqw`;
+
+/** 발자국(가로·세로 칸수)에 맞춘 그림 크기. 세로로 긴 자리는 가로 그림을 눕혀 쓴다 */
+function artBox(unit: string, span?: Span): CSSProperties | undefined {
+  if (!span || !unit) return undefined;
+  const tall = span.h > span.w;
+  const [w, h] = tall ? [span.h, span.w] : [span.w, span.h];
+  return {
+    width: `calc(${unit} * ${w})`,
+    height: `calc(${unit} * ${h})`,
+    rotate: tall ? '90deg' : undefined,
+  };
+}
+
+export type Span = { w: number; h: number };
 
 /** 아이콘 정의. 앱에 한 번만 그려두면 `<use>` 가 어디서든 참조한다 */
 export function SpriteDefs() {
@@ -16,21 +37,35 @@ export function Art({
   image,
   label,
   icon,
+  span,
+  unit = '',
 }: {
   emoji: string;
   image?: string;
   label: string;
   icon?: string;
+  span?: Span;
+  unit?: string;
 }) {
-  if (image) return <img className="art" src={image} alt={label} />;
+  const box = artBox(unit, span);
+  if (image) return <img className="art" src={image} alt={label} style={box} />;
   if (icon && ICONS.has(icon))
     return (
-      <svg className="art" viewBox="0 0 24 24" role="img" aria-label={label}>
+      <svg
+        className="art"
+        viewBox="0 0 24 24"
+        // 정사각 그림을 긴 자리에 맞춰 늘린다. 소파·여물통처럼 원래 길쭉한
+        // 물건이라 늘어난 쪽이 실제 모양에 가깝다
+        preserveAspectRatio={box && span!.w !== span!.h ? 'none' : undefined}
+        role="img"
+        aria-label={label}
+        style={box}
+      >
         <use href={`#i-${icon}`} />
       </svg>
     );
   return (
-    <span className="art" role="img" aria-label={label}>
+    <span className="art" role="img" aria-label={label} style={box}>
       {emoji}
     </span>
   );
@@ -42,6 +77,30 @@ type Props = {
   onCell: (key: string) => void;
   revealed: boolean;
 };
+
+/** 가구 한 점. 자리를 여러 칸 차지하면 그림도 그 발자국만큼 커진다 */
+function FurnitureArt({ f, span, n }: { f: Furniture; span: Span; n: number }) {
+  return (
+    <span
+      className={`furniture${f.standable ? ' standable' : ''}`}
+      title={f.label}
+      style={{
+        width: `calc(${span.w * 100}% - 6px)`,
+        height: `calc(${span.h * 100}% - 6px)`,
+      }}
+    >
+      <Art
+        emoji={f.emoji}
+        image={f.image}
+        icon={f.kind}
+        label={f.label}
+        span={span}
+        unit={unitOf(n)}
+      />
+      <span className="fur-label">{f.label}</span>
+    </span>
+  );
+}
 
 export default function Board({ puzzle, marks, onCell, revealed }: Props) {
   const { n, rooms, furniture, wallItems, people } = puzzle;
@@ -59,6 +118,12 @@ export default function Board({ puzzle, marks, onCell, revealed }: Props) {
   const furnAt = new Map<string, { f: (typeof furniture)[number]; first: boolean }>();
   for (const f of furniture)
     f.cells.forEach((c, i) => furnAt.set(`${c.r},${c.c}`, { f, first: i === 0 }));
+
+  // 가구가 실제로 덮는 가로·세로 칸수. cells[0] 이 왼쪽 위라 여기서 재면 된다
+  const spanOf = (f: (typeof furniture)[number]): Span => ({
+    w: 1 + Math.max(...f.cells.map((c) => c.c)) - f.cells[0].c,
+    h: 1 + Math.max(...f.cells.map((c) => c.r)) - f.cells[0].r,
+  });
 
   const wallAt = new Map(wallItems.map((w) => [`${w.cell.r},${w.cell.c}`, w]));
   const roomById = new Map(rooms.map((r) => [r.id, r]));
@@ -138,17 +203,7 @@ export default function Board({ puzzle, marks, onCell, revealed }: Props) {
           }}
         >
           {fur && fur.first && (
-            <span
-              className={`furniture${fur.f.standable ? ' standable' : ''}`}
-              title={fur.f.label}
-              style={{
-                width: `calc(${fur.f.cells.some((x) => x.c !== fur.f.cells[0].c) ? 200 : 100}% - 6px)`,
-                height: `calc(${fur.f.cells.some((x) => x.r !== fur.f.cells[0].r) ? 200 : 100}% - 6px)`,
-              }}
-            >
-              <Art emoji={fur.f.emoji} image={fur.f.image} icon={fur.f.kind} label={fur.f.label} />
-              <span className="fur-label">{fur.f.label}</span>
-            </span>
+            <FurnitureArt f={fur.f} span={spanOf(fur.f)} n={n} />
           )}
           {wall && (
             <span className={`wall-item ${wall.side} ${wall.kind}`} title={wall.label}>

@@ -26,7 +26,7 @@ export type Furniture = {
 
 export type WallItem = {
   id: string;
-  kind: 'window' | 'door';
+  kind: 'window' | 'door' | 'fence' | 'gate';
   label: string;
   emoji: string;
   image?: string;

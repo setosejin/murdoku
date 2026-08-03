@@ -20,12 +20,18 @@ export const VICTIM_COLOR = '#8a8f98';
 
 export type RoomSpec = { name: string; floor: FloorKind };
 
+/** 하늘이 뚫린 바닥. 여기엔 창문·문 대신 울타리·대문이 선다 */
+export const OUTDOOR_FLOORS = new Set<FloorKind>(['grass', 'soil']);
+
 export type FurnitureSpec = {
   kind: string;
   label: string;
   emoji: string;
-  /** 차지하는 칸 수 (2면 방 안에서 세로/가로로 두 칸) */
-  size: 1 | 2;
+  /**
+   * 차지하는 칸 수. 2·3 은 가로 또는 세로 일자, 4 는 2×2.
+   * 큰 가구는 방이 넉넉할 때만 놓인다 — 자리가 없으면 조용히 건너뛴다.
+   */
+  size: 1 | 2 | 3 | 4;
   standable: boolean;
   /** 놓일 수 있는 방 이름. 없으면 아무 방이나 (러그·화분·물통) */
   rooms?: readonly string[];
@@ -33,7 +39,7 @@ export type FurnitureSpec = {
 };
 
 export type WallItemSpec = {
-  kind: 'window' | 'door';
+  kind: 'window' | 'door' | 'fence' | 'gate';
   label: string;
   emoji: string;
   image?: string;
@@ -49,7 +55,13 @@ export type Theme = {
   /** 방 이름은 테마마다 9개 이상 — 6×6 평면도가 최대 9개 방까지 나온다 */
   rooms: readonly RoomSpec[];
   furniture: readonly FurnitureSpec[];
+  /** 실내 벽에 붙는 것. 0번은 창문 자리, 1번은 문 자리 */
   wallItems: readonly WallItemSpec[];
+  /**
+   * 야외(잔디·흙) 칸에 걸렸을 때 대신 쓰는 것. 자리 순서는 wallItems 와 같다.
+   * 없으면 실내 것을 그대로 쓴다 — 저택은 야외 방이 없어서 필요가 없다.
+   */
+  outdoorItems?: readonly WallItemSpec[];
   titles: readonly string[];
   briefs: readonly string[];
   roles: readonly string[];
@@ -71,17 +83,17 @@ const MANSION: Theme = {
   ],
   furniture: [
     { kind: 'bed', label: '침대', emoji: '🛏️', size: 2, standable: true, rooms: ['침실', '손님방'] },
-    { kind: 'sofa', label: '소파', emoji: '🛋️', size: 2, standable: true, rooms: ['거실', '서재', '손님방'] },
-    { kind: 'rug', label: '러그', emoji: '🟫', size: 1, standable: true },
+    { kind: 'sofa', label: '소파', emoji: '🛋️', size: 3, standable: true, rooms: ['거실', '서재', '손님방'] },
+    { kind: 'rug', label: '러그', emoji: '🟫', size: 4, standable: true },
     { kind: 'table', label: '탁자', emoji: '🪑', size: 1, standable: false, rooms: ['거실', '주방', '다이닝룸', '손님방', '서재', '복도'] },
-    { kind: 'piano', label: '피아노', emoji: '🎹', size: 1, standable: false, rooms: ['거실', '서재', '작업실'] },
+    { kind: 'piano', label: '피아노', emoji: '🎹', size: 2, standable: false, rooms: ['거실', '서재', '작업실'] },
     { kind: 'plant', label: '화분', emoji: '🪴', size: 1, standable: false },
     { kind: 'tv', label: 'TV', emoji: '📺', size: 1, standable: false, rooms: ['거실', '침실', '손님방'] },
-    { kind: 'bookshelf', label: '책장', emoji: '📚', size: 1, standable: false, rooms: ['서재', '침실', '거실', '작업실', '손님방'] },
+    { kind: 'bookshelf', label: '책장', emoji: '📚', size: 2, standable: false, rooms: ['서재', '침실', '거실', '작업실', '손님방'] },
     { kind: 'fridge', label: '냉장고', emoji: '🧊', size: 1, standable: false, rooms: ['주방', '다이닝룸'] },
     { kind: 'lamp', label: '스탠드', emoji: '💡', size: 1, standable: false },
-    { kind: 'bathtub', label: '욕조', emoji: '🛁', size: 1, standable: false, rooms: ['욕실'] },
-    { kind: 'desk', label: '책상', emoji: '🗄️', size: 1, standable: false, rooms: ['서재', '침실', '작업실', '손님방'] },
+    { kind: 'bathtub', label: '욕조', emoji: '🛁', size: 2, standable: false, rooms: ['욕실'] },
+    { kind: 'desk', label: '책상', emoji: '🗄️', size: 2, standable: false, rooms: ['서재', '침실', '작업실', '손님방'] },
   ],
   wallItems: [
     { kind: 'window', label: '창문', emoji: '🪟' },
@@ -120,22 +132,26 @@ const FARM: Theme = {
     { name: '우물가', floor: 'soil' },
   ],
   furniture: [
-    { kind: 'haystack', label: '건초더미', emoji: '🌾', size: 1, standable: true, rooms: ['외양간', '헛간', '돼지우리', '창고'] },
-    { kind: 'trough', label: '여물통', emoji: '🥣', size: 2, standable: false, rooms: ['외양간', '돼지우리', '목초지'] },
-    { kind: 'mud', label: '진흙탕', emoji: '🟤', size: 1, standable: true, rooms: ['돼지우리', '마당', '우물가'] },
+    { kind: 'haystack', label: '건초더미', emoji: '🌾', size: 4, standable: true, rooms: ['외양간', '헛간', '돼지우리', '창고'] },
+    { kind: 'trough', label: '여물통', emoji: '🥣', size: 3, standable: false, rooms: ['외양간', '돼지우리', '목초지'] },
+    { kind: 'mud', label: '진흙탕', emoji: '🟤', size: 2, standable: true, rooms: ['돼지우리', '마당', '우물가'] },
     { kind: 'well', label: '우물', emoji: '🕳️', size: 1, standable: false, rooms: ['우물가', '마당', '정원'] },
     { kind: 'tree', label: '나무', emoji: '🌳', size: 1, standable: false, rooms: ['목초지', '정원', '마당'] },
     { kind: 'cart', label: '수레', emoji: '🛒', size: 2, standable: false, rooms: ['마당', '헛간', '창고', '작업실'] },
-    { kind: 'tractor', label: '트랙터', emoji: '🚜', size: 2, standable: false, rooms: ['헛간', '창고', '마당', '작업실'] },
+    { kind: 'tractor', label: '트랙터', emoji: '🚜', size: 3, standable: false, rooms: ['헛간', '창고', '마당', '작업실'] },
     { kind: 'scarecrow', label: '허수아비', emoji: '🎃', size: 1, standable: false, rooms: ['정원', '목초지', '마당'] },
-    { kind: 'bench', label: '작업대', emoji: '🔨', size: 1, standable: false, rooms: ['작업실', '헛간', '창고'] },
+    { kind: 'bench', label: '작업대', emoji: '🔨', size: 2, standable: false, rooms: ['작업실', '헛간', '창고'] },
     { kind: 'bucket', label: '물통', emoji: '🪣', size: 1, standable: false },
     { kind: 'sack', label: '사료포대', emoji: '📦', size: 1, standable: false },
     { kind: 'stump', label: '그루터기', emoji: '🪵', size: 1, standable: true },
   ],
   wallItems: [
     { kind: 'window', label: '창문', emoji: '🪟' },
-    { kind: 'door', label: '대문', emoji: '🚪' },
+    { kind: 'door', label: '문', emoji: '🚪' },
+  ],
+  outdoorItems: [
+    { kind: 'fence', label: '울타리', emoji: '🚧' },
+    { kind: 'gate', label: '대문', emoji: '⛩️' },
   ],
   titles: [
     '새벽의 농장', '사라진 우유통', '진흙 위의 발자국', '건초 속의 열쇠',

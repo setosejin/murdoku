@@ -24,9 +24,20 @@ describe('Board 렌더링', () => {
     for (const room of p.rooms) expect(html).toContain(room.name);
   });
 
-  it('2칸 가구는 두 칸에 걸쳐 그려진다', () => {
+  it('가구는 자기 발자국만큼 자리와 그림을 차지한다', () => {
     const { p, html } = render(false);
-    if (p.furniture.some((f) => f.cells.length === 2)) expect(html).toContain('200%');
+    for (const f of p.furniture) {
+      const rs = f.cells.map((c) => c.r);
+      const cs = f.cells.map((c) => c.c);
+      const w = Math.max(...cs) - Math.min(...cs) + 1;
+      const h = Math.max(...rs) - Math.min(...rs) + 1;
+      // 자리: 칸 수만큼 늘어난 상자
+      expect(html).toContain(`width:calc(${w * 100}% - 6px);height:calc(${h * 100}% - 6px)`);
+      // 그림: 세로로 긴 자리는 가로 그림을 눕혀 쓰므로 긴 변이 앞에 온다
+      const [uw, uh] = h > w ? [h, w] : [w, h];
+      expect(html).toContain(`width:calc(13.600cqw * ${uw});height:calc(13.600cqw * ${uh})`);
+      if (h > w) expect(html).toContain('rotate:90deg');
+    }
   });
 
   it('가구마다 이름이 적혀 있다 (증언의 가구명과 칸을 맞출 수 있게)', () => {
