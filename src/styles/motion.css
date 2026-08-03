@@ -35,10 +35,12 @@
   .sheet:not([open]),
   .sheet[data-closing] {
     translate: none !important;
+    scale: none !important;
   }
   .chip:hover,
   .chip:active,
-  .brush:active,
+  .dcase:hover,
+  .dcase:active,
   .clue-row:active,
   .mbar-btn:active {
     transform: none;

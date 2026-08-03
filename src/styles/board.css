@@ -1,10 +1,5 @@
-/* ---- play area ---- */
-.play {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) 260px;
-  gap: 20px;
-  align-items: start;
-}
+/* ---- play area ----
+   `.play` 그리드는 `desktop.css` 에 있다 (데스크톱 셸 전용) */
 
 .board-wrap {
   position: relative;

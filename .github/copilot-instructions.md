@@ -102,11 +102,11 @@ git -c credential.https://github.com.helper= \
 | `src/hooks/useMediaQuery.ts` | `MOBILE_QUERY` + 미디어 쿼리 구독 (셸 선택) |
 | `src/App.tsx` | 데스크톱 셸 + 모바일/데스크톱 갈림길 |
 | `src/components/MobileShell.tsx` | 모바일 셸 — 한 화면 레이아웃 + 바텀시트 4종 |
-| `src/components/ClueList.tsx` | 증언 목록 겸 메모 브러시 (모바일) |
-| `src/components/Sheet.tsx` | 바텀시트 `<dialog>` 래퍼 |
+| `src/components/ClueList.tsx` | 증언 목록 겸 메모 브러시 (두 셸 공용) |
+| `src/components/Sheet.tsx` | 바텀시트(모바일)·가운데 모달(`modal` 변형, 데스크톱) `<dialog>` 래퍼 |
 | `src/components/Board.tsx` | 격자·방 경계·가구·메모 렌더 |
 | `src/components/CaseCards.tsx` | 용의자·피해자 카드 그리드 (두 셸 공용) |
-| `src/components/GamePanels.tsx` | 기본 정보·범례·메모·지목·시드 패널 (두 셸 공용) |
+| `src/components/GamePanels.tsx` | 규칙·범례·브러시바·지목·시드 패널 (두 셸 공용) |
 | `src/components/ChangelogDialog.tsx` | `CHANGELOG.md` 를 읽어 모달로 그린다 (마크다운 부분집합 렌더러) |
 | `src/components/HistoryPanel.tsx` | 기록 목록 + 계정(로그인/가입) + 복구 키 패널 |
 | `src/game/auth.ts` | 계정 — 아이디/`dk` 검증(워커와 공용) + 브라우저 PBKDF2 |
@@ -117,6 +117,14 @@ git -c credential.https://github.com.helper= \
 `App.tsx` 가 `useMediaQuery(MOBILE_QUERY)` 로 데스크톱 셸과 `MobileShell` 중 하나를 고른다. **상태(`useGame`)와 패널 컴포넌트는 둘이 함께 쓴다** — 마크업을 복제하면 두 화면이 갈라진다. 상태를 셸 안으로 내리면 창 크기를 바꿀 때 메모가 날아간다.
 
 모바일은 **스크롤이 없다.** 붙박이는 상단바·보드·증언 목록(= 메모 브러시)·하단 액션바 넷뿐이고 나머지는 전부 시트로 들어간다. 새 UI 를 모바일 메인 화면에 붙이려면 그만큼 보드가 작아진다는 뜻이다 — 시트를 먼저 고려할 것.
+
+데스크톱도 **한 화면**이다. `.app { height: 100dvh }` 이고 `.play` 가 `증언(=브러시) | 보드 | 지목·범례` 세 열이다. 넘치는 몫은 페이지가 아니라 열(`.dclues` / `.side`) 안에서 스크롤한다. 여기서 쉽게 깨지는 것 셋:
+
+- `.play { grid-template-rows: minmax(0, 1fr) }` 를 빼면 auto 행이 내용만큼 커져서 열이 푸터를 뚫고 나간다.
+- `.play { align-items: stretch }` 를 `start` 로 바꾸면 가운데 열 높이가 내용에 맞춰지고 `.pboard { container-type: size }` 가 0 이 되어 보드가 사라진다.
+- 양옆 열 폭은 `clamp(200px, 22vw, 310px)` 다. 고정 px 로 두면 좁은 창에서 양옆이 자리를 먼저 챙겨가고 가운데 보드만 쪼그라든다(900px 창에서 보드가 240px 이었다).
+
+늘 필요하지 않은 것(사건 브리핑·규칙·시드·기록·계정·피드백)은 모달로 내린다 — 모바일 시트와 같은 `Sheet` 에 `modal` 만 붙인다. 데스크톱 메인 화면에 패널을 하나 더 붙이려면 그만큼 보드가 작아진다.
 
 `src/hooks/useMediaQuery.ts` 의 `MOBILE_QUERY` 와 `src/styles/mobile.css` 의 미디어 쿼리는 **글자까지 같아야 한다**. 어긋나면 마크업은 모바일인데 스타일은 데스크톱이 된다. `mobile.test.ts` 가 일치를 검사한다.
 

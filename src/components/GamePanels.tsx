@@ -46,53 +46,25 @@ export function LegendPanel({ furniture, bare }: { furniture: Furniture[]; bare?
   );
 }
 
-export function BrushPalette({
-  suspects,
+export function BrushBar({
   brush,
   setBrush,
   clearMarks,
 }: {
-  suspects: Person[];
   brush: string;
   setBrush: (id: string) => void;
   clearMarks: () => void;
 }) {
   return (
-    <div className="panel palette">
-      <b>메모</b>
-      <div className="brushes">
-        {suspects.map((p) => (
-          <button
-            key={p.id}
-            type="button"
-            className={`brush${brush === p.id ? ' on' : ''}`}
-            style={{ borderColor: p.color }}
-            aria-pressed={brush === p.id}
-            aria-label={`${p.id} · ${p.name} 표시`}
-            onClick={() => setBrush(p.id)}
-          >
-            {p.id}
-          </button>
-        ))}
-        <button
-          type="button"
-          className={`brush${brush === 'V' ? ' on' : ''}`}
-          aria-pressed={brush === 'V'}
-          aria-label="피해자 표시"
-          onClick={() => setBrush('V')}
-        >
-          V
-        </button>
-        <button
-          type="button"
-          className={`brush${brush === 'X' ? ' on' : ''}`}
-          aria-pressed={brush === 'X'}
-          aria-label="빈 칸 표시"
-          onClick={() => setBrush('X')}
-        >
-          ✕
-        </button>
-      </div>
+    <div className="dclues-bar">
+      <button
+        type="button"
+        className={`chip${brush === 'X' ? ' on' : ''}`}
+        aria-pressed={brush === 'X'}
+        onClick={() => setBrush('X')}
+      >
+        ✕ 빈칸
+      </button>
       <button type="button" className="chip" onClick={clearMarks}>
         메모 지우기
       </button>
@@ -130,18 +102,27 @@ export function AccusePanel({
   return (
     <div className={bare ? 'accuse bare' : 'panel accuse'}>
       {!bare && <b>범인은?</b>}
-      <select
-        value={accused}
-        aria-label="범인으로 지목할 용의자"
-        onChange={(e) => setAccused(e.target.value)}
-      >
-        <option value="">용의자 선택</option>
+      {/* 증언 목록과 같은 줄 모양이다 — 보드 위 토큰·증언·여기의 뱃지가 같은 색이라
+          "이 사람" 을 세 곳에서 다시 찾을 필요가 없다.
+          select 였을 때는 열고·고르고·누르는 세 번이었다 */}
+      <ul className="clue-list" role="group" aria-label="범인으로 지목할 용의자">
         {suspects.map((p) => (
-          <option key={p.id} value={p.id}>
-            {p.id} · {p.name}
-          </option>
+          <li key={p.id}>
+            <button
+              type="button"
+              className={`clue-row${accused === p.id ? ' on' : ''}`}
+              aria-pressed={accused === p.id}
+              onClick={() => setAccused(p.id)}
+            >
+              <span className="clue-badge" style={{ background: p.color }}>
+                {p.id}
+              </span>
+              <b>{p.name}</b>
+              <span className="clue-text">{p.role}</span>
+            </button>
+          </li>
         ))}
-      </select>
+      </ul>
       <button type="button" className="chip primary" onClick={accuse} disabled={!accused}>
         지목하기
       </button>
