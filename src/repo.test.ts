@@ -1,4 +1,6 @@
 import { describe, expect, it } from 'vitest';
+import sprite from './assets/sprite.svg?raw';
+import { THEMES } from './data/content';
 
 const MAX_LINES = 500;
 
@@ -39,5 +41,28 @@ describe('저장소 규약', () => {
       .map(([path]) => path);
 
     expect(bad).toEqual([]);
+  });
+});
+
+describe('스프라이트', () => {
+  // 가구 그림은 발자국 비율대로 그려져 있다. size 만 올리고 그림을 그대로 두면
+  // 늘어나거나(예전) 남는 자리에 letterbox 되어 조용히 어색해진다 — 여기서 잡는다
+  it('가구 아이콘의 viewBox 가 발자국 비율과 같다', () => {
+    const boxes = new Map(
+      [...sprite.matchAll(/id="i-([\w-]+)"\s+viewBox="0 0 ([\d.]+) ([\d.]+)"/g)].map((m) => [
+        m[1],
+        `${m[2]}x${m[3]}`,
+      ]),
+    );
+    // size 4 는 2×2 다 (generate.ts 의 SHAPES)
+    const want = (size: number) =>
+      size === 4 ? '48x48' : `${24 * size}x24`;
+
+    expect(boxes.size).toBeGreaterThan(15);
+    for (const theme of THEMES)
+      for (const spec of theme.furniture) {
+        if (!boxes.has(spec.kind)) continue; // 이모지로 떨어지는 가구는 그림이 없다
+        expect(`${spec.label} ${boxes.get(spec.kind)}`).toBe(`${spec.label} ${want(spec.size)}`);
+      }
   });
 });

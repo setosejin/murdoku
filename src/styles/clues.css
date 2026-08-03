@@ -8,6 +8,15 @@
   display: flex;
   flex-direction: column;
   gap: 4px;
+  /* 사건이 바뀌면 목록이 통째로 새로 마운트된다(ClueList/AccusePanel 의 key).
+     보드는 150ms 로 페이드해 들어오는데 이름만 제자리에서 갈리면
+     화면의 절반은 바뀌고 절반은 순간이동한 것처럼 보인다 */
+  transition: opacity 150ms var(--ease-out);
+}
+@starting-style {
+  .clue-list {
+    opacity: 0;
+  }
 }
 .clue-row {
   width: 100%;

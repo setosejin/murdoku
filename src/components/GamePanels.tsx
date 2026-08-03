@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Art } from './Board';
+import { spanOf } from '../game/types';
 import type { Furniture, Person } from '../game/types';
 
 /**
@@ -28,7 +29,7 @@ export function LegendPanel({ furniture, bare }: { furniture: Furniture[]; bare?
     <ul>
       {furniture.map((f) => (
         <li key={f.id} className={f.standable ? 'ok' : 'no'}>
-          <Art emoji={f.emoji} image={f.image} icon={f.kind} label={f.label} />
+          <Art emoji={f.emoji} image={f.image} icon={f.kind} label={f.label} span={spanOf(f)} />
           <span>{f.label}</span>
           <em>{f.standable ? '설 수 있음' : '설 수 없음'}</em>
         </li>
@@ -104,8 +105,14 @@ export function AccusePanel({
       {!bare && <b>범인은?</b>}
       {/* 증언 목록과 같은 줄 모양이다 — 보드 위 토큰·증언·여기의 뱃지가 같은 색이라
           "이 사람" 을 세 곳에서 다시 찾을 필요가 없다.
-          select 였을 때는 열고·고르고·누르는 세 번이었다 */}
-      <ul className="clue-list" role="group" aria-label="범인으로 지목할 용의자">
+          select 였을 때는 열고·고르고·누르는 세 번이었다.
+          key 는 증언 목록과 같은 이유다 — 용의자가 바뀌면 목록을 갈아끼운다 */}
+      <ul
+        className="clue-list"
+        key={suspects.map((p) => p.name).join()}
+        role="group"
+        aria-label="범인으로 지목할 용의자"
+      >
         {suspects.map((p) => (
           <li key={p.id}>
             <button

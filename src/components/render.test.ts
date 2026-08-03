@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { createElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
-import { generatePuzzle } from '../game/generate';
+import { DIFFICULTIES, generatePuzzle } from '../game/generate';
 import App from '../App';
 import Board from './Board';
 import FeedbackDialog, { issueUrl } from './FeedbackDialog';
@@ -24,9 +24,22 @@ describe('Board 렌더링', () => {
     for (const room of p.rooms) expect(html).toContain(room.name);
   });
 
-  it('2칸 가구는 두 칸에 걸쳐 그려진다', () => {
+  it('가구는 자기 발자국만큼 자리와 그림을 차지한다', () => {
     const { p, html } = render(false);
-    if (p.furniture.some((f) => f.cells.length === 2)) expect(html).toContain('200%');
+    for (const f of p.furniture) {
+      const rs = f.cells.map((c) => c.r);
+      const cs = f.cells.map((c) => c.c);
+      const w = Math.max(...cs) - Math.min(...cs) + 1;
+      const h = Math.max(...rs) - Math.min(...rs) + 1;
+      // 자리: 칸 수만큼 늘어난 상자
+      expect(html).toContain(`width:calc(${w * 100}% - 6px);height:calc(${h * 100}% - 6px)`);
+      // 그림: 세로로 긴 자리는 가로 그림을 눕혀 쓰므로 긴 변이 앞에 온다
+      const [uw, uh] = h > w ? [h, w] : [w, h];
+      expect(html).toContain(`width:calc(13.600cqw * ${uw});height:calc(13.600cqw * ${uh})`);
+      // viewBox 도 같은 비율이라야 늘어나지도 letterbox 되지도 않는다
+      expect(html).toContain(`viewBox="0 0 ${24 * uw} ${24 * uh}"`);
+      if (h > w) expect(html).toContain('rotate:90deg');
+    }
   });
 
   it('가구마다 이름이 적혀 있다 (증언의 가구명과 칸을 맞출 수 있게)', () => {
@@ -37,6 +50,26 @@ describe('Board 렌더링', () => {
   it('정답 공개 시 인물 토큰이 n개 나온다', () => {
     const { html } = render(true);
     expect((html.match(/token solved/g) ?? []).length).toBe(5);
+  });
+
+  /* 정답 공개는 이 게임의 규칙("범인 = 피해자와 같은 방에 있던 용의자")을
+     순서로 말한다. 범인 표시나 사건 현장 표시가 빠지면 정답이 보드 밖 문구로만
+     남아서, 이름을 읽고 보드에서 글자를 다시 찾아야 한다 */
+  it('정답 공개 시 범인 토큰과 사건 현장이 따로 표시된다', () => {
+    const { p, html } = render(true);
+    expect((html.match(/token solved culprit/g) ?? []).length).toBe(1);
+
+    const vc = p.solution[p.people.find((x) => x.isVictim)!.id];
+    const crimeRoom = p.rooms.find((rm) => rm.cells.some((c) => c.r === vc.r && c.c === vc.c))!;
+    expect((html.match(/class="cell[^"]* crime/g) ?? []).length).toBe(crimeRoom.cells.length);
+    // 마지막 한 마디의 딜레이. 의사요소가 읽어가므로 인라인이 아니라 변수로 내려간다
+    expect(html).toContain('--crime-delay');
+  });
+
+  it('공개 전에는 범인도 사건 현장도 드러나지 않는다', () => {
+    const { html } = render(false);
+    expect(html).not.toContain('culprit');
+    expect(html).not.toContain(' crime');
   });
 
   it('설 수 없는 가구 칸은 blocked로 표시되고 이유가 라벨에 들어간다', () => {
@@ -61,7 +94,7 @@ describe('Board 렌더링', () => {
   // Safari 는 repeat() 안의 var() 를 캐싱해서, 난이도를 오갔다 돌아오면 옛 열 폭을 쓴다.
   // 그래서 열 개수는 CSS 변수가 아니라 인라인 값으로 박아야 한다 (webkit#202259)
   it('열 개수를 grid-template-columns 에 직접 박는다', () => {
-    for (const n of [4, 5, 6]) {
+    for (const n of DIFFICULTIES.map((d) => d.n)) {
       const html = renderToStaticMarkup(
         createElement(Board, {
           puzzle: generatePuzzle(n, `cols-${n}`),

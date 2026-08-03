@@ -19,7 +19,10 @@ export default function ClueList({
   const clueOf = (id: string) => puzzle.clues.find((c) => c.personId === id)?.text ?? '';
 
   return (
-    <ul className="clue-list">
+    // 사건이 바뀌면 목록을 통째로 갈아끼운다. <li> 의 key 가 A/B/C/V 로 고정이라
+    // 그냥 두면 React 가 DOM 을 재사용해서, 보드는 페이드하는데 이름만 제자리에서
+    // 바뀐다. 여기에 key 를 두면 두 셸이 다 고쳐진다 (등장 페이드는 clues.css)
+    <ul className="clue-list" key={`${puzzle.seed}:${puzzle.n}`}>
       {puzzle.people.map((p) => (
         <li key={p.id}>
           <button
