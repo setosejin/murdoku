@@ -1,7 +1,19 @@
 import { describe, expect, it } from 'vitest';
 import { DIFFICULTIES } from './generate';
 import worker from '../../worker/index';
-import { isCode, MAX_PLAYS, mergePlays, N_RANGE, sanitizePlays, type Play } from './history';
+import {
+  isCode,
+  MAX_PLAYS,
+  mergePlays,
+  N_RANGE,
+  sanitizeBoard,
+  sanitizePlays,
+  SCORE_BASE,
+  scoreOf,
+  summarize,
+  TOP_N,
+  type Play,
+} from './history';
 
 describe('플레이 기록', () => {
   const play = (over: Partial<Play> = {}): Play => ({
@@ -77,6 +89,92 @@ describe('플레이 기록', () => {
     expect(isCode('a'.repeat(22))).toBe(true);
     for (const bad of ['', 'a'.repeat(21), 'a'.repeat(23), 'A'.repeat(22), '../'.repeat(7) + 'a'])
       expect(isCode(bad)).toBe(false);
+  });
+});
+
+describe('점수', () => {
+  const play = (over: Partial<Play> = {}): Play => ({
+    seed: 'a1b2c3',
+    n: 4,
+    at: 1000,
+    ok: true,
+    tries: 1,
+    title: '사라진 회중시계',
+    ...over,
+  });
+
+  it('SCORE_BASE 가 실제 난이도와 어긋나지 않는다', () => {
+    expect(Object.keys(SCORE_BASE).map(Number).sort()).toEqual(DIFFICULTIES.map((d) => d.n).sort());
+    // 감점 단위가 만점의 1/5 라 5로 나누어떨어져야 정수로 떨어진다
+    for (const base of Object.values(SCORE_BASE)) expect(base % 5).toBe(0);
+  });
+
+  it('난이도가 높을수록 만점이 크다', () => {
+    const ns = DIFFICULTIES.map((d) => d.n);
+    for (let i = 1; i < ns.length; i++)
+      expect(SCORE_BASE[ns[i]]).toBeGreaterThan(SCORE_BASE[ns[i - 1]]);
+  });
+
+  it('지목이 늘수록 20%씩 깎이고 20%는 남는다', () => {
+    const full = SCORE_BASE[6];
+    const unit = full / 5;
+    expect(scoreOf(play({ n: 6, tries: 1 }))).toBe(full);
+    expect(scoreOf(play({ n: 6, tries: 2 }))).toBe(full - unit);
+    expect(scoreOf(play({ n: 6, tries: 5 }))).toBe(unit);
+    // 아무리 헤매도 0 밑으로는 안 간다
+    expect(scoreOf(play({ n: 6, tries: 999 }))).toBe(unit);
+    expect(Number.isInteger(scoreOf(play({ n: 5, tries: 3 })))).toBe(true);
+  });
+
+  it('정답을 보고 지목한 판은 0점이다', () => {
+    expect(scoreOf(play({ ok: false, tries: 1 }))).toBe(0);
+  });
+
+  it('같은 사건은 첫 해결만 친다 (다시 풀어 점수를 불릴 수 없다)', () => {
+    const sloppy = play({ n: 6, at: 100, tries: 4 });
+    // 답을 알고 다시 푼 판. 나중 기록이라 점수에 반영되면 안 된다
+    const replay = play({ n: 6, at: 200, tries: 1 });
+
+    expect(summarize([sloppy]).score).toBe(scoreOf(sloppy));
+    expect(summarize([sloppy, replay]).score).toBe(scoreOf(sloppy));
+    expect(summarize([replay, sloppy]).score).toBe(scoreOf(sloppy));
+    expect(summarize([sloppy, replay]).cases).toBe(1);
+  });
+
+  it('다른 사건은 따로 더해진다', () => {
+    const a = play({ seed: 'aaa', n: 4, tries: 1 });
+    const b = play({ seed: 'bbb', n: 7, tries: 2 });
+    expect(summarize([a, b])).toEqual({ score: scoreOf(a) + scoreOf(b), cases: 2 });
+  });
+
+  it('정답 확인만 한 사건은 사건 수에도 안 들어간다', () => {
+    expect(summarize([play({ ok: false })])).toEqual({ score: 0, cases: 0 });
+  });
+
+  it('순위표도 검증하고 점수순으로 세운다', () => {
+    const row = (over: Record<string, unknown> = {}) => ({
+      name: 'sejin',
+      score: 100,
+      cases: 1,
+      at: 1,
+      ...over,
+    });
+
+    expect(sanitizeBoard('x')).toEqual([]);
+    expect(sanitizeBoard([row({ name: '' }), row({ score: -1 }), row({ at: 0 }), null, 'x'])).toEqual(
+      [],
+    );
+
+    const sorted = sanitizeBoard([
+      row({ name: 'b', score: 100, at: 2 }),
+      row({ name: 'c', score: 300 }),
+      row({ name: 'a', score: 100, at: 1 }),
+    ]);
+    // 동점이면 먼저 올린 쪽이 앞이다
+    expect(sorted.map((e) => e.name)).toEqual(['c', 'a', 'b']);
+
+    const [clean] = sanitizeBoard([{ ...row(), evil: '×'.repeat(9999) }]);
+    expect(Object.keys(clean).sort()).toEqual(['at', 'cases', 'name', 'score']);
   });
 });
 
@@ -189,5 +287,137 @@ describe('기록 동기화 워커', () => {
       );
       expect(await res.json()).toEqual([play(1)]);
     }
+  });
+});
+
+describe('순위표 워커', () => {
+  const DK = '0123456789abcdef'.repeat(4);
+
+  const env = () => {
+    const store = new Map<string, string>();
+    let writes = 0;
+    return {
+      HISTORY: {
+        get: async (k: string) => store.get(k) ?? null,
+        put: async (k: string, v: string) => {
+          writes++;
+          store.set(k, v);
+        },
+      },
+      writes: () => writes,
+    };
+  };
+
+  const post = (e: ReturnType<typeof env>, path: string, body?: unknown) =>
+    worker.fetch(
+      new Request(`https://w.dev${path}`, {
+        method: 'POST',
+        ...(body === undefined ? {} : { body: JSON.stringify(body) }),
+      }),
+      e,
+    );
+
+  /** 가입해서 이름 붙은 코드를 받고, 그 코드로 사건 하나를 푼 기록을 올린다 */
+  const solve = async (
+    e: ReturnType<typeof env>,
+    id: string,
+    plays: { seed: string; n: number; tries: number; at?: number }[],
+  ) => {
+    const res = await post(e, '/a/signup', { id, dk: DK });
+    const { code } = (await res.json()) as { code: string };
+    await post(
+      e,
+      `/h/${code}`,
+      plays.map((p) => ({ ...p, at: p.at ?? 1000, ok: true, title: '사건' })),
+    );
+    return code;
+  };
+
+  const board = async (e: ReturnType<typeof env>, code: string) =>
+    (await (await post(e, `/lb/${code}`)).json()) as {
+      top: { name: string; score: number; cases: number }[];
+      rank: number | null;
+    };
+
+  it('점수순으로 세우고 내 순위를 알려준다', async () => {
+    const e = env();
+    const low = await solve(e, 'low', [{ seed: 'a', n: 4, tries: 1 }]);
+    const high = await solve(e, 'high', [{ seed: 'b', n: 7, tries: 1 }]);
+
+    const seen = await board(e, high);
+    expect(seen.top.map((r) => r.name)).toEqual(['high', 'low']);
+    expect(seen.top[0].score).toBe(SCORE_BASE[7]);
+    expect(seen.rank).toBe(1);
+    expect((await board(e, low)).rank).toBe(2);
+  });
+
+  it('점수는 저장된 기록에서 서버가 센다 (클라이언트가 올린 숫자를 안 믿는다)', async () => {
+    const e = env();
+    // 점수·순위 같은 걸 끼워 보내도 sanitizePlays 가 버린다
+    const res = await post(e, '/a/signup', { id: 'cheat', dk: DK });
+    const { code } = (await res.json()) as { code: string };
+    await post(e, `/h/${code}`, [
+      { seed: 'a', n: 4, at: 1, ok: true, tries: 9, title: '사건', score: 999_999 },
+    ]);
+    expect((await board(e, code)).top[0].score).toBe(SCORE_BASE[4] / 5);
+  });
+
+  it('게스트는 순위에 오르지 않는다', async () => {
+    const e = env();
+    await post(e, `/h/${'g'.repeat(22)}`, [
+      { seed: 'a', n: 4, at: 1, ok: true, tries: 1, title: '사건' },
+    ]);
+    const seen = await board(e, 'g'.repeat(22));
+    expect(seen.top).toEqual([]);
+    expect(seen.rank).toBe(null);
+  });
+
+  it('같은 사람이 두 줄을 차지하지 않는다', async () => {
+    const e = env();
+    const code = await solve(e, 'sejin', [{ seed: 'a', n: 4, tries: 1 }]);
+    await post(e, `/h/${code}`, [
+      { seed: 'a', n: 4, at: 1000, ok: true, tries: 1, title: '사건' },
+      { seed: 'b', n: 5, at: 2000, ok: true, tries: 1, title: '사건' },
+    ]);
+
+    const seen = await board(e, code);
+    expect(seen.top).toHaveLength(1);
+    expect(seen.top[0]).toMatchObject({ cases: 2, score: SCORE_BASE[4] + SCORE_BASE[5] });
+  });
+
+  it('TOP 10 만 내려주고, 밖에 있어도 순위는 알려준다', async () => {
+    const e = env();
+    let last = '';
+    // 점수가 낮은 순으로 12명 — 마지막에 가입한 사람이 꼴찌다
+    for (let i = 0; i < 12; i++)
+      last = await solve(e, `pp${i}`, [{ seed: `s${i}`, n: 4, tries: Math.min(i + 1, 5) }]);
+
+    const seen = await board(e, last);
+    expect(seen.top).toHaveLength(TOP_N);
+    expect(seen.rank).toBeGreaterThan(TOP_N);
+  });
+
+  it('기록이 안 바뀌면 순위표도 안 쓴다', async () => {
+    const e = env();
+    const code = await solve(e, 'sejin', [{ seed: 'a', n: 4, tries: 1 }]);
+    const before = e.writes();
+    await post(e, `/h/${code}`, []);
+    await post(e, `/lb/${code}`);
+    expect(e.writes()).toBe(before);
+  });
+
+  it('기록 코드가 아니면 400', async () => {
+    const e = env();
+    for (const path of ['/lb/', '/lb/short', '/lb/../secret']) {
+      expect((await post(e, path)).status).toBe(400);
+    }
+    expect(e.writes()).toBe(0);
+  });
+
+  it('망가진 순위표가 응답을 깨뜨리지 않는다', async () => {
+    const e = env();
+    const code = await solve(e, 'sejin', [{ seed: 'a', n: 4, tries: 1 }]);
+    await e.HISTORY.put('lb', '찢어진 json');
+    expect(await board(e, code)).toEqual({ top: [], rank: null });
   });
 });

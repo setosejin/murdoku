@@ -91,7 +91,8 @@ export default function HistoryPanel({
               <button type="button" onClick={() => onOpen(p.n, p.seed)}>
                 <b>{p.title}</b>
                 <small>
-                  {p.seed} · {fmtDate(p.at)} · {p.n}x{p.n} · {p.tries}번 만에 해결
+                  {p.seed} · {fmtDate(p.at)} · {p.n}x{p.n} ·{' '}
+                  {p.ok ? `${p.tries}번 만에 해결` : '정답 확인'}
                 </small>
               </button>
             </li>

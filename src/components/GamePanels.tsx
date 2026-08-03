@@ -82,6 +82,8 @@ export type AccuseProps = {
   result: 'correct' | 'wrong' | null;
   attempt: number;
   culpritName: string;
+  /** 방금 맞힌 판의 점수. 0 이면 정답을 보고 지목한 판이다 */
+  earned: number;
   revealed: boolean;
   setRevealed: (next: boolean) => void;
   /** 시트 안에서는 제목과 테두리를 생략한다 (시트 제목이 이미 `범인 지목`) */
@@ -96,6 +98,7 @@ export function AccusePanel({
   result,
   attempt,
   culpritName,
+  earned,
   revealed,
   setRevealed,
   bare,
@@ -135,7 +138,12 @@ export function AccusePanel({
       </button>
       {result === 'correct' && (
         <p key={attempt} className="verdict ok" role="status">
-          정답! 범인은 {culpritName}!
+          정답! 범인은 {culpritName}!{' '}
+          {earned > 0 ? (
+            <em className="earned">+{earned}점</em>
+          ) : (
+            <em className="earned none">정답을 본 판이라 점수 없음</em>
+          )}
         </p>
       )}
       {result === 'wrong' && (

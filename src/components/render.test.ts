@@ -6,6 +6,8 @@ import App from '../App';
 import Board from './Board';
 import FeedbackDialog, { issueUrl } from './FeedbackDialog';
 import ChangelogDialog, { renderMarkdown } from './ChangelogDialog';
+import Leaderboard from './Leaderboard';
+import { SCORE_BASE, scoreOf, type Play } from '../game/history';
 import changelog from '../../CHANGELOG.md?raw';
 import desktopCss from '../styles/desktop.css?raw';
 
@@ -163,6 +165,43 @@ describe('desktop.css 불변식', () => {
   it('보드는 남는 공간의 짧은 변에 맞춘다', () => {
     expect(desktopCss).toMatch(/\.pboard\s*\{[^}]*container-type:\s*size/);
     expect(desktopCss).toContain('min(100cqw, 100cqh');
+  });
+});
+
+describe('점수판', () => {
+  const play = (over: Partial<Play> = {}): Play => ({
+    seed: 'a1b2c3',
+    n: 4,
+    at: 1000,
+    ok: true,
+    tries: 1,
+    title: '사라진 회중시계',
+    ...over,
+  });
+
+  const render = (plays: Play[]) =>
+    renderToStaticMarkup(createElement(Leaderboard, { plays, code: 'a'.repeat(22) }));
+
+  it('내 점수를 로컬 기록에서 바로 센다 (서버가 없어도 보인다)', () => {
+    const plays = [play({ seed: 'a', n: 7, tries: 2 }), play({ seed: 'b', n: 4, tries: 1 })];
+    const total = plays.reduce((s, p) => s + scoreOf(p), 0);
+
+    const html = render(plays);
+    expect(html).toContain(`${total.toLocaleString('ko-KR')}점`);
+    expect(html).toContain('2사건 해결');
+  });
+
+  it('점수 규칙을 SCORE_BASE 에서 그대로 읽어 보여준다', () => {
+    // 문구에 숫자를 복제하면 만점을 조정할 때 조용히 거짓말이 된다
+    const html = render([]);
+    for (const [n, base] of Object.entries(SCORE_BASE)) expect(html).toContain(`${n}×${n} ${base}`);
+  });
+
+  it('서버가 없으면 순위 대신 그 사실을 말한다', () => {
+    expect(import.meta.env.VITE_SYNC_URL).toBeFalsy();
+    const html = render([]);
+    expect(html).not.toContain('<ol');
+    expect(html).toContain('순위 서버가 없어');
   });
 });
 

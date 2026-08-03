@@ -9,6 +9,7 @@
 @import './styles/panels.css';
 @import './styles/clues.css';
 @import './styles/history.css';
+@import './styles/scores.css';
 @import './styles/dialog.css';
 @import './styles/sheet.css';
 /* 셸별 레이아웃. 모바일이 데스크톱 규칙을 덮어야 하므로 이 순서다 */

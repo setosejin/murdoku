@@ -1,0 +1,85 @@
+/* ---- 점수판 ---- */
+/* 내 점수가 먼저다. 남의 줄보다 크고, 순위는 붙임말로 따라온다 */
+.myscore {
+  margin: 0;
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 6px;
+  font-size: 13px;
+}
+.myscore strong {
+  font-size: 20px;
+  font-variant-numeric: tabular-nums;
+}
+.myscore small {
+  font-size: 11px;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.ranks {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.ranks li {
+  display: grid;
+  /* 순위 · 이름 · 사건 수 · 점수. 점수는 오른쪽 끝에 줄 맞춰 선다 */
+  grid-template-columns: 22px 1fr auto auto;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  /* 패널 반경 18 - 패딩 12 = 6 */
+  border: 2px solid var(--tile-line);
+  border-radius: 6px;
+  background: var(--tile);
+  padding: 4px 8px;
+}
+/* 내 줄은 목록에서 눈으로 바로 찾아야 한다 */
+.ranks li.mine {
+  border-color: var(--wall);
+  background: #fff;
+}
+.ranks .rk {
+  font-weight: 700;
+  font-size: 12px;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+  color: var(--muted);
+}
+.ranks li:nth-child(-n + 3) .rk {
+  color: var(--ink);
+}
+.ranks b {
+  font-size: 13px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.ranks small {
+  font-size: 11px;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+.ranks em {
+  font-style: normal;
+  font-weight: 700;
+  /* 점수는 자릿수가 제각각이라 비례폭이면 목록이 흔들린다 */
+  font-variant-numeric: tabular-nums;
+}
+
+/* 지목 결과 옆의 획득 점수 */
+.earned {
+  font-style: normal;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+.earned.none {
+  font-weight: 400;
+  font-size: 12px;
+  color: var(--muted);
+}
