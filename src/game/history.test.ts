@@ -126,7 +126,7 @@ describe('점수', () => {
     expect(Number.isInteger(scoreOf(play({ n: 5, tries: 3 })))).toBe(true);
   });
 
-  it('정답을 보고 지목한 판은 0점이다', () => {
+  it('ok:false 인 기록은 0점이다 (앱은 안 쓰지만 남의 기록이 들어올 수 있다)', () => {
     expect(scoreOf(play({ ok: false, tries: 1 }))).toBe(0);
   });
 
@@ -147,7 +147,7 @@ describe('점수', () => {
     expect(summarize([a, b])).toEqual({ score: scoreOf(a) + scoreOf(b), cases: 2 });
   });
 
-  it('정답 확인만 한 사건은 사건 수에도 안 들어간다', () => {
+  it('ok:false 인 기록은 사건 수에도 안 들어간다', () => {
     expect(summarize([play({ ok: false })])).toEqual({ score: 0, cases: 0 });
   });
 

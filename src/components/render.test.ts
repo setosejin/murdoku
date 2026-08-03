@@ -7,6 +7,7 @@ import Board from './Board';
 import FeedbackDialog, { issueUrl } from './FeedbackDialog';
 import ChangelogDialog, { renderMarkdown } from './ChangelogDialog';
 import Leaderboard from './Leaderboard';
+import { AccusePanel, type AccuseProps } from './GamePanels';
 import { SCORE_BASE, scoreOf, type Play } from '../game/history';
 import changelog from '../../CHANGELOG.md?raw';
 import desktopCss from '../styles/desktop.css?raw';
@@ -202,6 +203,45 @@ describe('점수판', () => {
     const html = render([]);
     expect(html).not.toContain('<ol');
     expect(html).toContain('순위 서버가 없어');
+  });
+});
+
+describe('정답을 본 사건', () => {
+  const suspects = generatePuzzle(4, 'peek-check').people.filter((p) => !p.isVictim);
+  const props = {
+    suspects,
+    accused: suspects[0].id,
+    setAccused: () => {},
+    accuse: () => {},
+    result: null,
+    attempt: 0,
+    culpritName: '아무개',
+    earned: 0,
+    revealed: false,
+    setRevealed: () => {},
+  } as const;
+
+  const render = (over: Partial<AccuseProps>) =>
+    renderToStaticMarkup(createElement(AccusePanel, { ...props, peeked: false, ...over }));
+
+  it('보기 전에는 지목할 수 있고, 버튼이 대가를 미리 말한다', () => {
+    const html = render({});
+    expect(html).not.toContain('disabled');
+    expect(html).toContain('정답 보기 (이 사건 포기)');
+  });
+
+  it('한 번 보면 지목이 막히고 이유를 말한다', () => {
+    // 감췄다고 안 본 게 되지 않는다 — revealed 가 아니라 peeked 로 잠근다
+    const html = render({ peeked: true, revealed: false });
+    expect(html).toMatch(/<button[^>]*disabled[^>]*>지목하기<\/button>/);
+    expect(html).toContain('이 사건은 여기까지야');
+  });
+
+  it('맞힌 뒤에는 정답을 봐도 지목 버튼 문구가 겁주지 않는다', () => {
+    const html = render({ peeked: true, result: 'correct', earned: 150, revealed: true });
+    expect(html).toContain('+150점');
+    expect(html).not.toContain('이 사건은 여기까지야');
+    expect(html).toContain('정답 숨기기');
   });
 });
 

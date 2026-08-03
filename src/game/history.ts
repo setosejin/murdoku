@@ -31,8 +31,10 @@ export const N_RANGE = { min: 4, max: 7 } as const;
 /**
  * 난이도별 기본 점수. N_RANGE 와 같은 이유로 DIFFICULTIES 를 import 하지 않는다 —
  * 어긋나지 않는지는 테스트가 검사한다. 5로 나누어떨어져야 감점 단위가 정수로 떨어진다.
+ *
+ * ponytail: 격자가 정사각이라 한 변(n)이 키다. 가로세로 다른 격자가 생기면 그 몫으로 500 을 둔다
  */
-export const SCORE_BASE: Record<number, number> = { 4: 100, 5: 250, 6: 500, 7: 1000 };
+export const SCORE_BASE: Record<number, number> = { 4: 150, 5: 250, 6: 350, 7: 450 };
 
 const MAX_SEED_LEN = 64;
 const MAX_TITLE_LEN = 80;
@@ -91,7 +93,7 @@ export function mergePlays(a: readonly Play[], b: readonly Play[]): Play[] {
  * Play 에서 그대로 계산되므로 저장 구조가 안 바뀐다 — 워커도 같은 함수로 순위를 매긴다.
  */
 export function scoreOf(p: Pick<Play, 'n' | 'tries' | 'ok'>): number {
-  // ok=false 는 정답을 미리 보고 지목한 판이다. 기록에는 남되 점수는 없다
+  // 정답을 본 사건은 앱이 지목을 막지만, 남·옛 기기에서 넘어온 기록에는 섞일 수 있다
   if (!p.ok) return 0;
   const base = SCORE_BASE[p.n] ?? 0;
   const unit = base / 5;
@@ -127,7 +129,8 @@ export const MAX_BOARD = 100;
 /** 화면에 보여주는 수 */
 export const TOP_N = 10;
 
-const MAX_SCORE = MAX_PLAYS * 1000;
+/** 순위표 점수의 상한. 한 사건이 만점이어도 이걸 못 넘는다 */
+const MAX_SCORE = MAX_PLAYS * Math.max(...Object.values(SCORE_BASE));
 
 /** 순위표도 신뢰 경계다 — 워커가 KV 에서 읽을 때도, 브라우저가 네트워크에서 받을 때도 통과한다 */
 export function sanitizeBoard(raw: unknown): Rank[] {

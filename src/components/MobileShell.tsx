@@ -111,6 +111,7 @@ export default function MobileShell({ game }: { game: Game }) {
           attempt={game.attempt}
           culpritName={game.culpritName}
           earned={game.earned}
+          peeked={game.peeked}
           revealed={game.revealed}
           setRevealed={game.setRevealed}
           bare

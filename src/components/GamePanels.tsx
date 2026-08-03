@@ -82,8 +82,10 @@ export type AccuseProps = {
   result: 'correct' | 'wrong' | null;
   attempt: number;
   culpritName: string;
-  /** 방금 맞힌 판의 점수. 0 이면 정답을 보고 지목한 판이다 */
+  /** 방금 맞힌 판의 점수 */
   earned: number;
+  /** 정답을 한 번이라도 봤나. 그 순간 이 사건은 끝이다 */
+  peeked: boolean;
   revealed: boolean;
   setRevealed: (next: boolean) => void;
   /** 시트 안에서는 제목과 테두리를 생략한다 (시트 제목이 이미 `범인 지목`) */
@@ -99,10 +101,12 @@ export function AccusePanel({
   attempt,
   culpritName,
   earned,
+  peeked,
   revealed,
   setRevealed,
   bare,
 }: AccuseProps) {
+  const solved = result === 'correct';
   return (
     <div className={bare ? 'accuse bare' : 'panel accuse'}>
       {!bare && <b>범인은?</b>}
@@ -133,26 +137,27 @@ export function AccusePanel({
           </li>
         ))}
       </ul>
-      <button type="button" className="chip primary" onClick={accuse} disabled={!accused}>
+      <button type="button" className="chip primary" onClick={accuse} disabled={!accused || peeked}>
         지목하기
       </button>
-      {result === 'correct' && (
-        <p key={attempt} className="verdict ok" role="status">
-          정답! 범인은 {culpritName}!{' '}
-          {earned > 0 ? (
-            <em className="earned">+{earned}점</em>
-          ) : (
-            <em className="earned none">정답을 본 판이라 점수 없음</em>
-          )}
+      {/* 정답을 본 순간 이 사건은 끝난다. 왜 눌리지 않는지 여기서 말해준다 */}
+      {peeked && !solved && (
+        <p className="hint" role="status">
+          정답을 봤으니 이 사건은 여기까지야. 새 사건으로 넘어가자.
         </p>
       )}
-      {result === 'wrong' && (
+      {solved && (
+        <p key={attempt} className="verdict ok" role="status">
+          정답! 범인은 {culpritName}! <em className="earned">+{earned}점</em>
+        </p>
+      )}
+      {result === 'wrong' && !peeked && (
         <p key={attempt} className="verdict no" role="status">
           아니야… 다시 생각해봐.
         </p>
       )}
       <button type="button" className="link" onClick={() => setRevealed(!revealed)}>
-        {revealed ? '정답 숨기기' : '정답 보기'}
+        {revealed ? '정답 숨기기' : peeked || solved ? '정답 보기' : '정답 보기 (이 사건 포기)'}
       </button>
     </div>
   );

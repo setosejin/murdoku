@@ -67,8 +67,8 @@ export default function Leaderboard({ plays, code }: { plays: Play[]; code: stri
         {Object.entries(SCORE_BASE)
           .map(([n, base]) => `${n}×${n} ${base}`)
           .join(' · ')}
-        ). 지목이 한 번 늘 때마다 20%씩 깎이고 20%는 남아. 정답을 보고 지목하면 0점, 같은 사건은
-        첫 해결만 친다.
+        ). 지목이 한 번 늘 때마다 20%씩 깎이고 20%는 남아. 정답을 보면 그 사건은 끝이고, 같은
+        사건은 첫 해결만 친다.
       </p>
     </div>
   );

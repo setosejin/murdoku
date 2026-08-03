@@ -118,6 +118,7 @@ export default function App() {
             attempt={game.attempt}
             culpritName={game.culpritName}
             earned={game.earned}
+            peeked={game.peeked}
             revealed={game.revealed}
             setRevealed={game.setRevealed}
           />
