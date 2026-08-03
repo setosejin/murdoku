@@ -305,6 +305,7 @@ export const DIFFICULTIES: Difficulty[] = [
   { n: 4, label: '쉬움 (4×4)' },
   { n: 5, label: '보통 (5×5)' },
   { n: 6, label: '어려움 (6×6)' },
+  { n: 7, label: '매우 어려움 (7×7)' },
 ];
 
 export function generatePuzzle(n: number, seed = String(Date.now())): Puzzle {

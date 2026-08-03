@@ -1,11 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import { generatePuzzle } from './generate';
+import { DIFFICULTIES, generatePuzzle } from './generate';
 import { indexScene, satisfies } from './clues';
 import { solve } from './solve';
 import { OUTDOOR_FLOORS, THEMES } from '../data/content';
 
 describe('generatePuzzle', () => {
-  for (const n of [4, 5, 6]) {
+  for (const n of DIFFICULTIES.map((d) => d.n)) {
     it(`${n}x${n}: 해가 정확히 1개이고 정답이 모든 증언을 만족한다`, () => {
       for (let i = 0; i < 8; i++) {
         const p = generatePuzzle(n, `seed-${n}-${i}`);
@@ -114,10 +114,10 @@ describe('generatePuzzle', () => {
   // generatePuzzle 은 실패해도 조용히 300×20×60 회 되던지다 맨 끝에서야 throw 한다.
   // 제약을 하나 잘못 넣으면 특정 난이도가 에러 없이 영구 실패하므로 넓게 훑어 잡는다.
   // ponytail: 재시도 횟수를 따로 세지 않는다 — 폭증하면 이 테스트가 타임아웃으로 먼저 터진다.
-  // (기준선: 난이도당 60시드에 27·32·102ms)
+  // (기준선: 난이도당 60시드에 27·32·102·290ms)
   it('모든 난이도 × 60시드에서 빠짐없이 생성된다', () => {
     const seen = new Set<string>();
-    for (const n of [4, 5, 6])
+    for (const n of DIFFICULTIES.map((d) => d.n))
       for (let i = 0; i < 60; i++) {
         expect(() => generatePuzzle(n, `sweep-${n}-${i}`), `n=${n} seed=${i}`).not.toThrow();
         seen.add(generatePuzzle(n, `sweep-${n}-${i}`).theme.id);

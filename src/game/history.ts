@@ -26,7 +26,7 @@ export const MAX_PLAYS = 200;
  * ponytail: generate.ts 의 DIFFICULTIES 를 import 하면 워커 번들에 생성기와 콘텐츠가 통째로 딸려온다.
  * 범위만 여기 두고, 어긋나지 않는지는 테스트가 검사한다.
  */
-export const N_RANGE = { min: 4, max: 6 } as const;
+export const N_RANGE = { min: 4, max: 7 } as const;
 
 const MAX_SEED_LEN = 64;
 const MAX_TITLE_LEN = 80;

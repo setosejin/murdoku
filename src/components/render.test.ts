@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { createElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
-import { generatePuzzle } from '../game/generate';
+import { DIFFICULTIES, generatePuzzle } from '../game/generate';
 import App from '../App';
 import Board from './Board';
 import FeedbackDialog, { issueUrl } from './FeedbackDialog';
@@ -94,7 +94,7 @@ describe('Board 렌더링', () => {
   // Safari 는 repeat() 안의 var() 를 캐싱해서, 난이도를 오갔다 돌아오면 옛 열 폭을 쓴다.
   // 그래서 열 개수는 CSS 변수가 아니라 인라인 값으로 박아야 한다 (webkit#202259)
   it('열 개수를 grid-template-columns 에 직접 박는다', () => {
-    for (const n of [4, 5, 6]) {
+    for (const n of DIFFICULTIES.map((d) => d.n)) {
       const html = renderToStaticMarkup(
         createElement(Board, {
           puzzle: generatePuzzle(n, `cols-${n}`),
