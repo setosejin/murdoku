@@ -1,21 +1,24 @@
-/* ---- top bar ---- */
+/* ---- top bar ----
+   데스크톱은 한 줄을 지킨다: 로고 · 사건 제목(브리핑 여는 버튼) · 난이도/메뉴.
+   모바일 셸은 이걸 안 쓰고 `.mtop` 을 쓴다 */
 .topbar {
+  flex: none;
   display: flex;
   flex-wrap: wrap;
-  gap: 12px;
-  align-items: baseline;
+  gap: 8px 12px;
+  align-items: center;
   justify-content: space-between;
   border-bottom: 3px solid var(--wall);
-  padding-bottom: 12px;
+  padding-bottom: 10px;
 }
 .topbar h1 {
+  flex: none;
   margin: 0;
-  font-size: 30px;
+  font-size: 22px;
   letter-spacing: -0.02em;
-  text-wrap: balance;
 }
 .topbar .sub {
-  font-size: 15px;
+  font-size: 13px;
   color: var(--muted);
   font-weight: 500;
 }
@@ -23,4 +26,9 @@
   display: flex;
   flex-wrap: wrap;
   gap: 6px;
+}
+/* 난이도·새 사건 칩은 상단바를 낮게 유지한다 (규약 40px 히트영역은 지킨다) */
+.topbar .chip {
+  padding: 4px 12px;
+  font-size: 13px;
 }

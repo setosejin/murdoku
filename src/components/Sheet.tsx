@@ -10,11 +10,14 @@ export default function Sheet({
   open,
   onClose,
   title,
+  modal,
   children,
 }: {
   open: boolean;
   onClose: () => void;
   title: string;
+  /** 데스크톱: 바닥에 붙는 대신 가운데에 뜬다 (`desktop.css` 의 `.sheet.modal`) */
+  modal?: boolean;
   children?: ReactNode;
 }) {
   const ref = useRef<HTMLDialogElement>(null);
@@ -49,7 +52,10 @@ export default function Sheet({
       d.close();
     };
     const onEnd = (e: TransitionEvent) => {
-      if (e.target === d && (e.propertyName === 'translate' || e.propertyName === 'opacity'))
+      if (
+        e.target === d &&
+        (e.propertyName === 'translate' || e.propertyName === 'scale' || e.propertyName === 'opacity')
+      )
         finish();
     };
     d.addEventListener('transitionend', onEnd);
@@ -65,7 +71,7 @@ export default function Sheet({
   return (
     <dialog
       ref={ref}
-      className="sheet"
+      className={modal ? 'sheet modal' : 'sheet'}
       aria-label={title}
       onClose={onClose}
       // ESC 는 기본 동작이 즉시 닫기라 퇴장이 잘린다. 막고 우리 경로로 돌린다

@@ -1,9 +1,5 @@
-/* ---- side panels ---- */
-.side {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
+/* ---- 패널 ----
+   데스크톱 사이드 열(`desktop.css` 의 `.side`)과 모바일 시트가 함께 쓴다 */
 .panel {
   border: 3px solid var(--wall);
   /* 안쪽 입력 6 + 패딩 12 = 18 */
@@ -63,40 +59,12 @@
 .legend .no em {
   background: #f2dcd8;
 }
-.brushes {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-}
-.brush {
-  width: 40px;
-  height: 40px;
-  border-radius: 50%;
-  border: 3px solid var(--wall);
-  background: var(--tile);
-  cursor: pointer;
-  font-weight: 700;
-}
-
-/* ---- 누름 피드백 (칩·브러시 공용) ---- */
-.chip,
-.brush {
+/* ---- 누름 피드백 ---- */
+.chip {
   transition: transform var(--dur-press) var(--ease-out), background var(--dur-fast) var(--ease-out);
 }
-.chip:active,
-.brush:active {
+.chip:active {
   transform: scale(0.96);
-}
-.brush.on {
-  background: var(--wall);
-  color: var(--paper);
-}
-.accuse select {
-  border: 2px solid var(--wall);
-  border-radius: 6px;
-  padding: 6px 8px;
-  min-height: 40px;
-  background: var(--tile);
 }
 .verdict {
   margin: 0;

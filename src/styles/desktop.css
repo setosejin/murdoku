@@ -1,0 +1,217 @@
+/* ---- 데스크톱 셸 ----
+   한 화면 안에 다 들어오게 한다. 세로로 쌓여 있던 사건 카드 → 보드 → 사이드 패널을
+   가로 세 열로 편다: 증언(= 메모 브러시) · 보드 · 지목/참고.
+
+   핵심은 클릭 동선이다. 증언을 읽는 자리가 곧 브러시를 고르는 자리이고,
+   그 옆이 바로 보드다 — 예전에는 이 셋이 세로로 800px 넘게 흩어져 있어서
+   메모 한 번 찍을 때마다 스크롤을 오갔다.
+
+   여기 규칙은 데스크톱 셸에만 있는 클래스(.play·.dclues·.side·.pboard)에 걸린다.
+   모바일은 이 마크업을 아예 그리지 않으므로 미디어 쿼리가 필요 없다. */
+.app {
+  max-width: 1500px;
+  /* 페이지가 아니라 화면이다 — 넘치는 몫은 페이지가 아니라 열 안에서 스크롤한다.
+     아주 낮은 창에서는 눌러 담는 대신 그때만 페이지가 스크롤한다 */
+  height: 100dvh;
+  min-height: 520px;
+  margin: 0 auto;
+  padding: 12px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.play {
+  flex: 1 1 auto;
+  /* flex 아이템 기본값 auto 라 내용이 크면 안 줄어든다 — 보드 컨테이너 쿼리가 이걸 먹고 산다 */
+  min-height: 0;
+  display: grid;
+  /* 옆 열의 최대 폭을 화면에 묶는다. 고정 px 로 두면 좁은 창에서 양옆이 자리를
+     먼저 챙겨가고 가운데 보드만 쪼그라든다 (900px 창에서 보드가 240px 이었다).
+     `repeat()`·`calc()` 안의 var() 만 Safari 가 캐싱한다 — clamp 의 고정 단위는 안전하다 */
+  grid-template-columns: clamp(200px, 22vw, 310px) minmax(0, 1fr) clamp(200px, 20vw, 290px);
+  /* auto 행은 내용만큼 커져서 열이 푸터를 뚫고 나간다 — 남는 높이에 딱 맞춘다 */
+  grid-template-rows: minmax(0, 1fr);
+  gap: 14px;
+  /* start 로 두면 가운데 열 높이가 내용에 맞춰져 보드 컨테이너 쿼리가 0 이 된다 */
+  align-items: stretch;
+}
+
+/* ---- 가운데: 보드 ----
+   남는 공간의 짧은 변에 맞춘 정사각. 모바일과 같은 방식이다 */
+.pboard {
+  min-width: 0;
+  min-height: 0;
+  display: grid;
+  place-items: center;
+  container-type: size;
+}
+.pboard .board-wrap {
+  /* 4x4 에서 칸이 우스꽝스럽게 커지지 않게 한 번 자른다 */
+  width: min(100cqw, 100cqh, 660px);
+  height: min(100cqw, 100cqh, 660px);
+}
+.pboard .board {
+  width: 100%;
+  height: 100%;
+  max-width: none;
+  margin: 0;
+  /* 보드 높이가 확정이라 fr 이 균등하게 갈린다. 칸의 aspect-ratio 는 여기서 무시된다 */
+  grid-auto-rows: minmax(0, 1fr);
+}
+/* 컨테이너 쿼리가 없는 브라우저: 예전처럼 폭에만 맞춘다 */
+@supports not (container-type: size) {
+  .pboard {
+    display: block;
+    overflow: auto;
+  }
+  .pboard .board-wrap {
+    width: 100%;
+    height: auto;
+  }
+  .pboard .board {
+    height: auto;
+    max-width: 620px;
+    margin: 0 auto;
+    grid-auto-rows: auto;
+  }
+}
+
+/* ---- 왼쪽: 증언 = 메모 브러시 ---- */
+.dclues {
+  /* 열 높이만큼 늘리면 짧은 사건에서 패널 아래가 텅 빈다 — 내용에 맞추되
+     화면을 넘지는 않게 자른다 (넘치는 몫은 아래에서 목록이 스크롤로 받는다) */
+  align-self: start;
+  max-height: 100%;
+  min-height: 0;
+}
+/* 목록만 스크롤한다 — 패널 제목과 아래 버튼은 늘 제자리에 있어야 손이 기억한다 */
+.dclues .clue-list {
+  flex: 0 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+/* 데스크톱은 세로 여유가 있다 — 증언을 한 줄로 자르지 않고 접어서 다 보여준다 */
+.dclues .clue-row {
+  align-items: flex-start;
+  padding: 7px 10px;
+}
+.dclues .clue-row.on {
+  padding: 6px 9px;
+}
+.dclues .clue-badge,
+.dclues .clue-row b {
+  /* 뱃지·이름은 첫 줄에 맞춘다 (증언이 두 줄로 접혀도) */
+  margin-top: 1px;
+}
+.dclues .clue-text {
+  line-height: 1.45;
+}
+.dclues-bar {
+  display: flex;
+  gap: 6px;
+}
+.dclues-bar .chip {
+  flex: 1;
+  padding: 6px 8px;
+  font-size: 13px;
+}
+
+/* ---- 오른쪽: 지목 · 범례 · 규칙 ---- */
+.side {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-height: 0;
+  /* 낮은 창에서 페이지 전체를 늘리는 대신 이 열만 스크롤한다 */
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+.side > * {
+  flex: none;
+}
+
+/* ---- 상단바의 사건 제목 = 브리핑 여는 버튼 ---- */
+.dcase {
+  flex: 0 1 auto;
+  max-width: 460px;
+  min-width: 0;
+  min-height: 40px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border: 2px solid var(--wall);
+  border-radius: 999px;
+  background: var(--tile);
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  padding: 4px 14px 4px 6px;
+  cursor: pointer;
+  transition: transform var(--dur-press) var(--ease-out);
+}
+.dcase b {
+  flex: 1;
+  min-width: 0;
+  font-size: 14px;
+  /* 제목이 길어도 상단바는 한 줄을 넘지 않는다 — 전체는 브리핑에서 본다 */
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.dcase-more {
+  flex: none;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1;
+}
+@media (hover: hover) and (pointer: fine) {
+  .dcase:hover {
+    transform: translateY(-1px);
+  }
+}
+.dcase:active {
+  transform: scale(0.99);
+}
+.dcase:focus-visible {
+  outline: 3px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* ---- 가운데 모달 ----
+   `Sheet` 를 그대로 쓰되 바닥에 붙는 대신 가운데에 뜬다. 등장·퇴장은 아래에서
+   올라오는 대신 살짝 커지는 쪽으로 바꾼다 (마우스에는 방향감이 필요 없다) */
+.sheet.modal {
+  margin: auto;
+  max-width: 620px;
+  max-height: min(80dvh, 720px);
+  border-bottom: 3px solid var(--wall);
+  border-radius: 30px;
+  box-shadow: 4px 4px 0 var(--wall);
+  translate: 0;
+  scale: 1;
+  transition:
+    scale 200ms var(--ease-out),
+    opacity 180ms var(--ease-out),
+    overlay 200ms allow-discrete,
+    display 200ms allow-discrete;
+}
+.sheet.modal:not([open]),
+.sheet.modal[data-closing] {
+  translate: 0;
+  scale: 0.96;
+}
+@starting-style {
+  .sheet.modal[open] {
+    translate: 0;
+    scale: 0.96;
+  }
+}
+.sheet.modal .sheet-body {
+  padding-bottom: 12px;
+}
+/* 메뉴 모달에 홀로 놓인 버튼이 폭을 다 먹지 않게 */
+.sheet.modal .sheet-body > .chip {
+  align-self: flex-start;
+}

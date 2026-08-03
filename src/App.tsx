@@ -1,22 +1,33 @@
+import { useState } from 'react';
 import Board, { SpriteDefs } from './components/Board';
 import CaseCards from './components/CaseCards';
 import ChangelogDialog from './components/ChangelogDialog';
+import ClueList from './components/ClueList';
 import FeedbackDialog from './components/FeedbackDialog';
 import HistoryPanel from './components/HistoryPanel';
 import MobileShell from './components/MobileShell';
-import {
-  AccusePanel,
-  BrushPalette,
-  LegendPanel,
-  RulesPanel,
-  SeedPanel,
-} from './components/GamePanels';
+import Sheet from './components/Sheet';
+import { AccusePanel, BrushBar, LegendPanel, RulesPanel, SeedPanel } from './components/GamePanels';
 import useGame from './hooks/useGame';
 import useMediaQuery, { MOBILE_QUERY } from './hooks/useMediaQuery';
 
+type DialogId = 'case' | 'menu';
+
+/**
+ * 데스크톱 셸 — 한 화면 안에 세 열로 편다: 증언(= 메모 브러시) · 보드 · 지목/참고.
+ *
+ * 예전에는 사건 카드 → 보드 → 사이드 패널이 세로로 쌓여 있어서, 증언을 읽고
+ * 브러시를 고르고 칸을 찍는 세 동작이 800px 넘게 떨어져 있었다. 증언 목록이
+ * 브러시를 겸하면(모바일이 먼저 쓴 방식) 그 왕복이 통째로 사라진다.
+ *
+ * 늘 필요하지는 않은 것(사건 브리핑·시드·기록·피드백)은 모달로 내린다 — 모바일
+ * 시트와 같은 `Sheet` 를 쓰고 모양만 가운데 모달로 바꾼다.
+ */
 export default function App() {
   const game = useGame();
   const mobile = useMediaQuery(MOBILE_QUERY);
+  const [dialog, setDialog] = useState<DialogId | null>(null);
+  const close = () => setDialog(null);
   const { puzzle } = game;
 
   if (mobile)
@@ -34,6 +45,20 @@ export default function App() {
         <h1>
           murdoku <span className="sub">머도쿠</span>
         </h1>
+
+        <button
+          type="button"
+          className="dcase"
+          aria-haspopup="dialog"
+          onClick={() => setDialog('case')}
+        >
+          <span className="case-no">{puzzle.theme.label}</span>
+          <b>{puzzle.title}</b>
+          <span className="dcase-more" aria-hidden="true">
+            브리핑 ⌄
+          </span>
+        </button>
+
         <div className="controls">
           {game.difficulties.map((d) => (
             <button
@@ -49,40 +74,40 @@ export default function App() {
           <button type="button" className="chip primary" onClick={() => game.reset()}>
             새 사건
           </button>
-          <FeedbackDialog seed={game.seed} n={game.n} />
+          <button
+            type="button"
+            className="chip"
+            aria-label="더보기"
+            aria-haspopup="dialog"
+            onClick={() => setDialog('menu')}
+          >
+            ⋯
+          </button>
         </div>
       </header>
 
-      <section className="case">
-        <div className="case-head">
-          <span className="case-no">{puzzle.theme.label}</span>
-          <h2>{puzzle.title}</h2>
-        </div>
-        <p className="brief">{puzzle.brief}</p>
-        <CaseCards puzzle={puzzle} />
-      </section>
-
       <section className="play">
-        {/* key 로 사건마다 새 보드를 만들어 크로스페이드를 건다.
-            seed:n 이어야 한다 — puzzle 이나 marks 를 넣으면 메모를 찍을 때마다
-            보드가 통째로 재마운트되면서 키보드 포커스가 날아간다 */}
-        <Board
-          key={`${game.seed}:${game.n}`}
-          puzzle={puzzle}
-          marks={game.marks}
-          onCell={game.onCell}
-          revealed={game.revealed}
-        />
+        <div className="panel dclues">
+          <b>증언</b>
+          {/* 증언을 읽는 자리가 곧 브러시를 고르는 자리다 */}
+          <ClueList puzzle={puzzle} brush={game.brush} setBrush={game.setBrush} />
+          <BrushBar brush={game.brush} setBrush={game.setBrush} clearMarks={game.clearMarks} />
+        </div>
+
+        <div className="pboard">
+          {/* key 로 사건마다 새 보드를 만들어 크로스페이드를 건다.
+              seed:n 이어야 한다 — puzzle 이나 marks 를 넣으면 메모를 찍을 때마다
+              보드가 통째로 재마운트되면서 키보드 포커스가 날아간다 */}
+          <Board
+            key={`${game.seed}:${game.n}`}
+            puzzle={puzzle}
+            marks={game.marks}
+            onCell={game.onCell}
+            revealed={game.revealed}
+          />
+        </div>
 
         <div className="side">
-          <RulesPanel />
-          <LegendPanel furniture={puzzle.furniture} />
-          <BrushPalette
-            suspects={game.suspects}
-            brush={game.brush}
-            setBrush={game.setBrush}
-            clearMarks={game.clearMarks}
-          />
           <AccusePanel
             suspects={game.suspects}
             accused={game.accused}
@@ -94,14 +119,7 @@ export default function App() {
             revealed={game.revealed}
             setRevealed={game.setRevealed}
           />
-          <SeedPanel seed={game.seed} onOpen={(s) => game.reset(game.n, s)} />
-          <HistoryPanel
-            plays={game.plays}
-            code={game.code}
-            setPlays={game.setPlays}
-            setCode={game.setCode}
-            onOpen={(pn, ps) => game.reset(pn, ps)}
-          />
+          <LegendPanel furniture={puzzle.furniture} />
         </div>
       </section>
 
@@ -120,6 +138,29 @@ export default function App() {
         </p>
         <ChangelogDialog />
       </footer>
+
+      <Sheet modal open={dialog === 'case'} onClose={close} title={puzzle.title}>
+        <p className="brief">{puzzle.brief}</p>
+        <CaseCards puzzle={puzzle} />
+        {/* 규칙은 처음 한 번 읽고 마는 것이라 사이드 열을 계속 차지할 이유가 없다.
+            6x6 에서는 범례만으로도 열이 꽉 찬다 (모바일 `사건` 시트도 같은 자리에 둔다) */}
+        <RulesPanel />
+      </Sheet>
+
+      <Sheet modal open={dialog === 'menu'} onClose={close} title="더보기">
+        <SeedPanel seed={game.seed} onOpen={(s) => game.reset(game.n, s)} />
+        <HistoryPanel
+          plays={game.plays}
+          code={game.code}
+          setPlays={game.setPlays}
+          setCode={game.setCode}
+          onOpen={(pn, ps) => {
+            game.reset(pn, ps);
+            close();
+          }}
+        />
+        <FeedbackDialog seed={game.seed} n={game.n} />
+      </Sheet>
     </div>
   );
 }

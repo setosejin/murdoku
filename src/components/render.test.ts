@@ -7,6 +7,7 @@ import Board from './Board';
 import FeedbackDialog, { issueUrl } from './FeedbackDialog';
 import ChangelogDialog, { renderMarkdown } from './ChangelogDialog';
 import changelog from '../../CHANGELOG.md?raw';
+import desktopCss from '../styles/desktop.css?raw';
 
 describe('Board 렌더링', () => {
   const render = (revealed: boolean, marks: Record<string, string> = {}) => {
@@ -94,6 +95,41 @@ describe('App 렌더링', () => {
 
   it('아이콘 스프라이트를 한 번만 심는다', () => {
     expect((html.match(/id="i-bed"/g) ?? []).length).toBe(1);
+  });
+
+  it('증언 목록과 보드와 지목이 한 화면에 같이 있다', () => {
+    // 클릭 동선의 전부다. 하나라도 모달로 내려가면 왕복이 다시 생긴다
+    expect(html).toContain('class="pboard"');
+    expect(html).toContain('class="panel accuse"');
+    // 증언 줄이 곧 브러시 — 목록이 시트가 아니라 증언 패널 안에 있어야 성립한다
+    expect(html).toMatch(/class="panel dclues".*class="clue-list".*class="dclues-bar"/s);
+  });
+});
+
+// 데스크톱 셸도 모바일처럼 한 화면이다. 아래 셋은 전부 실제로 깨뜨려 본 것들이라
+// 주석 대신 테스트로 못박는다 (CSS 원문 검사는 vite.config 의 test.css: true 에 기댄다)
+describe('desktop.css 불변식', () => {
+  it('페이지가 아니라 열이 스크롤한다', () => {
+    // min-height 로 두면 열이 길어질 때 페이지가 그만큼 늘어난다
+    expect(desktopCss).toMatch(/\.app\s*\{[^}]*height:\s*100dvh/);
+    expect(desktopCss).toMatch(/\.side\s*\{[^}]*overflow-y:\s*auto/);
+  });
+
+  it('.play 의 행 높이를 남는 공간에 묶는다', () => {
+    // auto 행은 내용만큼 커져서 열이 푸터를 뚫고 나간다
+    expect(desktopCss).toMatch(/\.play\s*\{[^}]*grid-template-rows:\s*minmax\(0, 1fr\)/);
+    // start 면 가운데 열 높이가 내용에 맞춰져 보드 컨테이너 쿼리가 0 이 된다
+    expect(desktopCss).toMatch(/\.play\s*\{[^}]*align-items:\s*stretch/);
+  });
+
+  it('양옆 열 폭이 화면을 따라 줄어든다', () => {
+    // 고정 px 면 좁은 창에서 양옆이 자리를 먼저 챙기고 보드만 쪼그라든다
+    expect(desktopCss).toMatch(/\.play\s*\{[^}]*grid-template-columns:\s*clamp\(/);
+  });
+
+  it('보드는 남는 공간의 짧은 변에 맞춘다', () => {
+    expect(desktopCss).toMatch(/\.pboard\s*\{[^}]*container-type:\s*size/);
+    expect(desktopCss).toContain('min(100cqw, 100cqh');
   });
 });
 

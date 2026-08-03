@@ -50,9 +50,6 @@
     padding: 4px 12px 4px 6px;
     cursor: pointer;
   }
-  .mtitle .case-no {
-    flex: none;
-  }
   .mtitle b {
     flex: 1;
     min-width: 0;
@@ -123,82 +120,23 @@
     bottom: calc(env(safe-area-inset-bottom, 0px) + 76px);
   }
 
-  /* ---- 증언 목록 = 메모 브러시 ---- */
-  .clue-list {
+  /* ---- 증언 목록 = 메모 브러시 ----
+     모양은 `clues.css` 에 있다. 여기선 좁은 화면에 맞춰 눌러 담기만 한다 —
+     한 줄로 자르고, 넘치면 목록만 스크롤한다.
+     늘려 담는 건 셸의 붙박이 목록에만 건다 (지목 시트도 같은 줄 모양을 쓴다) */
+  .mshell > .clue-list {
     flex: 0 1 auto;
     min-height: 0;
     overflow-y: auto;
     overscroll-behavior: contain;
-    margin: 0;
-    padding: 0;
-    list-style: none;
-    display: flex;
-    flex-direction: column;
-    gap: 4px;
   }
   .clue-row {
-    width: 100%;
     min-height: 44px;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    text-align: left;
-    border: 2px solid var(--tile-line);
-    border-radius: 10px;
-    background: var(--tile);
-    color: inherit;
-    font: inherit;
-    padding: 4px 10px;
-    cursor: pointer;
-    touch-action: manipulation;
-    -webkit-tap-highlight-color: transparent;
-    transition:
-      transform var(--dur-press) var(--ease-out),
-      border-color var(--dur-fast) var(--ease-out),
-      background-color var(--dur-fast) var(--ease-out);
-  }
-  /* 형제 컨트롤(칩·브러시·액션바)과 같은 누름 피드백. 증언 줄만 빠져 있으면
-     같은 화면에서 어떤 건 반응하고 어떤 건 안 하는 것처럼 느껴진다 */
-  .clue-row:active {
-    transform: scale(0.96);
-  }
-  /* 테두리를 굵히는 만큼 패딩에서 빼서 선택해도 줄이 밀리지 않는다 */
-  .clue-row.on {
-    border-width: 3px;
-    border-color: var(--wall);
-    background: #fff;
-    padding: 3px 9px;
-  }
-  .clue-row:focus-visible {
-    outline: 3px solid var(--accent);
-    outline-offset: 2px;
-  }
-  .clue-badge {
-    flex: none;
-    width: 24px;
-    height: 24px;
-    border-radius: 50%;
-    border: 2px solid var(--wall);
-    display: grid;
-    place-items: center;
-    font-size: 12px;
-    font-weight: 700;
-  }
-  .clue-row b {
-    flex: none;
-    font-size: 13px;
   }
   .clue-text {
-    flex: 1;
-    min-width: 0;
-    font-size: 13px;
-    color: var(--muted);
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
-  }
-  .clue-row.on .clue-text {
-    color: var(--ink);
   }
 
   /* 시트 안팎의 공용 컨트롤은 터치 기준 44px 로 올린다. 데스크톱 규약인 40px 은
@@ -208,7 +146,6 @@
   .link,
   .ver,
   .sheet-x,
-  .accuse select,
   .seedbox input,
   .sync input,
   .sync summary,
@@ -283,7 +220,7 @@
     .clue-row {
       min-height: 40px;
     }
-    .clue-list {
+    .mshell > .clue-list {
       gap: 3px;
     }
     .mbar-btn {
@@ -313,7 +250,7 @@
     min-height: 0;
     min-width: 0;
   }
-  .clue-list {
+  .mshell > .clue-list {
     grid-area: clues;
   }
   .mbar {

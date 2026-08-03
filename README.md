@@ -46,11 +46,11 @@ npm run build   # 정적 빌드 (dist/)
 | `src/hooks/useMediaQuery.ts` | `MOBILE_QUERY` + 미디어 쿼리 구독 (셸 선택)                  |
 | `src/App.tsx`              | 데스크톱 셸 + 모바일/데스크톱 갈림길                            |
 | `src/components/MobileShell.tsx` | 모바일 셸 — 한 화면 레이아웃 + 시트 4종                   |
-| `src/components/ClueList.tsx` | 증언 목록 겸 메모 브러시 (모바일)                            |
-| `src/components/Sheet.tsx` | 바텀시트 `<dialog>` 래퍼                                        |
+| `src/components/ClueList.tsx` | 증언 목록 겸 메모 브러시 (두 셸 공용)                        |
+| `src/components/Sheet.tsx` | 바텀시트(모바일)·가운데 모달(데스크톱) `<dialog>` 래퍼      |
 | `src/components/Board.tsx` | 격자·방 경계·바닥 재질·가구·메모 렌더                         |
 | `src/components/CaseCards.tsx` | 용의자·피해자 카드 그리드 (두 셸 공용)                      |
-| `src/components/GamePanels.tsx` | 기본 정보·범례·메모·지목·시드 패널 (두 셸 공용)            |
+| `src/components/GamePanels.tsx` | 규칙·범례·브러시바·지목·시드 패널 (두 셸 공용)             |
 | `src/components/HistoryPanel.tsx` | 기록 목록 + 계정 + 복구 키 패널                        |
 | `src/assets/sprite.svg`    | 가구·벽부착물·인물 아이콘 (`<symbol id="i-<kind>">`)          |
 | `src/game/history.ts`      | 플레이 기록 — 검증·병합(순수) + localStorage + 동기화          |
@@ -64,6 +64,20 @@ npm run build   # 정적 빌드 (dist/)
 ## 화면
 
 셸이 둘이다. `useMediaQuery(MOBILE_QUERY)` 가 고르고, 게임 상태(`useGame`)와 패널 컴포넌트는 둘이 함께 쓴다 — 그래서 창 크기를 바꿔도 사건과 메모가 그대로 남는다.
+
+**둘 다 한 화면에 들어간다.** 데스크톱은 세 열로 편다.
+
+```
+ murdoku   [저택] 사라진 회중시계 브리핑⌄   [쉬움][보통][어려움] [새 사건] [⋯]
+┌──────────────┬───────────────────┬──────────────┐
+│ 증언          │                   │ 범인은?       │
+│ Ⓐ 민준 …      │       보드         │ Ⓐ Ⓑ Ⓒ       │
+│ Ⓑ 서연 …      │                   │ [지목하기]    │
+│ [✕ 빈칸][지우기]│                   │ 범례          │
+└──────────────┴───────────────────┴──────────────┘
+```
+
+증언을 읽는 자리가 곧 브러시를 고르는 자리다 — 줄을 누르면 그 인물로 칸을 표시한다(모바일이 먼저 쓴 방식). 사건 브리핑·규칙은 제목 버튼이, 시드·기록·계정·피드백은 `⋯` 가 여는 모달에 들어간다. 넘치는 몫은 페이지가 아니라 열 안에서 스크롤한다.
 
 **모바일(좁거나 낮은 화면)은 스크롤이 없다.** 한 화면에 셋만 붙박이로 둔다.
 

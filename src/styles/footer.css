@@ -1,12 +1,12 @@
 /* ---- footer ---- */
 .footer {
+  flex: none;
   display: flex;
   flex-wrap: wrap;
   gap: 4px 16px;
-  align-items: baseline;
+  align-items: center;
   justify-content: space-between;
-  margin-top: 32px;
-  padding-top: 14px;
+  padding-top: 8px;
   border-top: 3px solid var(--wall);
   color: var(--muted);
   font-size: 13px;
@@ -68,6 +68,14 @@
   cursor: not-allowed;
   transform: none;
 }
+/* 빨강을 40% 로 흐리면 흰 글씨가 안 읽힌다 — 지목 버튼은 대기 상태가 길어서
+   그동안 계속 대비 미달로 남는다. 색을 흐리는 대신 갈아끼운다 */
+.chip.primary:disabled {
+  opacity: 1;
+  background: #e6dfd0;
+  border-color: var(--tile-line);
+  color: #5c5346;
+}
 .link {
   background: none;
   border: none;
@@ -86,8 +94,6 @@
 .chip:focus-visible,
 .link:focus-visible,
 .ver:focus-visible,
-.brush:focus-visible,
-.accuse select:focus-visible,
 .seedbox input:focus-visible,
 .sync input:focus-visible,
 .sync summary:focus-visible,

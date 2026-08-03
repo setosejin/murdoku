@@ -1,36 +1,19 @@
-/* ---- case board ---- */
-.case {
-  margin: 24px 0;
-  border: 3px solid var(--wall);
-  /* 안쪽 카드 8 + 패딩 16 = 동심 반경 24 */
-  border-radius: 24px;
-  background: #fffdf7;
-  padding: 16px;
-  box-shadow: 4px 4px 0 var(--wall);
+/* ---- 사건 카드 ----
+   데스크톱은 상단바의 제목 버튼이 여는 브리핑 모달, 모바일은 `사건` 시트 안에 들어간다.
+   두 셸 모두 시트/모달 안이라 바깥 껍데기는 없다 */
+.brief {
+  margin: 10px 0 16px;
+  color: var(--muted);
+  font-size: 14px;
 }
-.case-head {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  border-bottom: 2px solid var(--wall);
-  padding-bottom: 8px;
-}
+/* 사건 종류 뱃지. 두 셸의 상단바 제목 버튼이 함께 쓴다 */
 .case-no {
+  flex: none;
   font-size: 11px;
   letter-spacing: 0.18em;
   border: 2px solid var(--wall);
   border-radius: 4px;
   padding: 2px 6px;
-}
-.case-head h2 {
-  margin: 0;
-  font-size: 20px;
-  text-wrap: balance;
-}
-.brief {
-  margin: 10px 0 16px;
-  color: var(--muted);
-  font-size: 14px;
 }
 .cards {
   display: grid;
