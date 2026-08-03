@@ -8,7 +8,14 @@ import HistoryPanel from './components/HistoryPanel';
 import Leaderboard from './components/Leaderboard';
 import MobileShell from './components/MobileShell';
 import Sheet from './components/Sheet';
-import { AccusePanel, BrushBar, LegendPanel, RulesPanel, SeedPanel } from './components/GamePanels';
+import {
+  AccusePanel,
+  BrushBar,
+  DifficultySeg,
+  LegendPanel,
+  RulesPanel,
+  SeedPanel,
+} from './components/GamePanels';
 import useGame from './hooks/useGame';
 import useMediaQuery, { MOBILE_QUERY } from './hooks/useMediaQuery';
 
@@ -56,22 +63,13 @@ export default function App() {
           <span className="case-no">{puzzle.theme.label}</span>
           <b>{puzzle.title}</b>
           <span className="dcase-more" aria-hidden="true">
-            브리핑 ⌄
+            브리핑
+            <i>⌄</i>
           </span>
         </button>
 
         <div className="controls">
-          {game.difficulties.map((d) => (
-            <button
-              key={d.n}
-              type="button"
-              className={`chip${d.n === game.n ? ' on' : ''}`}
-              aria-pressed={d.n === game.n}
-              onClick={() => game.reset(d.n)}
-            >
-              {d.label}
-            </button>
-          ))}
+          <DifficultySeg difficulties={game.difficulties} n={game.n} onPick={game.reset} />
           <button type="button" className="chip primary" onClick={() => game.reset()}>
             새 사건
           </button>
