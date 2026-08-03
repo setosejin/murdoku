@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Art } from './Board';
+import { spanOf } from '../game/types';
 import type { Furniture, Person } from '../game/types';
 
 /**
@@ -28,7 +29,7 @@ export function LegendPanel({ furniture, bare }: { furniture: Furniture[]; bare?
     <ul>
       {furniture.map((f) => (
         <li key={f.id} className={f.standable ? 'ok' : 'no'}>
-          <Art emoji={f.emoji} image={f.image} icon={f.kind} label={f.label} />
+          <Art emoji={f.emoji} image={f.image} icon={f.kind} label={f.label} span={spanOf(f)} />
           <span>{f.label}</span>
           <em>{f.standable ? '설 수 있음' : '설 수 없음'}</em>
         </li>

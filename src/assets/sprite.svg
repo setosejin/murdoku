@@ -2,26 +2,39 @@
   가구·벽부착물 아이콘. 이 앱의 디자인 언어(두꺼운 잉크 선 + 플랫 색)로 직접 그렸다.
   선 색·굵기는 지정하지 않는다 — 쓰는 쪽(`svg.art`)에서 상속받아 한 곳에서 조절한다.
   id 는 `i-<FurnitureSpec.kind>` 규칙. 이름이 맞으면 자동으로 쓰이고, 없으면 이모지로 떨어진다.
+
+  **viewBox 는 한 칸당 24 다.** `FurnitureSpec.size` 가 2 면 48×24, 3 이면 72×24,
+  4(2×2)면 48×48. 늘려 쓰지 않으므로 선 굵기가 한 칸짜리 가구와 같다.
+  칸 경계(x=24, 48…)에 부품 경계를 맞춰 그린다 — 세 칸짜리 소파는 2인용 소파 두 칸 +
+  스툴 한 칸처럼, 칸마다 제 몫의 물건이 보이게. 크기를 바꾸면 여기도 다시 그려야 한다.
 -->
 <svg xmlns="http://www.w3.org/2000/svg" style="display: none" aria-hidden="true">
-  <symbol id="i-bed" viewBox="0 0 24 24">
-    <path d="M3 17V9a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v8" fill="#e7d7b4" />
-    <rect x="5" y="9.5" width="6.5" height="4.5" rx="1.5" fill="#fffdf7" />
-    <path d="M12.5 14V9.5H19a1 1 0 0 1 1 1V14z" fill="#c0392b" />
-    <path d="M3 14h18v3H3z" fill="#e7d7b4" />
-    <path d="M3 17v2M21 17v2" />
+  <!-- ▸ 2칸: 베개 한 칸 + 이불 한 칸 -->
+  <symbol id="i-bed" viewBox="0 0 48 24">
+    <path d="M3 18V7a2 2 0 0 1 2-2h38a2 2 0 0 1 2 2v11z" fill="#e7d7b4" />
+    <rect x="5.5" y="7.5" width="16" height="7.5" rx="2" fill="#fffdf7" />
+    <path d="M24 15V7.5h18.5a1 1 0 0 1 1 1V15z" fill="#c0392b" />
+    <path d="M3 15h42v3H3z" fill="#e7d7b4" />
+    <path d="M3 18v3M45 18v3" />
   </symbol>
 
-  <symbol id="i-sofa" viewBox="0 0 24 24">
-    <path d="M4 16v-6a3 3 0 0 1 3-3h10a3 3 0 0 1 3 3v6z" fill="#9b7e9e" />
-    <path d="M4 12h16v5H4z" fill="#b99bbb" />
-    <path d="M4 12H2.5v4H4M20 12h1.5v4H20" fill="#9b7e9e" />
-    <path d="M6 17v2M18 17v2" />
+  <!-- ▸ 3칸: 2인용 소파(방석 두 칸) + 스툴 한 칸 -->
+  <symbol id="i-sofa" viewBox="0 0 72 24">
+    <path d="M4 17v-7a3 3 0 0 1 3-3h32a3 3 0 0 1 3 3v7z" fill="#9b7e9e" />
+    <path d="M4 12.5h38V17H4z" fill="#b99bbb" />
+    <path d="M4 12.5H1.8v4.5H4M42 12.5h2.2v4.5H42" fill="#9b7e9e" />
+    <path d="M23 7.5v5" stroke-width="1.2" />
+    <path d="M6 17v3M40 17v3" />
+    <rect x="50" y="10.5" width="18" height="6.5" rx="2.5" fill="#b99bbb" />
+    <path d="M53 17v3M65 17v3" />
   </symbol>
 
-  <symbol id="i-rug" viewBox="0 0 24 24">
-    <rect x="2.5" y="6" width="19" height="12" rx="2" fill="#c98f6a" />
-    <path d="M5.5 9h13M5.5 12h13M5.5 15h13" stroke-width="1.2" />
+  <!-- ▸ 2×2: 술 달린 큰 러그. 바닥을 덮는 물건이라 자리를 꽉 채운다 -->
+  <symbol id="i-rug" viewBox="0 0 48 48">
+    <rect x="3" y="5" width="42" height="38" rx="3" fill="#c98f6a" />
+    <rect x="8" y="10.5" width="32" height="27" rx="2" fill="none" stroke-width="1.4" />
+    <path d="M13 17h22M13 24h22M13 31h22" stroke-width="1.2" />
+    <path d="M3 9.5h42M3 38.5h42" stroke-width="1.2" />
   </symbol>
 
   <symbol id="i-table" viewBox="0 0 24 24">
@@ -29,10 +42,14 @@
     <path d="M5.5 11.5V18M18.5 11.5V18" />
   </symbol>
 
-  <symbol id="i-piano" viewBox="0 0 24 24">
-    <rect x="3" y="6" width="18" height="12" rx="2" fill="#2f2b26" />
-    <rect x="5" y="12" width="14" height="4" rx="1" fill="#fffdf7" />
-    <path d="M8 12v4M11 12v4M14 12v4M17 12v4" stroke-width="1.1" />
+  <!-- ▸ 2칸: 건반 한 칸 + 열린 뚜껑 안 현이 보이는 한 칸 -->
+  <symbol id="i-piano" viewBox="0 0 48 24">
+    <rect x="3" y="4" width="42" height="14" rx="2" fill="#2f2b26" />
+    <rect x="5.5" y="11" width="18" height="6.5" rx="1" fill="#fffdf7" />
+    <path d="M9 11v6.5M12.5 11v6.5M16 11v6.5M19.5 11v6.5" stroke-width="1" />
+    <rect x="26.5" y="6.5" width="16" height="11" rx="1.5" fill="#d8c193" />
+    <path d="M30 9v6.5M33.5 9v6.5M37 9v6.5M40 9v6.5" stroke-width="1" />
+    <path d="M6 18v3M42 18v3" />
   </symbol>
 
   <symbol id="i-plant" viewBox="0 0 24 24">
@@ -47,13 +64,20 @@
     <path d="M9 17v2M15 19H9" />
   </symbol>
 
-  <symbol id="i-bookshelf" viewBox="0 0 24 24">
-    <rect x="4" y="3.5" width="16" height="17" rx="1.5" fill="#a9713f" />
-    <path d="M4 12h16" />
-    <rect x="6" y="6" width="2.5" height="6" fill="#c0392b" stroke="none" />
-    <rect x="9" y="7" width="2.5" height="5" fill="#5a9c62" stroke="none" />
-    <rect x="12" y="6" width="2.5" height="6" fill="#e0b13a" stroke="none" />
-    <rect x="6.5" y="14.5" width="9" height="2.5" fill="#8fb8cf" stroke="none" />
+  <!-- ▸ 2칸: 세워 꽂은 책 한 칸 + 눕혀 쌓은 책 한 칸 -->
+  <symbol id="i-bookshelf" viewBox="0 0 48 24">
+    <rect x="3" y="3" width="42" height="18" rx="1.5" fill="#a9713f" />
+    <path d="M3 12h42M24 3v18" />
+    <rect x="6" y="5.5" width="3.2" height="6.5" fill="#c0392b" stroke="none" />
+    <rect x="9.7" y="6.5" width="3.2" height="5.5" fill="#5a9c62" stroke="none" />
+    <rect x="13.4" y="5.5" width="3.2" height="6.5" fill="#e0b13a" stroke="none" />
+    <rect x="17.1" y="7" width="3.2" height="5" fill="#8fb8cf" stroke="none" />
+    <rect x="6" y="14.5" width="14" height="2.6" fill="#8fb8cf" stroke="none" />
+    <rect x="6" y="17.6" width="14" height="2.6" fill="#e0b13a" stroke="none" />
+    <rect x="27" y="5.5" width="3.2" height="6.5" fill="#8fb8cf" stroke="none" />
+    <rect x="30.7" y="6.5" width="3.2" height="5.5" fill="#c0392b" stroke="none" />
+    <rect x="34.4" y="5.5" width="3.2" height="6.5" fill="#5a9c62" stroke="none" />
+    <rect x="27" y="15.5" width="15" height="2.6" fill="#e0b13a" stroke="none" />
   </symbol>
 
   <symbol id="i-fridge" viewBox="0 0 24 24">
@@ -68,33 +92,49 @@
     <path d="M8 20h8" stroke-width="2.2" />
   </symbol>
 
-  <symbol id="i-bathtub" viewBox="0 0 24 24">
-    <path d="M3 11h18v3a4 4 0 0 1-4 4H7a4 4 0 0 1-4-4z" fill="#bfe0ef" />
-    <path d="M6 11V7a2 2 0 0 1 4 0" />
-    <path d="M6 18v2M18 18v2" />
+  <!-- ▸ 2칸: 수도꼭지 쪽 한 칸 + 물 담긴 쪽 한 칸 -->
+  <symbol id="i-bathtub" viewBox="0 0 48 24">
+    <path d="M3 9h42v6a5 5 0 0 1-5 5H8a5 5 0 0 1-5-5z" fill="#bfe0ef" />
+    <path d="M7 9V5.5a2.5 2.5 0 0 1 5 0" />
+    <path d="M24 12.5c2.5 0 2.5 2 5 2s2.5-2 5-2 2.5 2 5 2" fill="none" stroke-width="1.2" />
+    <circle cx="15" cy="15" r="2" fill="none" stroke-width="1.2" />
+    <path d="M7 20v3M41 20v3" />
   </symbol>
 
-  <symbol id="i-desk" viewBox="0 0 24 24">
-    <rect x="2.5" y="7" width="19" height="3" rx="1" fill="#c99a5b" />
-    <rect x="13" y="10" width="7" height="8" rx="1" fill="#a9713f" />
-    <path d="M4.5 10v8" />
-    <path d="M14.5 13h4" stroke-width="1.2" />
+  <!-- ▸ 2칸: 다리 쪽 한 칸 + 서랍장 한 칸 -->
+  <symbol id="i-desk" viewBox="0 0 48 24">
+    <rect x="3" y="6.5" width="42" height="3.5" rx="1.2" fill="#c99a5b" />
+    <rect x="27" y="10" width="16" height="9.5" rx="1" fill="#a9713f" />
+    <path d="M5.5 10v9.5" />
+    <path d="M29.5 13.5h11M29.5 16.5h11" stroke-width="1.2" />
+    <rect x="8" y="2.5" width="11" height="4" rx="1" fill="#8fb8cf" />
   </symbol>
 
-  <symbol id="i-haystack" viewBox="0 0 24 24">
-    <path d="M3 19c0-6 4-11 9-11s9 5 9 11z" fill="#e2b959" />
-    <path d="M8 19c0-4 1.5-8 4-9M16 19c0-4-1.5-8-4-9" stroke-width="1.2" />
+  <!-- ▸ 2×2: 둥근 볏단 네 덩이 -->
+  <symbol id="i-haystack" viewBox="0 0 48 48">
+    <circle cx="14" cy="14" r="10.5" fill="#e2b959" />
+    <circle cx="34" cy="14" r="10.5" fill="#e2b959" />
+    <circle cx="14" cy="34" r="10.5" fill="#e2b959" />
+    <circle cx="34" cy="34" r="10.5" fill="#e2b959" />
+    <circle cx="14" cy="14" r="4.5" fill="none" stroke-width="1.2" />
+    <circle cx="34" cy="14" r="4.5" fill="none" stroke-width="1.2" />
+    <circle cx="14" cy="34" r="4.5" fill="none" stroke-width="1.2" />
+    <circle cx="34" cy="34" r="4.5" fill="none" stroke-width="1.2" />
   </symbol>
 
-  <symbol id="i-trough" viewBox="0 0 24 24">
-    <path d="M3 8h18l-2.5 9h-13z" fill="#a9713f" />
-    <path d="M5 17v3M19 17v3" />
-    <path d="M4.5 12h15" stroke-width="1.2" />
+  <!-- ▸ 3칸: 칸마다 칸막이가 선 긴 여물통 -->
+  <symbol id="i-trough" viewBox="0 0 72 24">
+    <path d="M3 8h66l-3 9H6z" fill="#a9713f" />
+    <path d="M24.5 8.5v8.5M46.5 8.5v8.5" stroke-width="1.2" />
+    <path d="M4.5 12h63" stroke-width="1.2" />
+    <path d="M7 17v4M65 17v4" />
   </symbol>
 
-  <symbol id="i-mud" viewBox="0 0 24 24">
-    <path d="M3 15c0-3 3-5 6-5s3-2 6-2 6 2 6 5-4 5-9 5-9-1-9-3z" fill="#8a6642" />
-    <path d="M8 14.5h2M14 15.5h3" stroke-width="1.2" />
+  <!-- ▸ 2칸: 웅덩이 두 개가 이어진다 -->
+  <symbol id="i-mud" viewBox="0 0 48 24">
+    <path d="M3 15c0-4 4-5 7-5s4-3 8-3 5 2 9 2 4-2 8-2 10 2 10 6-6 7-21 7S3 19 3 15z" fill="#8a6642" />
+    <ellipse cx="15" cy="14.5" rx="3.5" ry="1.7" fill="#6d5134" stroke="none" />
+    <ellipse cx="33" cy="16" rx="4.5" ry="2" fill="#6d5134" stroke="none" />
   </symbol>
 
   <symbol id="i-well" viewBox="0 0 24 24">
@@ -111,18 +151,25 @@
     <path d="M12 14v7" stroke-width="2.4" />
   </symbol>
 
-  <symbol id="i-cart" viewBox="0 0 24 24">
-    <path d="M4 8h13l-2 7H6z" fill="#c99a5b" />
-    <path d="M17 8h3" />
-    <circle cx="9" cy="18.5" r="2.5" fill="#3a4750" />
-    <path d="M14 15v2" />
+  <!-- ▸ 2칸: 짐칸 한 칸 + 바퀴·손잡이 한 칸 -->
+  <symbol id="i-cart" viewBox="0 0 48 24">
+    <path d="M4 6h34l-3 10H7z" fill="#c99a5b" />
+    <path d="M24 6.5v9" stroke-width="1.2" />
+    <path d="M38 6h5.5" stroke-width="1.8" />
+    <circle cx="13" cy="19.5" r="3.2" fill="#3a4750" />
+    <circle cx="30" cy="19.5" r="3.2" fill="#3a4750" />
   </symbol>
 
-  <symbol id="i-tractor" viewBox="0 0 24 24">
-    <path d="M8 12V6h5l2 6z" fill="#c0392b" />
-    <path d="M3 12h18v4H3z" fill="#c0392b" />
-    <circle cx="17" cy="17" r="4.5" fill="#3a4750" />
-    <circle cx="6" cy="18" r="3" fill="#3a4750" />
+  <!-- ▸ 3칸: 보닛·앞바퀴 / 운전석 / 뒷바퀴·적재함 -->
+  <symbol id="i-tractor" viewBox="0 0 72 24">
+    <path d="M9 6h4.5v5H9z" fill="#3a4750" />
+    <path d="M5 10h20v7H5z" fill="#c0392b" />
+    <path d="M25 10V3h12l4.5 7z" fill="#c0392b" />
+    <path d="M25 10h32v8H25z" fill="#c0392b" />
+    <circle cx="12" cy="18" r="4.2" fill="#3a4750" />
+    <circle cx="52" cy="14.5" r="7.5" fill="#3a4750" />
+    <circle cx="52" cy="14.5" r="2.8" fill="#b9b1a3" stroke="none" />
+    <path d="M60 10.5h8.5v6H60z" fill="#a9713f" />
   </symbol>
 
   <symbol id="i-scarecrow" viewBox="0 0 24 24">
@@ -132,11 +179,14 @@
     <path d="M5 12l-1.5 3M19 12l1.5 3" stroke-width="1.4" />
   </symbol>
 
-  <symbol id="i-bench" viewBox="0 0 24 24">
-    <rect x="2.5" y="9" width="19" height="3.5" rx="1" fill="#c99a5b" />
-    <path d="M5.5 12.5V20M18.5 12.5V20" />
-    <path d="M9 9V5h6" stroke-width="1.6" fill="none" />
-    <rect x="14" y="3" width="4" height="3" rx="1" fill="#3a4750" />
+  <!-- ▸ 2칸: 아래 선반 있는 상판 한 칸 + 공구함 한 칸 -->
+  <symbol id="i-bench" viewBox="0 0 48 24">
+    <rect x="3" y="9" width="42" height="5" rx="1.4" fill="#c99a5b" />
+    <path d="M6.5 14V21M41.5 14V21M24 14v7" stroke-width="1.6" />
+    <rect x="6" y="14.5" width="14" height="4.5" rx="1" fill="#a9713f" />
+    <path d="M9 9V5.5h7" fill="none" stroke-width="1.6" />
+    <rect x="27" y="3.5" width="11" height="5.5" rx="1" fill="#3a4750" />
+    <path d="M30.5 3.5V1.5h4v2" fill="none" stroke-width="1.2" />
   </symbol>
 
   <symbol id="i-bucket" viewBox="0 0 24 24">

@@ -1,5 +1,6 @@
 import { useEffect, useState, type CSSProperties } from 'react';
-import type { Furniture, Puzzle } from '../game/types';
+import { spanOf } from '../game/types';
+import type { Furniture, Puzzle, Span } from '../game/types';
 import { indexScene } from '../game/clues';
 import sprite from '../assets/sprite.svg?raw';
 
@@ -13,19 +14,23 @@ const ICONS = new Set([...sprite.matchAll(/id="i-([\w-]+)"/g)].map((m) => m[1]))
    나눗셈은 여기서 끝내고 완성된 문자열만 넘긴다 */
 const unitOf = (n: number) => `${(68 / n).toFixed(3)}cqw`;
 
+/** 그림 한 칸치의 좌표 단위. 스프라이트의 viewBox 는 이 값 × 칸 수다 */
+const VB = 24;
+
+/** 눕혀 그릴 때를 감안한 그림의 [긴 변, 짧은 변] 칸 수 */
+const units = (span?: Span): [number, number] =>
+  !span ? [1, 1] : span.h > span.w ? [span.h, span.w] : [span.w, span.h];
+
 /** 발자국(가로·세로 칸수)에 맞춘 그림 크기. 세로로 긴 자리는 가로 그림을 눕혀 쓴다 */
 function artBox(unit: string, span?: Span): CSSProperties | undefined {
   if (!span || !unit) return undefined;
-  const tall = span.h > span.w;
-  const [w, h] = tall ? [span.h, span.w] : [span.w, span.h];
+  const [w, h] = units(span);
   return {
     width: `calc(${unit} * ${w})`,
     height: `calc(${unit} * ${h})`,
-    rotate: tall ? '90deg' : undefined,
+    rotate: span.h > span.w ? '90deg' : undefined,
   };
 }
-
-export type Span = { w: number; h: number };
 
 /** 아이콘 정의. 앱에 한 번만 그려두면 `<use>` 가 어디서든 참조한다 */
 export function SpriteDefs() {
@@ -48,15 +53,16 @@ export function Art({
   unit?: string;
 }) {
   const box = artBox(unit, span);
+  const [uw, uh] = units(span);
   if (image) return <img className="art" src={image} alt={label} style={box} />;
   if (icon && ICONS.has(icon))
     return (
       <svg
         className="art"
-        viewBox="0 0 24 24"
-        // 정사각 그림을 긴 자리에 맞춰 늘린다. 소파·여물통처럼 원래 길쭉한
-        // 물건이라 늘어난 쪽이 실제 모양에 가깝다
-        preserveAspectRatio={box && span!.w !== span!.h ? 'none' : undefined}
+        // 스프라이트가 발자국 비율대로 그려져 있다 — 세 칸짜리 소파는 72×24 다.
+        // 상자도 같은 비율이라 기본 `xMidYMid meet` 이 딱 맞게 채운다. 늘리지 않으므로
+        // 선 굵기가 한 칸짜리 가구와 같고, 칸마다 다른 부분이 그려진다
+        viewBox={`0 0 ${VB * uw} ${VB * uh}`}
         role="img"
         aria-label={label}
         style={box}
@@ -118,12 +124,6 @@ export default function Board({ puzzle, marks, onCell, revealed }: Props) {
   const furnAt = new Map<string, { f: (typeof furniture)[number]; first: boolean }>();
   for (const f of furniture)
     f.cells.forEach((c, i) => furnAt.set(`${c.r},${c.c}`, { f, first: i === 0 }));
-
-  // 가구가 실제로 덮는 가로·세로 칸수. cells[0] 이 왼쪽 위라 여기서 재면 된다
-  const spanOf = (f: (typeof furniture)[number]): Span => ({
-    w: 1 + Math.max(...f.cells.map((c) => c.c)) - f.cells[0].c,
-    h: 1 + Math.max(...f.cells.map((c) => c.r)) - f.cells[0].r,
-  });
 
   const wallAt = new Map(wallItems.map((w) => [`${w.cell.r},${w.cell.c}`, w]));
   const roomById = new Map(rooms.map((r) => [r.id, r]));

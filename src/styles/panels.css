@@ -31,13 +31,15 @@
 }
 .legend li {
   display: grid;
-  grid-template-columns: 24px 1fr auto;
+  grid-template-columns: 38px 1fr auto;
   align-items: center;
   gap: 8px;
   font-size: 13px;
 }
+/* 가구 그림이 실제 발자국 비율이라 세 칸짜리 소파는 3:1 이다. 가로로 넉넉한 칸을
+   주고 세로로 맞추면 `meet` 이 알아서 눕혀 넣는다 — 범례가 모양까지 알려준다 */
 .legend svg.art {
-  width: 22px;
+  width: 38px;
   height: 22px;
 }
 .legend .art {

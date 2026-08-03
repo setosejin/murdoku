@@ -24,6 +24,15 @@ export type Furniture = {
   standable: boolean;
 };
 
+/** 가구가 덮는 가로·세로 칸수 */
+export type Span = { w: number; h: number };
+
+/** cells[0] 이 왼쪽 위라 거기서부터 재면 된다. 그림 크기와 스프라이트 viewBox 가 이걸 따른다 */
+export const spanOf = (f: Furniture): Span => ({
+  w: 1 + Math.max(...f.cells.map((c) => c.c)) - f.cells[0].c,
+  h: 1 + Math.max(...f.cells.map((c) => c.r)) - f.cells[0].r,
+});
+
 export type WallItem = {
   id: string;
   kind: 'window' | 'door' | 'fence' | 'gate';

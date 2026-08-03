@@ -36,6 +36,8 @@ describe('Board 렌더링', () => {
       // 그림: 세로로 긴 자리는 가로 그림을 눕혀 쓰므로 긴 변이 앞에 온다
       const [uw, uh] = h > w ? [h, w] : [w, h];
       expect(html).toContain(`width:calc(13.600cqw * ${uw});height:calc(13.600cqw * ${uh})`);
+      // viewBox 도 같은 비율이라야 늘어나지도 letterbox 되지도 않는다
+      expect(html).toContain(`viewBox="0 0 ${24 * uw} ${24 * uh}"`);
       if (h > w) expect(html).toContain('rotate:90deg');
     }
   });

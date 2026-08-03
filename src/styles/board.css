@@ -250,6 +250,9 @@
   top: 50%;
   left: 50%;
   translate: -50% -50%;
+}
+/* 이모지로 떨어진 가구만 — svg 는 preserveAspectRatio 가 알아서 가운데 맞춘다 */
+.furniture > span.art {
   display: grid;
   place-items: center;
 }
