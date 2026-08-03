@@ -5,6 +5,7 @@ import ChangelogDialog from './components/ChangelogDialog';
 import ClueList from './components/ClueList';
 import FeedbackDialog from './components/FeedbackDialog';
 import HistoryPanel from './components/HistoryPanel';
+import Leaderboard from './components/Leaderboard';
 import MobileShell from './components/MobileShell';
 import Sheet from './components/Sheet';
 import { AccusePanel, BrushBar, LegendPanel, RulesPanel, SeedPanel } from './components/GamePanels';
@@ -116,6 +117,8 @@ export default function App() {
             result={game.result}
             attempt={game.attempt}
             culpritName={game.culpritName}
+            earned={game.earned}
+            peeked={game.peeked}
             revealed={game.revealed}
             setRevealed={game.setRevealed}
           />
@@ -149,6 +152,7 @@ export default function App() {
 
       <Sheet modal open={dialog === 'menu'} onClose={close} title="더보기">
         <SeedPanel seed={game.seed} onOpen={(s) => game.reset(game.n, s)} />
+        <Leaderboard plays={game.plays} code={game.code} />
         <HistoryPanel
           plays={game.plays}
           code={game.code}

@@ -65,6 +65,8 @@ describe('모바일 셸 렌더링', () => {
     result: null,
     attempt: 0,
     revealed: false,
+    peeked: false,
+    earned: 0,
     plays: [],
     code: 'a'.repeat(22),
     difficulties: DIFFICULTIES,

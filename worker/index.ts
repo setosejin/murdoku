@@ -2,6 +2,7 @@
  * 기록 동기화 + 계정 워커.
  *
  *   POST /h/:code    body: Play[]      → 병합된 Play[]
+ *   POST /lb/:code   body: 없음        → {top: Rank[], rank: number|null}
  *   POST /a/signup   body: {id, dk}    → 201 {code}  (409 아이디 중복)
  *   POST /a/login    body: {id, dk}    → 200 {code}  (401 불일치)
  *
@@ -9,12 +10,26 @@
  * 계정은 기록 저장 구조에 끼어들지 않는다 — (아이디, 비번) 으로 기록 코드를 꺼내올 뿐이고,
  * 그 뒤는 /h/:code 가 지금까지와 똑같이 처리한다.
  *
+ * 순위표도 마찬가지로 기존 구조 위에 얹었다 — 점수는 저장된 Play[] 에서 계산하므로
+ * 클라이언트가 점수를 올려보내지 않는다. 이름은 `c:<코드>` 로 계정 아이디를 찾아 쓴다.
+ *
  * 검증은 클라이언트와 같은 함수를 쓴다 — 판정을 두 군데 두지 않는다.
  *
  * 배포: worker/ 에서 `npx wrangler deploy` (설치 불필요)
  */
 import { constantTimeEqual, isDk, isUserId, randomHex, sha256hex } from '../src/game/auth';
-import { isCode, mergePlays, newCode, sanitizePlays, type Play } from '../src/game/history';
+import {
+  isCode,
+  MAX_BOARD,
+  mergePlays,
+  newCode,
+  sanitizeBoard,
+  sanitizePlays,
+  summarize,
+  TOP_N,
+  type Play,
+  type Rank,
+} from '../src/game/history';
 
 /** ponytail: @cloudflare/workers-types 를 받는 대신 쓰는 것만 3줄로 적는다 */
 type KV = {
@@ -32,6 +47,10 @@ const MAX_AUTH_BODY = 1024;
 /** KV 값. 여기 든 코드가 곧 기록 키다 */
 type Account = { s: string; h: string; code: string };
 
+/** 순위표 전체가 이 한 키에 든다. 코드 → 표시 이름은 `c:<코드>` */
+const LB_KEY = 'lb';
+const nameKey = (code: string) => `c:${code}`;
+
 const parse = (raw: string | null): Play[] => {
   if (raw === null) return [];
   try {
@@ -40,6 +59,39 @@ const parse = (raw: string | null): Play[] => {
     return [];
   }
 };
+
+const parseBoard = (raw: string | null): Rank[] => {
+  if (raw === null) return [];
+  try {
+    return sanitizeBoard(JSON.parse(raw));
+  } catch {
+    return [];
+  }
+};
+
+/**
+ * 순위표 갱신. 기록이 실제로 바뀐 요청에서만 부른다.
+ *
+ * ponytail: 순위 전체를 한 키에 담고 통째로 다시 쓴다. KV 에 CAS 가 없어 두 사람이 같은 순간에
+ * 올리면 한쪽이 덮이는데, 다음 해결 때 제 점수로 다시 오른다. 실시간 정확도가 필요해지면
+ * Durable Objects 로 올린다 (가입 경합과 같은 선택)
+ */
+async function updateBoard(env: Env, code: string, plays: Play[]) {
+  // 게스트는 이름이 없어 줄을 세울 수 없다. 순위는 계정만 오른다
+  const name = await env.HISTORY.get(nameKey(code));
+  if (name === null) return;
+
+  // 점수는 저장된 기록에서 서버가 센다 — 클라이언트가 올린 숫자를 그대로 믿지 않는다
+  const { score, cases } = summarize(plays);
+  if (score === 0) return;
+
+  const raw = await env.HISTORY.get(LB_KEY);
+  const board = parseBoard(raw).filter((e) => e.name !== name);
+  board.push({ name, score, cases, at: Date.now() });
+  board.sort((a, b) => b.score - a.score || a.at - b.at);
+  const next = JSON.stringify(board.slice(0, MAX_BOARD));
+  if (next !== raw) await env.HISTORY.put(LB_KEY, next);
+}
 
 const parseAccount = (raw: string): Account | null => {
   try {
@@ -99,6 +151,8 @@ export default {
         // ponytail: KV 에 CAS 가 없어 get→put 사이에 같은 아이디가 끼어들 수 있다.
         // 퍼즐 게임에서 감수할 만한 경합이고, 실제로 문제가 되면 Durable Objects 로 올린다
         await env.HISTORY.put(key, JSON.stringify(account));
+        // 순위표에 이름을 달아주는 역방향 매핑. /h/:code 는 코드만 알기 때문에 필요하다
+        await env.HISTORY.put(nameKey(account.code), id);
         return json({ code: account.code }, 201);
       }
 
@@ -108,7 +162,20 @@ export default {
       if (account === null) return fail(401, '아이디나 비밀번호가 틀렸다');
       if (!constantTimeEqual(await sha256hex(account.s + dk), account.h))
         return fail(401, '아이디나 비밀번호가 틀렸다');
+      // 순위표가 생기기 전에 가입한 계정을 여기서 메운다. 없을 때 한 번만 쓴다
+      if ((await env.HISTORY.get(nameKey(account.code))) === null)
+        await env.HISTORY.put(nameKey(account.code), id);
       return json({ code: account.code }, 200);
+    }
+
+    if (path.startsWith('/lb/')) {
+      const c = path.slice(4);
+      if (!isCode(c)) return fail(400, '기록 코드가 아니다');
+      const board = parseBoard(await env.HISTORY.get(LB_KEY));
+      const name = await env.HISTORY.get(nameKey(c));
+      const i = name === null ? -1 : board.findIndex((e) => e.name === name);
+      // 내 점수는 브라우저가 자기 기록에서 세므로 여기서는 순위만 준다
+      return json({ top: board.slice(0, TOP_N), rank: i < 0 ? null : i + 1 }, 200);
     }
 
     const code = path.startsWith('/h/') ? path.slice(3) : '';
@@ -127,7 +194,10 @@ export default {
     // - 불러오기만 하는 요청은 KV 쓰기 한도(1천/일)를 안 먹는다
     // - 처음 방문한 사람이 빈 기록을 올려도 빈 항목이 생기지 않는다.
     //   이게 없으면 신규 방문자 수만큼 쓰기가 나가고, 아무나 랜덤 코드로 한도를 태울 수 있다
-    if (merged.length > 0 && body !== stored) await env.HISTORY.put(code, body);
+    if (merged.length > 0 && body !== stored) {
+      await env.HISTORY.put(code, body);
+      await updateBoard(env, code, merged);
+    }
 
     return new Response(body, {
       status: 200,

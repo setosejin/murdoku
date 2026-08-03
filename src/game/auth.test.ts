@@ -102,8 +102,10 @@ describe('계정 워커', () => {
     const e = env();
     const res = await auth(e, 'signup', { id: 'sejin', dk: DK });
     expect(res.status).toBe(201);
-    expect(isCode(await codeOf(res))).toBe(true);
-    expect(e.keys()).toEqual(['u:sejin']);
+    const code = await codeOf(res);
+    expect(isCode(code)).toBe(true);
+    // 계정 레코드 + 순위표가 이름을 찾을 역방향 매핑
+    expect(e.keys().sort()).toEqual(['u:sejin', `c:${code}`].sort());
   });
 
   it('비밀번호 원문도 dk 도 그대로 저장하지 않는다', async () => {
@@ -223,7 +225,7 @@ describe('계정 워커', () => {
       }),
       e,
     );
-    expect(e.keys().sort()).toEqual(['u:sejin', code].sort());
+    expect(e.keys().sort()).toEqual(['u:sejin', `c:${code}`, 'lb', code].sort());
     // 계정 레코드를 기록으로 읽으려는 시도는 코드 형식에서 막힌다
     expect(
       (

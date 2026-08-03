@@ -5,6 +5,7 @@ import ChangelogDialog from './ChangelogDialog';
 import ClueList from './ClueList';
 import FeedbackDialog from './FeedbackDialog';
 import HistoryPanel from './HistoryPanel';
+import Leaderboard from './Leaderboard';
 import Sheet from './Sheet';
 import { AccusePanel, LegendPanel, RulesPanel, SeedPanel } from './GamePanels';
 import type { Game } from '../hooks/useGame';
@@ -109,6 +110,8 @@ export default function MobileShell({ game }: { game: Game }) {
           result={game.result}
           attempt={game.attempt}
           culpritName={game.culpritName}
+          earned={game.earned}
+          peeked={game.peeked}
           revealed={game.revealed}
           setRevealed={game.setRevealed}
           bare
@@ -163,6 +166,8 @@ export default function MobileShell({ game }: { game: Game }) {
         </div>
 
         <SeedPanel seed={game.seed} onOpen={(s) => game.reset(game.n, s)} />
+
+        <Leaderboard plays={game.plays} code={game.code} />
 
         <HistoryPanel
           plays={game.plays}
