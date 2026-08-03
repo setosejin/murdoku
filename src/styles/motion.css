@@ -21,6 +21,10 @@
     animation: fade-in var(--dur-fast) var(--ease-out) !important;
     animation-delay: 0ms !important;
   }
+  /* 사건이 벌어진 방도 같이 나타난다. 앞의 스태거가 없으니 기다릴 이유도 없다 */
+  .cell.crime::after {
+    transition-delay: 0ms !important;
+  }
   /* 사건 교체 페이드와 기록 항목 등장은 이동만 뺀다 */
   .history ul.ready li {
     transform: none !important;

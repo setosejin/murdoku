@@ -84,6 +84,15 @@
   align-self: start;
   max-height: 100%;
   min-height: 0;
+  /* 첫 진입에만 한 번. 세 열이 동시에 툭 나타나면 어디부터 봐야 할지가 안 잡힌다.
+     @starting-style 은 마운트에만 걸리고 이 열들은 key 가 없어 다시 마운트되지
+     않는다 — 사건을 바꿔도 재생되지 않는다는 뜻이다 */
+  transition: opacity 200ms var(--ease-out);
+}
+@starting-style {
+  .dclues {
+    opacity: 0;
+  }
 }
 /* 목록만 스크롤한다 — 패널 제목과 아래 버튼은 늘 제자리에 있어야 손이 기억한다 */
 .dclues .clue-list {
@@ -127,6 +136,13 @@
   /* 낮은 창에서 페이지 전체를 늘리는 대신 이 열만 스크롤한다 */
   overflow-y: auto;
   overscroll-behavior: contain;
+  /* 사건(왼쪽 + 보드)이 먼저, 지목·범례는 그 다음. 읽는 순서와 같다 */
+  transition: opacity 200ms var(--ease-out) 120ms;
+}
+@starting-style {
+  .side {
+    opacity: 0;
+  }
 }
 .side > * {
   flex: none;

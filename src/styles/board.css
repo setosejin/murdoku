@@ -150,6 +150,25 @@
   background: repeating-linear-gradient(45deg, #0000 0 6px, #23201c12 6px 8px);
   pointer-events: none;
 }
+/* 사건이 벌어진 방. 정답 공개의 마지막 한 마디라 늘 자리를 잡아두고 투명도만 켠다
+   (없다가 생기는 요소는 트랜지션이 안 걸린다). 딜레이는 Board.tsx 가 --crime-delay 로 준다.
+   테두리가 아니라 바탕색인 이유: 방 경계선은 칸마다 위·왼쪽만 그리고 나머지 절반은
+   바깥 이웃 칸이 그린다. 테두리로 하면 칸마다 네 변이 다 그어져 방 하나가 아니라
+   상자 여덟 개로 보였다. 바탕은 붙은 칸끼리 저절로 한 덩어리가 된다 */
+.cell::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: var(--accent);
+  opacity: 0;
+  pointer-events: none;
+  /* 토큰·가구(z-index 1 이상) 아래, 칸 바탕 위 */
+  z-index: 0;
+}
+.cell.crime::after {
+  opacity: 0.14;
+  transition: opacity 200ms var(--ease-out) var(--crime-delay);
+}
 /* 가구 칸을 눌렀을 때: 흔들림 + 붉은 기 */
 .cell.denied {
   box-shadow: inset 0 0 0 200px #c0392b2e;
@@ -348,6 +367,26 @@ img.art,
   from {
     opacity: 0;
     transform: scale(0.92);
+  }
+}
+/* 범인만 한 박자 늦게, 살짝 넘어갔다 제자리로 온다. 무고한 사람들과 같은 등장을
+   쓰면 정답이 "누구인지"가 보드 안에서 안 보인다 — 답을 옆 문구로 읽고 보드에서
+   글자를 눈으로 찾아야 했다. 이어서 방 테두리(.cell.crime)가 규칙을 마무리한다 */
+.token.solved.culprit {
+  animation-name: token-in-culprit;
+  animation-duration: 260ms;
+}
+@keyframes token-in-culprit {
+  0% {
+    opacity: 0;
+    transform: scale(0.8);
+  }
+  60% {
+    opacity: 1;
+    transform: scale(1.06);
+  }
+  100% {
+    transform: scale(1);
   }
 }
 .mark-x {

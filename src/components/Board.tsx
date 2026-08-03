@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, type CSSProperties } from 'react';
 import type { Puzzle } from '../game/types';
 import { indexScene } from '../game/clues';
 import sprite from '../assets/sprite.svg?raw';
@@ -67,9 +67,29 @@ export default function Board({ puzzle, marks, onCell, revealed }: Props) {
     people.map((p) => [`${puzzle.solution[p.id].r},${puzzle.solution[p.id].c}`, p]),
   );
 
+  // 사건이 벌어진 방 = 피해자가 있던 방. 정답 공개의 마지막 한 마디다
+  const victim = people.find((p) => p.isVictim)!;
+  const victimCell = puzzle.solution[victim.id];
+  const crimeRoom = roomAt[victimCell.r][victimCell.c];
+
+  /* 정답 공개 순서. 무고한 사람이 읽는 방향대로 먼저 자리를 잡고, 한 박자 쉰 뒤
+     피해자 → 범인 순으로 온다. 이 게임의 규칙이 "범인 = 피해자와 같은 방에 있던
+     용의자" 하나뿐이라, 순서만으로 그 규칙을 말할 수 있다 — 정답 문구는 보드
+     바깥에 있어서 이름을 읽고 보드에서 다시 찾아야 했다.
+     딜레이는 여기서 산수를 끝내고 완성된 값만 넘긴다 (webkit#202259) */
+  const revealDelay = new Map<string, number>();
+  let innocents = 0;
+  for (let r = 0; r < n; r++)
+    for (let c = 0; c < n; c++) {
+      const p = personAt.get(`${r},${c}`);
+      if (p && p.id !== victim.id && p.id !== puzzle.culpritId)
+        revealDelay.set(p.id, innocents++ * 40);
+    }
+  const beat = innocents * 40;
+  revealDelay.set(victim.id, beat + 100);
+  revealDelay.set(puzzle.culpritId, beat + 240);
+
   const cells = [];
-  // 정답 공개 스태거용 행우선 순번. 읽는 방향대로 토큰이 훑고 지나가게 한다
-  let revealIndex = 0;
   for (let r = 0; r < n; r++) {
     for (let c = 0; c < n; c++) {
       const k = `${r},${c}`;
@@ -78,6 +98,7 @@ export default function Board({ puzzle, marks, onCell, revealed }: Props) {
       const room = labelAt.get(k);
       const mark = revealed ? undefined : marks[k];
       const person = revealed ? personAt.get(k) : undefined;
+      const crime = revealed && roomAt[r][c] === crimeRoom;
       const blocked = !idx.free[r][c];
       const here = roomById.get(roomAt[r][c])!;
 
@@ -96,7 +117,7 @@ export default function Board({ puzzle, marks, onCell, revealed }: Props) {
           key={k}
           type="button"
           data-floor={here.floor}
-          className={`cell${blocked ? ' blocked' : ''}${
+          className={`cell${blocked ? ' blocked' : ''}${crime ? ' crime' : ''}${
             denied?.key === k ? (denied.n % 2 ? ' denied alt' : ' denied') : ''
           }`}
           aria-label={blocked ? `${desc} (가구라 설 수 없음)` : desc}
@@ -137,12 +158,12 @@ export default function Board({ puzzle, marks, onCell, revealed }: Props) {
           {room && <span className="room-label">{room.name}</span>}
           {person ? (
             <span
-              className="token solved"
+              className={`token solved${person.id === puzzle.culpritId ? ' culprit' : ''}`}
               style={{
                 background: person.color,
                 // calc(var(--i) * …) 로 넘기면 WebKit 이 값을 캐싱한다 (webkit#202259).
-                // 산수는 여기서 끝내고 완성된 값만 넘긴다
-                animationDelay: `${revealIndex++ * 40}ms`,
+                // 산수는 위에서 끝내고 완성된 값만 넘긴다
+                animationDelay: `${revealDelay.get(person.id) ?? 0}ms`,
               }}
             >
               {person.id}
@@ -168,7 +189,18 @@ export default function Board({ puzzle, marks, onCell, revealed }: Props) {
           (webkit#202259) — 열 개수는 여기서 직접 박는다.
           행 높이는 CSS 가 정한다: 데스크톱은 칸의 aspect-ratio, 모바일은 `grid-auto-rows: 1fr`
           (보드 높이가 확정이라 fr 이 균등하게 갈린다) */}
-      <div className="board" style={{ gridTemplateColumns: `repeat(${n}, minmax(0, 1fr))` }}>
+      <div
+        className="board"
+        style={
+          {
+            gridTemplateColumns: `repeat(${n}, minmax(0, 1fr))`,
+            // 방 테두리는 범인이 자리를 잡은 뒤에 그어진다. 인원수에 따라 앞의
+            // 스태거 길이가 달라지므로 값도 같이 움직인다. 의사요소에는 인라인
+            // 스타일을 못 주니 커스텀 속성으로 내려보낸다 (상속된다)
+            '--crime-delay': `${beat + 380}ms`,
+          } as CSSProperties
+        }
+      >
         {cells}
       </div>
       {denied && (

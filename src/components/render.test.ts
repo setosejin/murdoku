@@ -39,6 +39,26 @@ describe('Board 렌더링', () => {
     expect((html.match(/token solved/g) ?? []).length).toBe(5);
   });
 
+  /* 정답 공개는 이 게임의 규칙("범인 = 피해자와 같은 방에 있던 용의자")을
+     순서로 말한다. 범인 표시나 사건 현장 표시가 빠지면 정답이 보드 밖 문구로만
+     남아서, 이름을 읽고 보드에서 글자를 다시 찾아야 한다 */
+  it('정답 공개 시 범인 토큰과 사건 현장이 따로 표시된다', () => {
+    const { p, html } = render(true);
+    expect((html.match(/token solved culprit/g) ?? []).length).toBe(1);
+
+    const vc = p.solution[p.people.find((x) => x.isVictim)!.id];
+    const crimeRoom = p.rooms.find((rm) => rm.cells.some((c) => c.r === vc.r && c.c === vc.c))!;
+    expect((html.match(/class="cell[^"]* crime/g) ?? []).length).toBe(crimeRoom.cells.length);
+    // 마지막 한 마디의 딜레이. 의사요소가 읽어가므로 인라인이 아니라 변수로 내려간다
+    expect(html).toContain('--crime-delay');
+  });
+
+  it('공개 전에는 범인도 사건 현장도 드러나지 않는다', () => {
+    const { html } = render(false);
+    expect(html).not.toContain('culprit');
+    expect(html).not.toContain(' crime');
+  });
+
   it('설 수 없는 가구 칸은 blocked로 표시되고 이유가 라벨에 들어간다', () => {
     const { p, html } = render(false);
     const cnt = p.furniture.filter((f) => !f.standable).reduce((s, f) => s + f.cells.length, 0);
