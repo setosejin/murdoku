@@ -6,6 +6,10 @@
  *   POST /a/signup   body: {id, dk}    → 201 {code}  (409 아이디 중복)
  *   POST /a/login    body: {id, dk}    → 200 {code}  (401 불일치)
  *
+ *   POST /adm/list   body: 없음         → {accounts, plays}   ← 전부 ADMIN_TOKEN 필요
+ *   POST /adm/get    body: {id|code}   → {id, code, plays, score, cases}
+ *   POST /adm/del    body: {id|code}   → {ok: true}
+ *
  * 새 기록 올리기 = 내 목록을 POST. 다른 기기에서 불러오기 = 빈 배열을 POST.
  * 계정은 기록 저장 구조에 끼어들지 않는다 — (아이디, 비번) 으로 기록 코드를 꺼내올 뿐이고,
  * 그 뒤는 /h/:code 가 지금까지와 똑같이 처리한다.
@@ -31,13 +35,20 @@ import {
   type Rank,
 } from '../src/game/history';
 
-/** ponytail: @cloudflare/workers-types 를 받는 대신 쓰는 것만 3줄로 적는다 */
+/** ponytail: @cloudflare/workers-types 를 받는 대신 쓰는 것만 적는다 */
 type KV = {
   get(key: string): Promise<string | null>;
   put(key: string, value: string): Promise<void>;
+  delete(key: string): Promise<void>;
+  list(opts?: { cursor?: string }): Promise<{
+    keys: { name: string }[];
+    list_complete: boolean;
+    cursor?: string;
+  }>;
 };
 
-type Env = { HISTORY: KV; ORIGIN?: string };
+/** ADMIN_TOKEN 은 vars 가 아니라 시크릿이다: `npx wrangler secret put ADMIN_TOKEN` */
+type Env = { HISTORY: KV; ORIGIN?: string; ADMIN_TOKEN?: string };
 
 /** 200건 × 80바이트면 한참 남는다 */
 const MAX_BODY = 64 * 1024;
@@ -104,12 +115,113 @@ const parseAccount = (raw: string): Account | null => {
   }
 };
 
+/** 순위표에서 한 줄을 뺀다. 점수는 기록에서 나오니 기록을 지우면 순위도 같이 내려야 한다 */
+async function dropFromBoard(env: Env, name: string) {
+  const raw = await env.HISTORY.get(LB_KEY);
+  if (raw === null) return;
+  const board = parseBoard(raw);
+  const next = board.filter((e) => e.name !== name);
+  if (next.length !== board.length) await env.HISTORY.put(LB_KEY, JSON.stringify(next));
+}
+
+/** `{id}` 나 `{code}` 를 (아이디, 코드) 로 푼다. 없는 계정이면 null */
+async function resolve(env: Env, body: { id?: unknown; code?: unknown }) {
+  if (isUserId(body.id)) {
+    const stored = await env.HISTORY.get(`u:${body.id}`);
+    const account = stored === null ? null : parseAccount(stored);
+    return account === null ? null : { id: body.id, code: account.code };
+  }
+  // 게스트 기록은 계정이 없다. 이름은 있으면 붙이고 없으면 null
+  if (isCode(body.code)) return { id: await env.HISTORY.get(nameKey(body.code)), code: body.code };
+  return null;
+}
+
+/**
+ * 관리자 API. 정적 호스팅(GitHub Pages)에는 접근 제어가 없으니 문지기는 페이지가 아니라 여기다 —
+ * admin.html 은 누구나 열 수 있고, 토큰 없이는 이 함수가 아무것도 안 내준다.
+ *
+ * ponytail: 토큰 하나로 끝낸다. 요청 제한은 없지만 32바이트 난수를 네트워크로 맞히는 건
+ * 현실적으로 불가능하다. 관리자가 여럿이 되거나 감사 기록이 필요해지면 앞에 Cloudflare Access 를 세운다
+ */
+async function handleAdmin(
+  sub: string,
+  req: Request,
+  env: Env,
+  reply: {
+    json: (body: unknown, status: number) => Response;
+    fail: (status: number, msg: string) => Response;
+  },
+): Promise<Response> {
+  const token = req.headers.get('x-admin-token');
+  // 시크릿을 안 넣었으면 아무도 못 들어온다 (열려 있는 편이 낫다는 판단을 하지 않는다)
+  if (!env.ADMIN_TOKEN || token === null || !constantTimeEqual(token, env.ADMIN_TOKEN))
+    return reply.fail(401, '관리자 토큰이 아니다');
+
+  const raw = await req.text();
+  if (raw.length > MAX_AUTH_BODY) return reply.fail(413, '너무 크다');
+  let body: { id?: unknown; code?: unknown } = {};
+  if (raw.length > 0) {
+    try {
+      body = (JSON.parse(raw) ?? {}) as typeof body;
+    } catch {
+      return reply.fail(400, 'JSON 이 아니다');
+    }
+  }
+
+  if (sub === 'list') {
+    const keys: string[] = [];
+    let cursor: string | undefined;
+    do {
+      const page = await env.HISTORY.list({ cursor });
+      for (const k of page.keys) keys.push(k.name);
+      cursor = page.list_complete ? undefined : page.cursor;
+    } while (cursor !== undefined);
+
+    // 키 이름만으로 그림이 나온다 — 값을 읽지 않아 계정이 늘어도 요청 하나가 그대로다.
+    // `c:<코드>` 가 있으면 주인이 있는 기록, 없으면 게스트 기록
+    const named = new Set(keys.filter((k) => k.startsWith('c:')).map((k) => k.slice(2)));
+    return reply.json(
+      {
+        accounts: keys
+          .filter((k) => k.startsWith('u:'))
+          .map((k) => k.slice(2))
+          .sort(),
+        plays: keys.filter(isCode).map((code) => ({ code, owned: named.has(code) })),
+      },
+      200,
+    );
+  }
+
+  if (sub !== 'get' && sub !== 'del') return reply.fail(404, '없는 경로다');
+
+  const who = await resolve(env, body);
+  if (who === null) return reply.fail(404, '그런 계정이나 기록 코드가 없다');
+
+  if (sub === 'get') {
+    const plays = parse(await env.HISTORY.get(who.code));
+    // 이름도 기록도 없는 코드는 그냥 없는 것이다 (기록을 지운 계정은 이름이 남아 200 이다).
+    // 이미 읽은 값으로 판단하므로 KV 를 한 번 더 때리지 않는다
+    if (who.id === null && plays.length === 0) return reply.fail(404, '그런 기록이 없다');
+    // 점수는 순위표와 같은 함수로 센다 — 관리자가 보는 숫자가 플레이어가 보는 숫자와 같아야 한다
+    return reply.json({ ...who, plays, ...summarize(plays) }, 200);
+  }
+
+  await env.HISTORY.delete(who.code);
+  // 계정을 지목했으면 계정까지, 코드만 지목했으면 기록만 지운다
+  if (isUserId(body.id)) {
+    await env.HISTORY.delete(nameKey(who.code));
+    await env.HISTORY.delete(`u:${body.id}`);
+  }
+  if (who.id !== null) await dropFromBoard(env, who.id);
+  return reply.json({ ok: true }, 200);
+}
+
 export default {
   async fetch(req: Request, env: Env): Promise<Response> {
     const cors: Record<string, string> = {
       'access-control-allow-origin': env.ORIGIN ?? '*',
       'access-control-allow-methods': 'POST, OPTIONS',
-      'access-control-allow-headers': 'content-type',
+      'access-control-allow-headers': 'content-type, x-admin-token',
       'access-control-max-age': '86400',
       vary: 'origin',
     };
@@ -167,6 +279,9 @@ export default {
         await env.HISTORY.put(nameKey(account.code), id);
       return json({ code: account.code }, 200);
     }
+
+    if (path.startsWith('/adm/'))
+      return handleAdmin(path.slice(5), req, env, { json, fail });
 
     if (path.startsWith('/lb/')) {
       const c = path.slice(4);

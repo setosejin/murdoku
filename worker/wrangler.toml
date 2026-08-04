@@ -15,3 +15,8 @@ id = "ee115f0bb41047bbb7fe3290fe63808a"
 # CORS 허용 오리진. 로컬 개발은 npx wrangler dev 로 별도 확인
 [vars]
 ORIGIN = "https://setosejin.github.io"
+
+# 관리자 토큰은 vars 가 아니라 시크릿이다 (공개 저장소에 들어가면 안 된다):
+#   npx wrangler secret put ADMIN_TOKEN     ← openssl rand -hex 32 로 만든 값
+# 안 넣으면 /adm/* 가 전부 401 이다 — 관리 화면이 그냥 안 열린다.
+# 로컬 확인은 npx wrangler dev --var ADMIN_TOKEN:아무거나
