@@ -40,6 +40,8 @@ const MAX_SEED_LEN = 64;
 const MAX_TITLE_LEN = 80;
 /** 계정 아이디 길이 상한(auth.ts 의 ID_RE 와 같다). 순환 import 를 만들지 않으려고 숫자만 둔다 */
 const MAX_NAME_LEN = 20;
+/** 순위표에 띄울 닉네임 길이 상한. auth.ts 의 isNick 이 같은 값을 쓴다 */
+export const MAX_NICK_LEN = 20;
 /** 2096년쯤. 말도 안 되는 시각이 목록 맨 위에 박히는 것만 막으면 된다 */
 const MAX_AT = 4e12;
 
@@ -121,8 +123,15 @@ export function summarize(plays: readonly Play[]): { score: number; cases: numbe
   return { score, cases };
 }
 
-/** 순위표 한 줄. 이름은 계정 아이디다 — 게스트는 이름이 없어 순위에 오르지 않는다 */
-export type Rank = { name: string; score: number; cases: number; at: number };
+/**
+ * 순위표 한 줄.
+ *
+ * `name` 은 계정 아이디 = **신원**이다. 줄을 합치고 내 순위를 찾는 열쇠라 바뀌면 안 된다 —
+ * 게스트는 이름이 없어 순위에 오르지 않는다.
+ * `nick` 은 **보여줄 이름**이고 없으면 아이디를 그대로 쓴다. 워커가 `/lb/` 로 내보낼 때
+ * 둘을 합쳐 `name` 하나로 보내므로, 이 두 칸이 같이 있는 건 KV 안에서뿐이다.
+ */
+export type Rank = { name: string; nick?: string; score: number; cases: number; at: number };
 
 /** 서버가 들고 있는 순위 수. 여기서 밀려나면 순위를 잃는다 */
 export const MAX_BOARD = 100;
@@ -140,11 +149,13 @@ export function sanitizeBoard(raw: unknown): Rank[] {
     if (typeof v !== 'object' || v === null) continue;
     const e = v as Record<string, unknown>;
     const name = str(e.name, MAX_NAME_LEN);
+    const nick = str(e.nick, MAX_NICK_LEN);
     const score = int(e.score, 0, MAX_SCORE);
     const cases = int(e.cases, 0, MAX_PLAYS);
     const at = int(e.at, 1, MAX_AT);
     if (name === null || score === null || cases === null || at === null) continue;
-    out.push({ name, score, cases, at });
+    // 닉네임은 없어도 되는 칸이라 통과 조건에 안 넣는다 — 이상하면 아이디로 돌아갈 뿐이다
+    out.push({ name, ...(nick === null ? {} : { nick }), score, cases, at });
   }
   // 동점이면 먼저 올린 쪽이 앞이다
   return out.sort((a, b) => b.score - a.score || a.at - b.at);

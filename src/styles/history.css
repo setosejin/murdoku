@@ -100,6 +100,17 @@
 .account form {
   flex-direction: column;
 }
+/* 닉네임은 칸이 하나뿐이라 한 줄에 선다 */
+.account .nickform {
+  display: flex;
+  flex-direction: row;
+  gap: 6px;
+}
+.account .nickform input {
+  flex: 1;
+  min-width: 0;
+  min-height: 40px;
+}
 .account p {
   margin: 0;
   font-size: 13px;

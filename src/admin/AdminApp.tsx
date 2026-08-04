@@ -34,7 +34,15 @@ const writeToken = (v: string) => {
 };
 
 type Listing = { accounts: string[]; plays: { code: string; owned: boolean }[] };
-type Detail = { id: string | null; code: string; plays: Play[]; score: number; cases: number };
+type Detail = {
+  id: string | null;
+  /** 순위표에 띄우는 이름. 없으면 아이디로 뜬다 */
+  nick: string | null;
+  code: string;
+  plays: Play[];
+  score: number;
+  cases: number;
+};
 
 /** auth.ts 의 AuthResult 와 같은 모양 — 던지지 않고 결과로 돌려준다 */
 type Res<T> = { ok: true; data: T } | { ok: false; status: number; error: string };
@@ -242,6 +250,8 @@ function DetailPanel({
     <section className="panel admin-detail">
       <b>{sel.id ?? '게스트'}</b>
       <p className="hint">
+        {/* 순위표는 닉네임만 보여준다 — 여기서 이어주지 않으면 그 줄이 누군지 못 짚는다 */}
+        {sel.nick !== null && <>순위표 이름 {sel.nick} · </>}
         <code>{sel.code}</code> · {sel.cases}사건 · {sel.score.toLocaleString('ko-KR')}점 ·{' '}
         {sel.plays.length}건
       </p>
