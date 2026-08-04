@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
-import Board, { SpriteDefs } from './components/Board';
+import Board from './components/Board';
+import { SpriteDefs } from './components/Art';
 import CaseCards from './components/CaseCards';
 import ChangelogDialog from './components/ChangelogDialog';
 import ClueList from './components/ClueList';

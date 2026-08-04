@@ -65,4 +65,9 @@
   .tour-card {
     transition-property: opacity;
   }
+  /* 안뜰의 주인은 산책을 아예 안 한다 (YardPet.tsx 가 타이머를 안 건다).
+     포인터를 따라 칸을 옮기기는 하지만 미끄러지지 않고 바로 옮겨 앉는다 */
+  .yard-pet {
+    transition: none !important;
+  }
 }

@@ -1,11 +1,9 @@
 import { useEffect, useState, type CSSProperties } from 'react';
-import { spanOf } from '../game/types';
-import type { Furniture, Puzzle, Span } from '../game/types';
+import { key, spanOf } from '../game/types';
+import type { Cell, Furniture, Puzzle, Span } from '../game/types';
 import { indexScene } from '../game/clues';
-import sprite from '../assets/sprite.svg?raw';
-
-/** 스프라이트에 실제로 들어 있는 아이콘 이름. 없는 가구는 이모지로 떨어진다 */
-const ICONS = new Set([...sprite.matchAll(/id="i-([\w-]+)"/g)].map((m) => m[1]));
+import { Art } from './Art';
+import YardPet from './YardPet';
 
 /* 가구 그림은 자기 발자국을 채운다. 두 칸을 차지하면 그림도 두 칸치 —
    침대와 스탠드가 같은 크기로 그려지면 몇 칸짜리 가구인지 그림만 봐선 알 수 없다.
@@ -13,69 +11,6 @@ const ICONS = new Set([...sprite.matchAll(/id="i-([\w-]+)"/g)].map((m) => m[1]))
    `calc(68cqw / var(--n))` 로 넘기면 WebKit 이 값을 캐싱하므로(webkit#202259)
    나눗셈은 여기서 끝내고 완성된 문자열만 넘긴다 */
 const unitOf = (n: number) => `${(68 / n).toFixed(3)}cqw`;
-
-/** 그림 한 칸치의 좌표 단위. 스프라이트의 viewBox 는 이 값 × 칸 수다 */
-const VB = 24;
-
-/** 눕혀 그릴 때를 감안한 그림의 [긴 변, 짧은 변] 칸 수 */
-const units = (span?: Span): [number, number] =>
-  !span ? [1, 1] : span.h > span.w ? [span.h, span.w] : [span.w, span.h];
-
-/** 발자국(가로·세로 칸수)에 맞춘 그림 크기. 세로로 긴 자리는 가로 그림을 눕혀 쓴다 */
-function artBox(unit: string, span?: Span): CSSProperties | undefined {
-  if (!span || !unit) return undefined;
-  const [w, h] = units(span);
-  return {
-    width: `calc(${unit} * ${w})`,
-    height: `calc(${unit} * ${h})`,
-    rotate: span.h > span.w ? '90deg' : undefined,
-  };
-}
-
-/** 아이콘 정의. 앱에 한 번만 그려두면 `<use>` 가 어디서든 참조한다 */
-export function SpriteDefs() {
-  return <span hidden dangerouslySetInnerHTML={{ __html: sprite }} />;
-}
-
-export function Art({
-  emoji,
-  image,
-  label,
-  icon,
-  span,
-  unit = '',
-}: {
-  emoji: string;
-  image?: string;
-  label: string;
-  icon?: string;
-  span?: Span;
-  unit?: string;
-}) {
-  const box = artBox(unit, span);
-  const [uw, uh] = units(span);
-  if (image) return <img className="art" src={image} alt={label} style={box} />;
-  if (icon && ICONS.has(icon))
-    return (
-      <svg
-        className="art"
-        // 스프라이트가 발자국 비율대로 그려져 있다 — 세 칸짜리 소파는 72×24 다.
-        // 상자도 같은 비율이라 기본 `xMidYMid meet` 이 딱 맞게 채운다. 늘리지 않으므로
-        // 선 굵기가 한 칸짜리 가구와 같고, 칸마다 다른 부분이 그려진다
-        viewBox={`0 0 ${VB * uw} ${VB * uh}`}
-        role="img"
-        aria-label={label}
-        style={box}
-      >
-        <use href={`#i-${icon}`} />
-      </svg>
-    );
-  return (
-    <span className="art" role="img" aria-label={label} style={box}>
-      {emoji}
-    </span>
-  );
-}
 
 type Props = {
   puzzle: Puzzle;
@@ -113,8 +48,13 @@ export default function Board({ puzzle, marks, onCell, revealed }: Props) {
   const idx = indexScene(puzzle);
   const roomAt = idx.roomAt;
 
-  // 가구 칸을 눌렀을 때 잠깐 띄우는 거절 표시
-  const [denied, setDenied] = useState<{ key: string; text: string; n: number } | null>(null);
+  // 누를 수 없는 칸을 눌렀을 때 잠깐 띄우는 거절 표시 (가구 위 · 안뜰)
+  const [denied, setDenied] = useState<{
+    key: string;
+    icon: string;
+    text: string;
+    n: number;
+  } | null>(null);
   useEffect(() => {
     if (!denied) return;
     const t = setTimeout(() => setDenied(null), 1600);
@@ -156,13 +96,14 @@ export default function Board({ puzzle, marks, onCell, revealed }: Props) {
 
   const cells = [];
   /* 안뜰(갇힌 빈 칸)은 방처럼 이름표를 하나만 단다 — 그림은 첫 칸, 이름은 마지막 칸.
-     ponytail: 안뜰이 격자당 한 덩어리라는 전제다 (`donut` 마스크만 만들고, 다른
-     마스크는 테두리에서 파고들어 전부 `바깥`이 된다). 갇힌 덩어리를 둘 이상 만드는
-     마스크를 넣으면 여기서 덩어리별로 나눠야 한다 */
+     ponytail: 안뜰이 격자당 한 덩어리이고 직사각형이라는 전제다 (`donut` 마스크만
+     만들고, 다른 마스크는 테두리에서 파고들어 전부 `바깥`이 된다). 갇힌 덩어리를 둘
+     이상 만드는 마스크를 넣으면 여기서도, YardPet 의 판에서도 덩어리별로 나눠야 한다 */
   const yard = puzzle.theme.courtyard;
-  const inner: string[] = [];
+  const yardCells: Cell[] = [];
   for (let r = 0; r < n; r++)
-    for (let c = 0; c < n; c++) if (idx.voidKind[r][c] === 'inner') inner.push(`${r},${c}`);
+    for (let c = 0; c < n; c++) if (idx.voidKind[r][c] === 'inner') yardCells.push({ r, c });
+  const inner = yardCells.map(key);
 
   /* 위계: 외벽 5px > 방 경계 3px > 칸선 1px.
      **외벽은 방 칸이 네 변을 다 그린다.** 반대편이 빈 칸이거나 격자 밖이라 선을
@@ -249,6 +190,7 @@ export default function Board({ puzzle, marks, onCell, revealed }: Props) {
             blocked
               ? setDenied((prev) => ({
                   key: k,
+                  icon: '🚫',
                   text: `${fur?.f.label ?? '가구'} 위에는 설 수 없어`,
                   n: (prev?.n ?? 0) + 1,
                 }))
@@ -311,10 +253,28 @@ export default function Board({ puzzle, marks, onCell, revealed }: Props) {
         }
       >
         {cells}
+        {/* 안뜰의 주인. 갇힌 빈 칸 안에서만 돌아다니며 "여기는 건물 밖" 을 몸으로 말한다.
+            정답을 공개한 뒤에는 물러난다 — 마지막 장면에서 시선을 뺏으면 안 된다 */}
+        {yardCells.length > 0 && !revealed && (
+          <YardPet
+            cells={yardCells}
+            n={n}
+            pet={yard.pet}
+            seed={puzzle.seed}
+            onPoke={() =>
+              setDenied((prev) => ({
+                key: 'yard',
+                icon: yard.pet.emoji,
+                text: yard.pet.deny,
+                n: (prev?.n ?? 0) + 1,
+              }))
+            }
+          />
+        )}
       </div>
       {denied && (
         <p key={denied.n} className="notice" role="status">
-          🚫 {denied.text}
+          {denied.icon} {denied.text}
         </p>
       )}
     </div>
