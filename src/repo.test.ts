@@ -55,6 +55,24 @@ describe('저장소 규약', () => {
     for (const kind of FLOOR_KINDS)
       expect(board, `${kind} 바닥에 스타일이 없다`).toContain(`[data-floor='${kind}']`);
   });
+
+  /* 증언은 방·가구·부착물을 이름으로만 부른다. 같은 이름이 둘이면 문구가 같아도
+     뜻이 갈린다 — 방 이름이 가구 이름과 겹치면 "난 X 옆에 있었어!"(가구에 인접)와
+     "난 X 에 있었어!"(그 방 안)가 서로 다른 칸을 가리키는데 플레이어는 구별할 수 없다.
+     generate.test.ts 는 가구끼리·방끼리만 봐서 이 교차 충돌을 놓친다 */
+  it('테마 안에서 방·가구·부착물 이름이 서로 겹치지 않는다', () => {
+    for (const theme of THEMES) {
+      const named = [
+        ...theme.rooms.map((r) => r.name),
+        ...theme.furniture.map((f) => f.label),
+        ...theme.wallItems.map((w) => w.label),
+        ...(theme.outdoorItems ?? []).map((w) => w.label),
+        theme.courtyard.label,
+      ];
+      const dupes = [...new Set(named.filter((x, i) => named.indexOf(x) !== i))];
+      expect(dupes, `${theme.label} 테마에 겹치는 이름이 있다`).toEqual([]);
+    }
+  });
 });
 
 // 링크 미리보기(카카오톡·트위터)는 배포 후 실물로 확인하기 전까지 깨진 걸 알 수 없다.

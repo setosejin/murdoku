@@ -127,7 +127,20 @@ export default function Board({ puzzle, marks, onCell, revealed }: Props) {
 
   const wallAt = new Map(wallItems.map((w) => [`${w.cell.r},${w.cell.c}`, w]));
   const roomById = new Map(rooms.map((r) => [r.id, r]));
-  const labelAt = new Map(rooms.map((r) => [`${r.cells[r.cells.length - 1].r},${r.cells[r.cells.length - 1].c}`, r]));
+  /* 방 이름표 자리 고르기. 이름표는 z-index 4 라 뭐든 덮는데, 증언이 가구·부착물을
+     이름으로 부르니 덮이면 못 푼다. 그래서 빈 바닥 → 가구 없는 칸 → 마지막 칸 순으로
+     양보한다. 여러 칸짜리 가구는 제 이름을 발치 칸에 떨어뜨리므로 가구를 먼저 피한다 */
+  const labelAt = new Map(
+    rooms.map((r) => {
+      const back = [...r.cells].reverse();
+      const key = (c: (typeof back)[number]) => `${c.r},${c.c}`;
+      const c =
+        back.find((x) => !furnAt.has(key(x)) && !wallAt.has(key(x))) ??
+        back.find((x) => !furnAt.has(key(x))) ??
+        r.cells[r.cells.length - 1];
+      return [key(c), r];
+    }),
+  );
   const personAt = new Map(
     people.map((p) => [`${puzzle.solution[p.id].r},${puzzle.solution[p.id].c}`, p]),
   );
@@ -264,7 +277,14 @@ export default function Board({ puzzle, marks, onCell, revealed }: Props) {
               <Art emoji={wall.emoji} image={wall.image} icon={wall.kind} label={wall.label} />
             </span>
           )}
-          {room && <span className="room-label">{room.name}</span>}
+          {room && (
+            /* 칸 아래쪽은 가구 이름(발치에 깔린다)과 아래쪽 부착물 차지다. 거기가
+               찼으면 이름표를 위로 올린다 — 부착물은 칸마다 하나뿐이라 아래가
+               부착물이면 위는 반드시 비어 있다 */
+            <span className={`room-label${fur || wall?.side === 'bottom' ? ' high' : ''}`}>
+              {room.name}
+            </span>
+          )}
           {person ? (
             <span
               className={`token solved${person.id === puzzle.culpritId ? ' culprit' : ''}`}

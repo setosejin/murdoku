@@ -203,7 +203,9 @@ const OFFICE: Theme = {
     { kind: 'cooler', label: '정수기', emoji: '🚰', size: 1, standable: false, rooms: ['복도', '라운지', 'A존', 'B존'] },
     { kind: 'server', label: '서버랙', emoji: '💽', size: 2, standable: false, rooms: ['기계실', '창고'] },
     { kind: 'sink', label: '세면대', emoji: '🧼', size: 2, standable: false, rooms: ['화장실'] },
-    { kind: 'elevator', label: '엘리베이터', emoji: '🛗', size: 2, standable: false, rooms: ['엘리베이터'] },
+    // 라벨이 '엘리베이터' 면 방 이름과 겹친다 — "난 엘리베이터 옆에"(승강기에 인접)와
+    // "난 엘리베이터에"(그 방 안)가 다른 칸을 가리키는데 플레이어는 구별할 수 없다
+    { kind: 'elevator', label: '승강기', emoji: '🛗', size: 2, standable: false, rooms: ['엘리베이터'] },
     { kind: 'whiteboard', label: '화이트보드', emoji: '📋', size: 2, standable: false, rooms: ['회의실', 'A존', 'B존'] },
     { kind: 'plant', label: '화분', emoji: '🪴', size: 1, standable: false },
     { kind: 'rug', label: '러그', emoji: '🟫', size: 4, standable: true },

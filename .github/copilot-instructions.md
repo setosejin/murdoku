@@ -165,7 +165,7 @@ buildFloorplan(마스크 → BSP → void 빼기 → 조각 흡수 → 지터)
 
 - **선은 전부 칸이 그린다. `.board` 에는 테두리도 바탕도 없다.** 굵기 위계는 **외벽 5px > 방 경계 3px > 칸 선 1px > 실루엣 밖 0**. `Board.tsx` 가 이웃 칸의 `roomAt` 을 비교해 정한다 — 격자 밖과 빈 칸을 똑같이 `-1` 로 보는 게 요령이다.
   - **외벽만 방 칸이 네 변을 다 그린다.** 반대편이 빈 칸이라 선을 나눠 그릴 상대가 없어서다. 방↔방·같은 방 선은 위·왼쪽만 그리고 나머지 절반은 이웃이 그린다.
-  - `.board` 에 사각 테두리를 되돌리면 **ㄱ자 건물에도 정사각형 액자가 남는다** — 실루엣이 도형이 아니라 여백처럼 읽힌다. 같은 이유로 `.cell.void.outer` 는 `--floor-tint: transparent` 라 그 자리에 종이가 비친다. `render.test.ts` 의 `가장 굵은 선이 건물 실루엣을 따라간다` 가 칸마다 "5px ⟺ 이웃이 건물이 아니다"를 검사한다.
+  - `.board` 에 사각 테두리를 되돌리면 **ㄱ자 건물에도 정사각형 액자가 남는다** — 실루엣이 도형이 아니라 여백처럼 읽힌다. 같은 이유로 `.cell.void.outer` 는 `--floor-tint: transparent` 라 그 자리에 종이가 비친다. `board.test.ts` 의 `가장 굵은 선이 건물 실루엣을 따라간다` 가 칸마다 "5px ⟺ 이웃이 건물이 아니다"를 검사한다.
 - **실루엣 밖 칸은 `<button>` 이 아니라 `<div class="cell void ...">` 다.** 누를 수도 포커스할 수도 없어야 한다. `roomById.get(roomAt[r][c])!` 앞에서 갈라야 한다 — void 는 `-1` 이라 그대로 두면 `undefined` 에서 터진다. 갇힌 칸(`inner`)만 테마 `courtyard` 의 바닥·그림·이름을 받고, 바깥(`outer`)은 그냥 빈 땅이다.
 - 2칸 가구는 `cells[0]` 에서 한 번만 그리고 `width/height: 200%` 로 옆 칸을 덮는다.
 - 창문·문은 절대 위치 부착물이라 칸을 막지 않는다. `~앞` 은 그 칸을 뜻한다.
@@ -226,7 +226,8 @@ Safari 를 실측하는 법 — **환경마다 되는 경로가 다르다. 아�
 | `src/game/clues.test.ts` | `matchingCells` 판정 (ON·NEXT_TO·IN_ROOM·FROM_ROOM) |
 | `src/game/history.test.ts` | 기록 검증·병합 + 동기화 워커 라우트 |
 | `src/game/auth.test.ts` | 계정 검증·워커 라우트·로그인 UI |
-| `src/components/render.test.ts` | 보드·앱(데스크톱 셸)·모달 렌더링 |
+| `src/components/board.test.ts` | 보드·실루엣 렌더링 |
+| `src/components/render.test.ts` | 앱(데스크톱 셸)·모달 렌더링 |
 | `src/components/mobile.test.ts` | 모바일 셸·증언 목록·시트 + `mobile.css` 불변식 |
 | `src/repo.test.ts` | 500줄 규약 + CSS 전역 금지 패턴(`repeat(var(`) |
 

@@ -396,6 +396,12 @@ img.art,
   border-style: dashed;
   color: var(--muted);
 }
+/* 방이 가구로 꽉 차서 이름표가 가구 위에 앉을 수밖에 없을 때. 가구 이름은 늘
+   제 발치(칸 아래쪽)에 깔리므로, 이름표만 칸 위로 올리면 둘 다 읽힌다 */
+.room-label.high {
+  top: 3px;
+  bottom: auto;
+}
 
 .token {
   position: relative;
