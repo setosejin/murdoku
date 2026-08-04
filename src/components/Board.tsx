@@ -67,7 +67,17 @@ export default function Board({ puzzle, marks, onCell, revealed }: Props) {
 
   const wallAt = new Map(wallItems.map((w) => [`${w.cell.r},${w.cell.c}`, w]));
   const roomById = new Map(rooms.map((r) => [r.id, r]));
-  const labelAt = new Map(rooms.map((r) => [`${r.cells[r.cells.length - 1].r},${r.cells[r.cells.length - 1].c}`, r]));
+  /* 방 이름표는 그 방의 마지막 칸(오른쪽 아래)에 붙는다. 다만 **벽부착물이 붙은 칸은
+     피한다** — 문·창문 라벨과 방 이름표가 같은 모서리에서 겹친다(넷 중 하나꼴).
+     방이 통째로 벽부착물 칸이면 어쩔 수 없이 원래 자리로 돌아간다 */
+  const labelAt = new Map(
+    rooms.map((r): [string, (typeof rooms)[number]] => {
+      const spot =
+        [...r.cells].reverse().find((c) => !wallAt.has(`${c.r},${c.c}`)) ??
+        r.cells[r.cells.length - 1];
+      return [`${spot.r},${spot.c}`, r];
+    }),
+  );
   const personAt = new Map(
     people.map((p) => [`${puzzle.solution[p.id].r},${puzzle.solution[p.id].c}`, p]),
   );
@@ -202,8 +212,11 @@ export default function Board({ puzzle, marks, onCell, revealed }: Props) {
             <FurnitureArt f={fur.f} span={spanOf(fur.f)} n={n} />
           )}
           {wall && (
-            <span className={`wall-item ${wall.side} ${wall.kind}`} title={wall.label}>
+            /* 외벽을 타고 앉는다 — 칸 안이 아니라 선 위에 있어야 "여기가 트였다"
+               로 읽힌다. 자리·크기는 board.css 가 정하고 방향 클래스만 넘긴다 */
+            <span className={`wall-item ${wall.side} ${wall.kind}`}>
               <Art emoji={wall.emoji} image={wall.image} icon={wall.kind} label={wall.label} />
+              <span className="wall-label">{wall.label}</span>
             </span>
           )}
           {room && <span className="room-label">{room.name}</span>}
