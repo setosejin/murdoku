@@ -6,6 +6,21 @@
   color: var(--muted);
   font-size: 14px;
 }
+/* 첫 방문에 저절로 열린 브리핑에만 붙는 안내. 다시 여는 길을 알려준다 */
+.brief-again {
+  margin: 4px 0 0;
+  border: 2px solid var(--wall);
+  border-radius: 10px;
+  background: #fffdf7;
+  padding: 8px 10px;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--muted);
+  word-break: keep-all;
+}
+.brief-again b {
+  color: var(--ink);
+}
 /* 사건 종류 뱃지. 두 셸의 상단바 제목 버튼이 함께 쓴다 */
 .case-no {
   flex: none;
