@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Art } from './Board';
+import { Art } from './Art';
 import { spanOf } from '../game/types';
 import type { Furniture, Person } from '../game/types';
 import type { Difficulty } from '../game/generate';

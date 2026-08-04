@@ -106,6 +106,9 @@ git -c credential.https://github.com.helper= \
 | `src/components/ClueList.tsx` | 증언 목록 겸 메모 브러시 (두 셸 공용) |
 | `src/components/Sheet.tsx` | 바텀시트(모바일)·가운데 모달(`modal` 변형, 데스크톱) `<dialog>` 래퍼 |
 | `src/components/Board.tsx` | 격자·방 경계·가구·메모 렌더 |
+| `src/components/Art.tsx` | 스프라이트 `<defs>` + `<Art>` (이모지/이미지/아이콘 하나로) |
+| `src/components/YardPet.tsx` | 안뜰(갇힌 빈 칸)을 돌아다니는 짐승 — 그림 + 투명한 판 |
+| `src/components/yardWalk.ts` | 안뜰 짐승의 걸음 규칙 (순수 함수) |
 | `src/components/CaseCards.tsx` | 용의자·피해자 카드 그리드 (두 셸 공용) |
 | `src/components/GamePanels.tsx` | 규칙·범례·브러시바·지목·시드 패널 (두 셸 공용) |
 | `src/components/ChangelogDialog.tsx` | `CHANGELOG.md` 를 읽어 모달로 그린다 (마크다운 부분집합 렌더러) |
@@ -174,6 +177,22 @@ buildFloorplan(마스크 → BSP → void 빼기 → 조각 흡수 → 지터)
 - **보드 안의 글자·아이콘 크기는 `vw` 가 아니라 `cqw` 로 잰다.** `.board { container-type: inline-size }` 가 기준이다. 모바일에서 보드는 **높이**에 맞춰 줄어드는데, `vw` 기준이면 글리프만 안 줄어 칸을 넘친다.
 - 모바일에서 보드는 `min(100cqw, 100cqh)` 로 남는 공간의 짧은 변에 맞춘다. 행은 `grid-auto-rows: minmax(0, 1fr)` — 데스크톱은 그대로 `.cell { aspect-ratio: 1 }` 이 정한다.
 
+### 안뜰의 주인
+
+안뜰(`voidKind === 'inner'`)에는 짐승이 산다 — 저택은 고양이, 농장은 오리. 못 누르는 칸이라는 걸 글자보다 먼저 몸으로 말하게 하려는 것이다. `YardPet.tsx` 가 `.board` 안에 **두 겹**을 절대배치로 얹는다.
+
+- `.yard-pet` — 칸 하나 크기의 그림. `pointer-events: none`, `z-index: 3`(안뜰 이름표 4 아래).
+- `.yard-plate` — 안뜰 bounding box 를 덮는 투명한 판. `z-index: 5`. 포인터는 전부 여기가 받는다.
+
+쉽게 깨지는 것들.
+
+- **판이 안뜰 밖으로 새면 진짜 칸의 클릭을 먹는다.** bounding box 에 섞인 비-안뜰 칸은 `.yard-gap`(`pointer-events: none`)으로 덮는다. `yard.test.ts` 가 ㄱ자 안뜰로 검사한다.
+- **좌표·트랙 수는 전부 JS 에서 문자열을 완성해 인라인으로 넘긴다.** `calc(var())` 는 Safari 가 캐싱한다(webkit#202259). `.yard-pet` 이 정확히 한 칸 크기라 `translate: ${c*100}% ${r*100}%` 가 칸에 정확히 떨어진다.
+- **상태는 `YardPet` 안에 둔다.** `Board` 로 올리면 걸음마다(1~3초) 보드 전체가 다시 그려진다. `cells` 는 렌더마다 새 배열이라 `useEffect` deps 에 그대로 넣으면 메모를 찍을 때마다 산책이 멈춘다 — 좌표를 이어붙인 `yardKey` 를 쓴다.
+- 산책은 `rng(\`${seed}-pet\`)` 을 탄다. **같은 사건 = 같은 산책.** `prefers-reduced-motion` 이면 타이머를 아예 안 건다.
+- 테마를 늘리면 `courtyard.pet` 과 `sprite.svg` 의 `i-<kind>` · `i-<kind>-sit` 을 같이 넣어야 한다. `yard.test.ts` 가 강제한다.
+- 안뜰은 **4×4 에서 안 나온다**(`donut.minN = 5`). 안뜰이 격자당 한 덩어리·직사각형이라는 전제는 `donut` 마스크가 유일한 출처다 — 갇힌 덩어리를 둘 이상 만드는 마스크를 넣으면 `Board.tsx` 의 이름표와 이 판이 같이 깨진다.
+
 ### 바텀시트
 
 `Sheet.tsx` 는 네이티브 `<dialog>` 다. 두 가지가 쉽게 깨진다.
@@ -228,6 +247,7 @@ Safari 를 실측하는 법 — **환경마다 되는 경로가 다르다. 아�
 | `src/game/rank.test.ts` | 순위표 — 워커 라우트·닉네임·`rankDrop` + 점수판/토스트/점 렌더 |
 | `src/game/auth.test.ts` | 계정 검증·워커 라우트·로그인 UI |
 | `src/components/render.test.ts` | 보드·앱(데스크톱 셸)·모달 렌더링 |
+| `src/components/yard.test.ts` | 안뜰 짐승 — 걸음 규칙·판 범위·테마별 그림 + `yard.css` 불변식 |
 | `src/components/mobile.test.ts` | 모바일 셸·증언 목록·시트 + `mobile.css` 불변식 |
 | `src/repo.test.ts` | 500줄 규약 + CSS 전역 금지 패턴(`repeat(var(`) |
 
