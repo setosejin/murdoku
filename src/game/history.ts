@@ -150,6 +150,31 @@ export function sanitizeBoard(raw: unknown): Rank[] {
   return out.sort((a, b) => b.score - a.score || a.at - b.at);
 }
 
+/** 순위가 밀린 폭. 숫자가 클수록 아래다 */
+export type RankDrop = { from: number; to: number };
+
+/** 마지막으로 본 순위. 계정이 갈리면 견줄 대상이 아니라서 이름도 같이 적는다 */
+export type SeenRank = { name: string; rank: number };
+
+/**
+ * 지난번에 본 순위와 방금 받은 순위를 견준다. 밀렸으면 알릴 내용을, 아니면 null.
+ *
+ * 안 알리는 쪽이 더 많다.
+ * - 게스트(`user` 가 빈 문자열)는 순위 자체가 없다
+ * - 처음 본 순위는 견줄 기준이 없다
+ * - 계정이 갈렸으면 남의 순위와 견주는 꼴이다
+ * - 순위 밖(`rank === null`)은 안 알린다 — 순위표가 비어 있을 때 오탐이 난다
+ * - 올라간 건 자기가 사건을 풀어서 오른 것이라 이미 아는 사실이다
+ */
+export function rankDrop(
+  seen: SeenRank | null,
+  user: string,
+  rank: number | null,
+): RankDrop | null {
+  if (user === '' || rank === null || seen === null || seen.name !== user) return null;
+  return rank > seen.rank ? { from: seen.rank, to: rank } : null;
+}
+
 const ALPHABET = 'abcdefghijklmnopqrstuvwxyz0123456789';
 
 /** 새 기록 코드. 계정 가입 때 워커도 이걸 부른다 — 코드 생성기가 두 벌이면 안 된다 */
@@ -228,6 +253,36 @@ export function setCode(code: string) {
 
 /** TOP 10 과 내 순위. 내 점수는 로컬 기록에서 세므로 서버는 순위만 알려준다 */
 export type Board = { top: Rank[]; rank: number | null };
+
+const RANK_KEY = 'murdoku.rank';
+
+/** 마지막으로 본 순위. localStorage 도 신뢰 경계라 형태를 검사한다 */
+export function readSeenRank(): SeenRank | null {
+  const raw = readLS(RANK_KEY);
+  if (raw === null) return null;
+  try {
+    const v = JSON.parse(raw) as { name?: unknown; rank?: unknown } | null;
+    const name = str(v?.name, MAX_NAME_LEN);
+    const rank = int(v?.rank, 1, MAX_BOARD);
+    return name === null || rank === null ? null : { name, rank };
+  } catch {
+    return null;
+  }
+}
+
+export function writeSeenRank(v: SeenRank) {
+  writeLS(RANK_KEY, JSON.stringify(v));
+}
+
+/**
+ * 방금 받은 순위를 지난번 것과 견주고, **본 것을 적는다.**
+ * 견주기와 적기를 한 함수에 묶어야 같은 알림이 새로고침마다 되풀이되지 않는다.
+ */
+export function checkRank(user: string, rank: number | null): RankDrop | null {
+  const drop = rankDrop(readSeenRank(), user, rank);
+  if (user !== '' && rank !== null) writeSeenRank({ name: user, rank });
+  return drop;
+}
 
 /**
  * 순위표를 받아온다. 서버가 없거나 실패하면 null — 화면은 내 점수만 보여준다.

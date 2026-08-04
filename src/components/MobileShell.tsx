@@ -6,6 +6,7 @@ import ClueList from './ClueList';
 import FeedbackDialog from './FeedbackDialog';
 import HistoryPanel from './HistoryPanel';
 import Leaderboard from './Leaderboard';
+import RankToast from './RankToast';
 import Sheet from './Sheet';
 import { AccusePanel, DifficultySeg, LegendPanel, RulesPanel, SeedPanel } from './GamePanels';
 import type { Game } from '../hooks/useGame';
@@ -23,6 +24,13 @@ export default function MobileShell({ game }: { game: Game }) {
   const [sheet, setSheet] = useState<SheetId | null>(null);
   const close = () => setSheet(null);
   const { puzzle } = game;
+  const alerted = game.rankAlert !== null;
+
+  // 메뉴를 열면 알림은 제 할 일을 다 했다 — 점수판이 바로 이 안에 있다
+  const openMenu = () => {
+    setSheet('menu');
+    game.dismissRank();
+  };
 
   return (
     <div className="mshell">
@@ -41,12 +49,14 @@ export default function MobileShell({ game }: { game: Game }) {
         </button>
         <button
           type="button"
-          className="micon"
-          aria-label="메뉴"
+          className={alerted ? 'micon alerted' : 'micon'}
+          /* 점은 눈에만 보인다 — 이름표도 같이 바뀌어야 한다 */
+          aria-label={alerted ? '메뉴 (순위 알림)' : '메뉴'}
           aria-haspopup="dialog"
-          onClick={() => setSheet('menu')}
+          onClick={openMenu}
         >
           ☰
+          {alerted && <span className="alert-dot" aria-hidden="true" />}
         </button>
       </header>
 
@@ -63,6 +73,9 @@ export default function MobileShell({ game }: { game: Game }) {
       </main>
 
       <ClueList puzzle={puzzle} brush={game.brush} setBrush={game.setBrush} />
+
+      {/* position: fixed 라 붙박이 넷의 자리를 뺏지 않는다 (모바일은 스크롤이 없다) */}
+      <RankToast alert={game.rankAlert} onClose={game.dismissRank} />
 
       <nav className="mbar">
         <button
@@ -159,7 +172,7 @@ export default function MobileShell({ game }: { game: Game }) {
 
         <SeedPanel seed={game.seed} onOpen={(s) => game.reset(game.n, s)} />
 
-        <Leaderboard plays={game.plays} code={game.code} />
+        <Leaderboard plays={game.plays} board={game.board} />
 
         <HistoryPanel
           plays={game.plays}

@@ -11,6 +11,7 @@
   }
   /* 새 정보가 나타났다는 신호는 남겨야 한다 — 이동 없이 투명도만 */
   .notice,
+  .toast,
   .verdict {
     animation: fade-in var(--dur-fast) var(--ease-out) !important;
   }

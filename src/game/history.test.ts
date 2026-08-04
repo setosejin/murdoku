@@ -7,6 +7,7 @@ import {
   MAX_PLAYS,
   mergePlays,
   N_RANGE,
+  rankDrop,
   sanitizeBoard,
   sanitizePlays,
   SCORE_BASE,
@@ -403,5 +404,37 @@ describe('순위표 워커', () => {
     const code = await solve(e, 'sejin', [{ seed: 'a', n: 4, tries: 1 }]);
     await e.HISTORY.put('lb', '찢어진 json');
     expect(await board(e, code)).toEqual({ top: [], rank: null });
+  });
+});
+
+describe('순위 탈환 알림', () => {
+  const seen = { name: 'sejin', rank: 3 };
+
+  it('밀렸을 때만 알린다', () => {
+    expect(rankDrop(seen, 'sejin', 5)).toEqual({ from: 3, to: 5 });
+  });
+
+  it('올라간 것과 그대로인 것은 안 알린다', () => {
+    // 오른 건 자기가 사건을 풀어서 오른 것이라 이미 아는 사실이다
+    expect(rankDrop(seen, 'sejin', 1)).toBeNull();
+    expect(rankDrop(seen, 'sejin', 3)).toBeNull();
+  });
+
+  it('게스트에게는 알리지 않는다', () => {
+    // 순위에는 계정만 오른다 — 게스트는 잃을 자리가 없다
+    expect(rankDrop(seen, '', 5)).toBeNull();
+  });
+
+  it('처음 본 순위는 견줄 기준이 없다', () => {
+    expect(rankDrop(null, 'sejin', 5)).toBeNull();
+  });
+
+  it('계정이 갈리면 남의 순위와 견주지 않는다', () => {
+    expect(rankDrop(seen, 'minji', 5)).toBeNull();
+  });
+
+  it('순위 밖으로 밀린 것은 안 알린다', () => {
+    // 순위표가 비었을 때도 rank 가 null 이라 오탐이 난다
+    expect(rankDrop(seen, 'sejin', null)).toBeNull();
   });
 });
