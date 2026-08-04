@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { createElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { DIFFICULTIES, generatePuzzle } from '../game/generate';
+import { indexScene } from '../game/clues';
 import App from '../App';
 import Board from './Board';
 import { DifficultySeg } from './GamePanels';
@@ -89,7 +90,9 @@ describe('Board 렌더링', () => {
     const { p, html } = render(false);
     const floors = new Set(p.rooms.map((r) => r.floor));
     for (const f of floors) expect(html).toContain(`data-floor="${f}"`);
-    expect((html.match(/data-floor="/g) ?? []).length).toBe(25);
+    // 건물 바깥 칸만 바닥이 없다 (안뜰은 테마 바닥을 쓴다)
+    const outer = indexScene(p).voidKind.flat().filter((k) => k === 'outer').length;
+    expect((html.match(/data-floor="/g) ?? []).length).toBe(25 - outer);
   });
 
   it('메모는 공개 전에만 보인다', () => {
@@ -111,6 +114,54 @@ describe('Board 렌더링', () => {
       );
       expect(html).toContain(`grid-template-columns:repeat(${n}, minmax(0, 1fr))`);
       expect(html).not.toContain('--n');
+    }
+  });
+});
+
+/* 건물 외곽선이 격자를 다 채우지 않는다. 방이 아닌 칸은 누를 수도 포커스할 수도
+   없어야 하고, 갇힌 칸(안뜰)만 테마 그림을 받는다 */
+describe('실루엣 렌더링', () => {
+  // 실루엣이 나오는 시드를 직접 찾는다 — 마스크 팔레트가 바뀌어도 테스트가 따라간다
+  const withVoid = (want: 'outer' | 'inner') => {
+    for (let i = 0; i < 60; i++) {
+      const p = generatePuzzle(6, `void-${i}`);
+      const kinds = indexScene(p).voidKind.flat();
+      if (!kinds.includes(want)) continue;
+      if (want === 'inner' && kinds.includes('outer')) continue;
+      const html = renderToStaticMarkup(
+        createElement(Board, { puzzle: p, marks: {}, onCell: () => {}, revealed: false }),
+      );
+      return { p, html, voids: kinds.filter(Boolean).length };
+    }
+    throw new Error(`${want} 실루엣이 나오는 시드를 못 찾았다`);
+  };
+
+  it('건물 밖 칸은 버튼이 아니다 (누를 수도 포커스할 수도 없다)', () => {
+    const { html, voids } = withVoid('outer');
+    expect(voids).toBeGreaterThan(0);
+    expect((html.match(/<div class="cell void /g) ?? []).length).toBe(voids);
+    expect((html.match(/<button/g) ?? []).length).toBe(36 - voids);
+    // 빈 칸끼리는 칸선을 긋지 않는다 — 건물 외곽선만 3px 벽으로 남는다
+    expect(html).toContain('class="cell void outer" style="border-top-width:0');
+  });
+
+  it('안뜰은 테마 바닥·그림·이름표로 그려진다', () => {
+    const { p, html } = withVoid('inner');
+    const yard = p.theme.courtyard;
+    expect(html).toContain(`class="cell void inner" data-floor="${yard.floor}"`);
+    expect(html).toContain(`aria-label="${yard.label}"`);
+    // 이름표는 방처럼 딱 한 번만. 방 이름과 헷갈리지 않게 `yard` 로 갈라 그린다
+    expect((html.match(new RegExp(`room-label yard">${yard.label}`, 'g')) ?? []).length).toBe(1);
+    expect(html).not.toContain(`room-label">${yard.label}`);
+  });
+
+  it('실루엣 밖에는 가구도 벽 부착물도 서지 않는다', () => {
+    for (const want of ['outer', 'inner'] as const) {
+      const { p } = withVoid(want);
+      const idx = indexScene(p);
+      for (const f of p.furniture)
+        for (const c of f.cells) expect(idx.voidKind[c.r][c.c]).toBeNull();
+      for (const w of p.wallItems) expect(idx.voidKind[w.cell.r][w.cell.c]).toBeNull();
     }
   });
 });
