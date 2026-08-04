@@ -1,10 +1,16 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" role="img" aria-label="murdoku">
+  <!-- 사건 현장 — 기울어진 평면도와 피해자 자리(붉은 X) -->
   <g transform="rotate(-10 16 16)">
     <rect x="4.5" y="4.5" width="23" height="23" rx="6.5" fill="#f7f1e3" stroke="#23201c" stroke-width="3"/>
-    <path d="M16 6v20M16 16.2h10" stroke="#23201c" stroke-width="2.6"/>
-    <path d="M8.1 16.25l4.5 4.5M12.6 16.25l-4.5 4.5" stroke="#c0392b" stroke-width="2.5" stroke-linecap="round"/>
-    <circle cx="21.65" cy="10.45" r="3.5" fill="#23201c"/>
-    <circle cx="20.15" cy="9.75" r="0.95" fill="#fdfaf2"/>
-    <circle cx="22.65" cy="9.75" r="0.95" fill="#fdfaf2"/>
+    <path d="M13.4 5v22M13.4 17.2h14.2M4.7 11.6h8.7" stroke="#23201c" stroke-width="2.4"/>
+    <path d="M6.5 19.2l4.6 4.6M11.1 19.2l-4.6 4.6" stroke="#c0392b" stroke-width="2.5" stroke-linecap="round"/>
+  </g>
+  <!-- 탐정 — 종이색 테두리가 없으면 16px 에서 모자가 잉크 벽에 먹혀 그냥 얼룩이 된다 -->
+  <circle cx="20.4" cy="16.4" r="4.9" fill="#23201c" stroke="#f7f1e3" stroke-width="1.5"/>
+  <circle cx="18.05" cy="16.6" r="1.32" fill="#fdfaf2"/>
+  <circle cx="21.75" cy="16.6" r="1.32" fill="#fdfaf2"/>
+  <g transform="rotate(-14 20.4 11.6)" fill="#23201c" stroke="#f7f1e3" stroke-width="1.5" stroke-linejoin="round">
+    <path d="M16.1 13.28L16.6 8.9Q16.6 7.5 18.2 7.5L22.6 7.5Q24.2 7.5 24.2 8.9L24.7 13.28Z"/>
+    <rect x="13.2" y="11.6" width="14.4" height="2.4" rx="1.2"/>
   </g>
 </svg>
