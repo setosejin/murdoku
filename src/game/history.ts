@@ -178,6 +178,17 @@ export function writeLS(key: string, value: string) {
   }
 }
 
+const TOUR_KEY = 'murdoku.tour';
+
+/** 온보딩을 한 번이라도 봤나. 처음 온 사람에게만 저절로 열린다 */
+export function seenTour(): boolean {
+  return readLS(TOUR_KEY) !== null;
+}
+
+export function markTourSeen() {
+  writeLS(TOUR_KEY, '1');
+}
+
 export function loadPlays(): Play[] {
   const raw = readLS(PLAYS_KEY);
   if (raw === null) return [];

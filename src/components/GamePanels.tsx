@@ -99,10 +99,13 @@ export function BrushBar({
   brush,
   setBrush,
   clearMarks,
+  onHelp,
 }: {
   brush: string;
   setBrush: (id: string) => void;
   clearMarks: () => void;
+  /** 온보딩 열기. 데스크톱 셸만 넘긴다 */
+  onHelp?: () => void;
 }) {
   return (
     <div className="dclues-bar">
@@ -117,6 +120,18 @@ export function BrushBar({
       <button type="button" className="chip" onClick={clearMarks}>
         메모 지우기
       </button>
+      {onHelp && (
+        <button
+          type="button"
+          className="chip icon"
+          aria-label="게임 방법 보기"
+          aria-haspopup="dialog"
+          title="게임 방법"
+          onClick={onHelp}
+        >
+          ?
+        </button>
+      )}
     </div>
   );
 }

@@ -12,6 +12,7 @@
 @import './styles/scores.css';
 @import './styles/dialog.css';
 @import './styles/sheet.css';
+@import './styles/tour.css';
 /* 셸별 레이아웃. 모바일이 데스크톱 규칙을 덮어야 하므로 이 순서다 */
 @import './styles/desktop.css';
 @import './styles/mobile.css';
