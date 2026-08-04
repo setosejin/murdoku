@@ -27,6 +27,10 @@ export default function MobileShell({ game }: { game: Game }) {
   return (
     <div className="mshell">
       <header className="mtop">
+        {/* 데스크톱 .topbar 의 h1 에 대응한다. 이 자리는 세로 비용이 0 이다 —
+            상단바 높이는 옆의 44px 버튼들이 정하고 워드마크는 그 안에 든다.
+            대가는 사건 제목의 가로 폭이고, .mtitle b 의 말줄임이 받는다 */}
+        <h1 className="mbrand">murdoku</h1>
         <button
           type="button"
           className="mtitle"

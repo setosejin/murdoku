@@ -34,6 +34,17 @@
     align-items: center;
     gap: 8px;
   }
+  /* 게임 이름. 데스크톱 부제(`머도쿠`)는 안 붙인다 — 45px 을 더 먹고,
+     이름은 `murdoku` 하나로 선다 */
+  .mbrand {
+    flex: none;
+    margin: 0;
+    font-size: 15px;
+    font-weight: 800;
+    letter-spacing: -0.02em;
+    line-height: 1;
+    white-space: nowrap;
+  }
   .mtitle {
     flex: 1;
     min-width: 0;
@@ -81,8 +92,14 @@
   /* ---- 보드: 폭과 높이 중 작은 쪽에 맞춘 정사각 ---- */
   .mplay {
     flex: 1 1 auto;
-    /* 증언 목록이 먼저 줄어들고 보드는 여기까지만 작아진다 */
-    min-height: 240px;
+    /* 가로에 맞춘 정사각이 flex 기준 크기가 된다. container-type: size 라
+       내용이 크기에 관여하지 못해서, 이게 없으면 기준이 0 이 되고 증언 목록이
+       제 내용 높이를 먼저 다 챙겨간다 — 인원이 늘수록 보드가 깎이던 원인이다.
+       남는 몫도 여기가 받는다(flex-grow). 보드는 정사각이 상한이라 더 커지지
+       않고 가운데 설 뿐이라, 세로 여유가 있는 큰 폰은 예전 화면 그대로다 */
+    aspect-ratio: 1;
+    /* 목록이 3줄 바닥에 닿은 뒤에야 보드가 여기까지 작아진다 */
+    min-height: 200px;
     display: grid;
     place-items: center;
     container-type: size;
@@ -104,6 +121,8 @@
     .mplay {
       display: block;
       overflow: auto;
+      /* 폭에만 맞추고 넘치면 스크롤하는 옛 경로다 — 정사각 기준은 여기 오면 안 된다 */
+      aspect-ratio: auto;
     }
     .mplay .board-wrap {
       width: 100%;
@@ -125,8 +144,11 @@
      한 줄로 자르고, 넘치면 목록만 스크롤한다.
      늘려 담는 건 셸의 붙박이 목록에만 건다 (지목 시트도 같은 줄 모양을 쓴다) */
   .mshell > .clue-list {
-    flex: 0 1 auto;
-    min-height: 0;
+    /* 자리가 모자라면 보드보다 100배 빨리 줄어든다 — 부족분은 사실상 여기가 다 진다.
+       자라지는 않는다(grow 0): 남는 몫은 .mplay 가 받아 보드를 가운데 세운다 */
+    flex: 0 100 auto;
+    /* 증언 3줄(40px × 3 + 간격 3px × 2)은 지킨다. 여기 닿으면 보드가 줄기 시작한다 */
+    min-height: 132px;
     overflow-y: auto;
     overscroll-behavior: contain;
   }
@@ -247,11 +269,15 @@
   }
   .mplay {
     grid-area: board;
+    /* 여기는 세로로 쌓는 배분이 아니다. aspect-ratio 를 남기면 grid 트랙
+       계산이 어긋난다 — 세로 배분의 기준값과 바닥을 둘 다 되돌린다 */
+    aspect-ratio: auto;
     min-height: 0;
     min-width: 0;
   }
   .mshell > .clue-list {
     grid-area: clues;
+    min-height: 0;
   }
   .mbar {
     grid-area: bar;
