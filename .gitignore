@@ -14,6 +14,8 @@ dist-ssr
 
 # wrangler dev 의 로컬 KV·상태
 .wrangler
+# wrangler 가 로컬 시크릿을 읽는 파일. ADMIN_TOKEN 이 여기 들어간다
+.dev.vars
 
 # 로컬 전용 파일 — 저장소에 두면 안 되는 신원·계정 메모, 개인 설정
 # (`.github/copilot-instructions.local.md`, `.impeccable/config.local.json` 등)

@@ -1,0 +1,80 @@
+/* ---- 관리자 화면 ----
+   `admin.html` 진입점 전용. `index.css` 의 @import 목록에 없다 —
+   넣으면 게임 번들에도 실린다. 나머지 모양(.panel/.chip/.link/.hint)은 게임 것을 그대로 쓴다 */
+.admin {
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 16px 16px 48px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.admin h1 {
+  margin: 0;
+  font-size: 20px;
+}
+.admin input {
+  min-height: 40px;
+  border: 2px solid var(--wall);
+  /* 패널 반경 18 - 패딩 12 = 6 */
+  border-radius: 6px;
+  padding: 5px 8px;
+  background: var(--tile);
+}
+.admin code {
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.admin-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.admin-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  /* 계정이 수백이면 목록이 페이지를 삼킨다. 여기서만 스크롤한다 */
+  max-height: 50vh;
+  overflow-y: auto;
+}
+.admin-list li button,
+.admin-list li span {
+  width: 100%;
+  min-height: 40px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 2px;
+  text-align: left;
+  border: 2px solid var(--tile-line);
+  border-radius: 6px;
+  background: var(--tile);
+  color: var(--ink);
+  padding: 6px 9px;
+}
+.admin-list li button {
+  cursor: pointer;
+  transition:
+    border-color var(--dur-fast) var(--ease-out),
+    background-color var(--dur-fast) var(--ease-out);
+}
+.admin-list li button:hover:not(:disabled) {
+  border-color: var(--wall);
+}
+.admin-list li small {
+  font-size: 12px;
+  color: var(--muted);
+}
+
+/* 되돌릴 수 없는 버튼은 눌리기 전에 그렇게 보여야 한다 */
+.chip.danger {
+  border-color: var(--accent);
+  color: var(--accent);
+}

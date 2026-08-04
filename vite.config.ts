@@ -8,6 +8,9 @@ export default defineConfig({
   // ponytail: 상대 경로. 라우터가 없어서 /murdoku/ 든 루트든 그냥 붙는다.
   // 라우팅이 생기면 base: '/murdoku/' 로 고정할 것.
   base: './',
+  // 진입점이 둘이다 — 게임(index.html)과 관리 화면(admin.html).
+  // 라우터를 얹는 대신 Vite 의 MPA 를 쓴다: 관리 화면 코드가 게임 번들에 안 실린다
+  build: { rollupOptions: { input: { main: 'index.html', admin: 'admin.html' } } },
   // Vitest 는 기본으로 CSS 를 빈 스텁으로 갈아치우는데, 그게 `?raw` 까지 먹어서
   // 스타일을 읽는 테스트가 조용히 빈 문자열을 보고 통과해버린다. 켜야 원문이 온다
   test: { css: true },

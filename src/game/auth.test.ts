@@ -3,6 +3,7 @@ import { createElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import worker from '../../worker/index';
 import { isCode } from './history';
+import { fakeEnv } from './kvFake';
 import { constantTimeEqual, derive, isDk, isUserId, MIN_PW, sha256hex } from './auth';
 import App from '../App';
 
@@ -73,22 +74,7 @@ describe('계정 워커', () => {
   const DK = '0123456789abcdef'.repeat(4);
   const DK2 = 'fedcba9876543210'.repeat(4);
 
-  const env = () => {
-    const store = new Map<string, string>();
-    let writes = 0;
-    return {
-      HISTORY: {
-        get: async (k: string) => store.get(k) ?? null,
-        put: async (k: string, v: string) => {
-          writes++;
-          store.set(k, v);
-        },
-      },
-      ORIGIN: 'https://setosejin.github.io',
-      writes: () => writes,
-      keys: () => [...store.keys()],
-    };
-  };
+  const env = () => fakeEnv({ ORIGIN: 'https://setosejin.github.io' });
 
   const auth = (e: ReturnType<typeof env>, route: 'signup' | 'login', body: unknown) =>
     worker.fetch(

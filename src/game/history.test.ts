@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { DIFFICULTIES } from './generate';
+import { fakeEnv } from './kvFake';
 import worker from '../../worker/index';
 import {
   isCode,
@@ -189,21 +190,7 @@ describe('기록 동기화 워커', () => {
     title: '사라진 회중시계',
   });
 
-  const env = () => {
-    const store = new Map<string, string>();
-    let writes = 0;
-    return {
-      HISTORY: {
-        get: async (k: string) => store.get(k) ?? null,
-        put: async (k: string, v: string) => {
-          writes++;
-          store.set(k, v);
-        },
-      },
-      ORIGIN: 'https://setosejin.github.io',
-      writes: () => writes,
-    };
-  };
+  const env = () => fakeEnv({ ORIGIN: 'https://setosejin.github.io' });
 
   const post = (e: ReturnType<typeof env>, path: string, body: unknown) =>
     worker.fetch(
@@ -293,20 +280,7 @@ describe('기록 동기화 워커', () => {
 describe('순위표 워커', () => {
   const DK = '0123456789abcdef'.repeat(4);
 
-  const env = () => {
-    const store = new Map<string, string>();
-    let writes = 0;
-    return {
-      HISTORY: {
-        get: async (k: string) => store.get(k) ?? null,
-        put: async (k: string, v: string) => {
-          writes++;
-          store.set(k, v);
-        },
-      },
-      writes: () => writes,
-    };
-  };
+  const env = () => fakeEnv();
 
   const post = (e: ReturnType<typeof env>, path: string, body?: unknown) =>
     worker.fetch(

@@ -56,9 +56,11 @@ npm run build   # 정적 빌드 (dist/)
 | `src/assets/sprite.svg`    | 가구·벽부착물·인물 아이콘 (`<symbol id="i-<kind>">`)          |
 | `src/game/history.ts`      | 플레이 기록 — 검증·병합·점수(순수) + localStorage + 동기화     |
 | `src/game/auth.ts`         | 계정 — 아이디/`dk` 검증(공용) + 브라우저 PBKDF2·가입·로그인      |
-| `worker/index.ts`          | 기록 동기화 + 계정 + 순위표 워커 (Cloudflare Workers + KV)       |
+| `worker/index.ts`          | 기록 동기화 + 계정 + 순위표 + 관리자 워커 (Cloudflare Workers + KV) |
 | `src/components/FeedbackDialog.tsx` | 피드백 모달 → GitHub 이슈 작성 폼 prefill                |
 | `src/components/ChangelogDialog.tsx` | 버전 기록 모달 — `CHANGELOG.md` 를 그대로 그린다        |
+| `src/admin/AdminApp.tsx`   | 관리 화면 — 플레이어 목록·기록 조회·삭제 (`admin.html`)         |
+| `src/game/kvFake.ts`       | 워커 테스트용 가짜 KV (앱·워커는 import 하지 않는다)             |
 
 증언은 `ON` / `NEXT_TO` / `IN_ROOM` 세 종류. 퍼즐은 매번 생성되며 항상 해가 하나뿐임이 보장된다.
 
@@ -206,6 +208,38 @@ KV 키 공간은 겹치지 않는다 — 기록은 `^[a-z0-9]{22}$`, 계정은 `
 - KV 에 CAS 가 없어 **같은 아이디 동시 가입이 이론상 경합**한다. 이 규모에서 감수한다. 막아야 하면 Durable Objects 로 올린다.
 - 가입 직후 다른 기기에서 로그인하면 KV 최종 일관성 탓에 잠깐 실패할 수 있다.
 - `VITE_SYNC_URL` 이 없는 빌드(포크 등)에서는 로그인 UI 를 아예 안 그린다.
+
+### 관리 화면
+
+`admin.html` — 게임과 **다른 URL, 다른 번들**이다. 라우터를 얹는 대신 Vite 의 다중 진입점을 쓴다(`vite.config.ts` 의 `rollupOptions.input`). 관리 화면 코드는 게임 번들에 안 실리고, 그 반대도 마찬가지다.
+
+```
+https://<사이트>/admin.html
+```
+
+**정적 호스팅에는 접근 제어가 없다.** GitHub Pages 는 이 HTML 을 누구에게나 준다 — 페이지를 숨겨서 막을 방법은 없고, 숨긴 URL 은 보안이 아니다. 그래서 **문지기는 페이지가 아니라 워커**다. `/adm/*` 는 전부 `x-admin-token` 헤더를 요구하고 상수시간으로 비교한다. 토큰이 없으면 목록조차 안 온다 — 화면이 비어 있는 게 아니라 데이터가 오지 않는 것이다.
+
+```bash
+cd worker
+npx wrangler secret put ADMIN_TOKEN     # openssl rand -hex 32
+```
+
+**시크릿을 안 넣으면 전부 401 이다.** "설정 안 했으니 통과"가 아니라 "설정 안 했으니 전원 차단"이고, 테스트가 그 방향을 고정한다.
+
+할 수 있는 것:
+
+| | |
+| --- | --- |
+| `POST /adm/list` | 계정 목록 + 기록 코드 목록. **키 이름만 읽는다** — 값을 안 열어서 계정이 늘어도 KV 조회 수가 그대로다 |
+| `POST /adm/get` | `{id}` 나 `{code}` 로 기록·점수·사건 수. 점수는 순위표와 같은 `summarize` 를 쓴다 |
+| `POST /adm/del` | `{code}` 면 기록만, `{id}` 면 계정까지. 어느 쪽이든 순위표에서도 내려간다 |
+
+알고 쓸 것:
+
+- 토큰은 `sessionStorage` 에만 둔다. 탭을 닫으면 사라지고, 401 을 받으면 화면이 스스로 잠긴다.
+- **요청 제한은 없다.** 32바이트 난수를 네트워크로 맞히는 건 현실적으로 불가능해서 감수한 선택이다. 관리자가 여럿이 되거나 감사 기록이 필요해지면 앞에 Cloudflare Access 를 세운다.
+- 게스트 기록은 `c:<코드>` 매핑이 없는 코드로 알아본다. 주인을 알 방법은 없다 — 코드가 곧 신원이라서다.
+- 검색·필터는 없다. 목록이 길어지면 그때 붙인다.
 
 ### 워커 배포
 
