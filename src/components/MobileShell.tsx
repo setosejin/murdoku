@@ -79,7 +79,7 @@ export default function MobileShell({ game }: { game: Game }) {
       <ClueList puzzle={puzzle} brush={game.brush} setBrush={game.setBrush} />
 
       {/* position: fixed 라 붙박이 넷의 자리를 뺏지 않는다 (모바일은 스크롤이 없다) */}
-      <RankToast alert={game.rankAlert} onClose={game.dismissRank} />
+      <RankToast alert={game.rankAlert} detective={game.detective} onClose={game.dismissRank} />
 
       <nav className="mbar">
         <button
@@ -123,6 +123,7 @@ export default function MobileShell({ game }: { game: Game }) {
           peeked={game.peeked}
           revealed={game.revealed}
           setRevealed={game.setRevealed}
+          detective={game.detective}
           bare
         />
         {/* 맞혔으면 보상은 보드에 있다 — 시트를 걷어내는 버튼을 눈에 띄게 준다 */}
@@ -168,13 +169,15 @@ export default function MobileShell({ game }: { game: Game }) {
 
         <SeedPanel seed={game.seed} onOpen={(s) => game.reset(game.n, s)} />
 
-        <Leaderboard plays={game.plays} board={game.board} />
+        <Leaderboard plays={game.plays} board={game.board} nick={game.nick} />
 
         <HistoryPanel
           plays={game.plays}
           code={game.code}
+          nick={game.nick}
           setPlays={game.setPlays}
           setCode={game.setCode}
+          setNick={game.setNick}
           onOpen={(pn, ps) => {
             game.reset(pn, ps);
             close();

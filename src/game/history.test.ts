@@ -246,8 +246,19 @@ describe('기록 동기화 워커', () => {
 
   it('기록 코드가 아니면 400이고 KV를 건드리지 않는다', async () => {
     const e = env();
-    for (const path of ['/h/../secret', '/h/', '/h/short', `/other/${CODE}`, `/h/${CODE}x`]) {
+    for (const path of ['/h/', '/h/short', `/h/${CODE}x`]) {
       expect((await post(e, path, [])).status).toBe(400);
+    }
+    expect(e.writes()).toBe(0);
+  });
+
+  it('모르는 주소는 404 다 — 잘못된 코드로 뒤집어씌우지 않는다', async () => {
+    // 이걸 400 "기록 코드가 아니다" 로 뭉개면, 워커보다 앞서 나간 클라이언트가
+    // 자기 요청이 잘못됐다고 오해한다 (배포 전 /a/nick 이 실제로 그랬다).
+    // `..` 은 URL 이 먼저 펴버려서 /h/ 로 시작하지도 않는다 — 경로 조작이 여기로 떨어진다
+    const e = env();
+    for (const path of ['/h/../secret', `/other/${CODE}`, '/', '/a/nope', '/lb', '/h']) {
+      expect((await post(e, path, [])).status).toBe(404);
     }
     expect(e.writes()).toBe(0);
   });

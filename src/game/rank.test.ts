@@ -34,8 +34,11 @@ describe('점수판', () => {
     ...over,
   });
 
-  const render = (plays: Play[], board: BoardData | null | undefined = undefined) =>
-    renderToStaticMarkup(createElement(Leaderboard, { plays, board }));
+  const render = (
+    plays: Play[],
+    board: BoardData | null | undefined = undefined,
+    nick = '',
+  ) => renderToStaticMarkup(createElement(Leaderboard, { plays, board, nick }));
 
   it('내 점수를 로컬 기록에서 바로 센다 (서버가 없어도 보인다)', () => {
     const plays = [play({ seed: 'a', n: 7, tries: 2 }), play({ seed: 'b', n: 4, tries: 1 })];
@@ -89,17 +92,80 @@ describe('점수판', () => {
       expect(html.match(/class="mine"/g)).toHaveLength(1);
       expect(html.indexOf('class="mine"')).toBeGreaterThan(html.indexOf('300'));
       expect(html.indexOf('class="mine"')).toBeLessThan(html.indexOf('100'));
-      // 순위 밖이면 켜진 줄이 없다
-      expect(render([play()], { top, rank: 42 })).not.toContain('mine');
     } finally {
       vi.unstubAllEnvs();
     }
   });
+
+  it('TOP 밖이면 내 줄을 목록 끝에 따로 붙인다', () => {
+    // 등수는 남들과 견주라고 있는 것이라, 숫자만 따로 떨어져 있으면 어느 줄 밑인지가 안 보인다
+    vi.stubEnv('VITE_SYNC_URL', 'https://w.dev');
+    try {
+      const top = [
+        { name: 'alpha', score: 300, cases: 3, at: 1 },
+        { name: 'beta', score: 200, cases: 2, at: 2 },
+      ];
+      const html = render([play({ seed: 'a', n: 4, tries: 1 })], { top, rank: 42 }, '세진');
+
+      const rows = html.match(/class="mine"/g);
+      expect(rows).toHaveLength(1);
+      // 내 줄은 맨 끝이고, 순위·이름·점수가 남들과 같은 모양으로 선다
+      expect(html.indexOf('class="mine"')).toBeGreaterThan(html.indexOf('beta'));
+      expect(html).toContain('>42</span>');
+      expect(html).toContain('>세진</b>');
+      expect(html).toContain(`>${SCORE_BASE[4].toLocaleString('ko-KR')}</em>`);
+      // 10위 다음이 42위인 게 이어진 목록처럼 읽히면 안 된다
+      expect(html).toContain('class="gap"');
+    } finally {
+      vi.unstubAllEnvs();
+    }
+  });
+
+  it('이미 TOP 안에 있으면 내 줄을 두 번 그리지 않는다', () => {
+    vi.stubEnv('VITE_SYNC_URL', 'https://w.dev');
+    try {
+      const top = [
+        { name: 'alpha', score: 300, cases: 3, at: 1 },
+        { name: 'beta', score: 200, cases: 2, at: 2 },
+      ];
+      const html = render([play()], { top, rank: 2 }, '세진');
+      expect(html.match(/class="mine"/g)).toHaveLength(1);
+      expect(html).not.toContain('class="gap"');
+      // 켜진 줄은 서버가 보낸 이름 그대로다 — 내 줄을 덧붙여 두 번 그리지 않는다
+      expect(html).toContain('class="mine"><span class="rk">2</span><b>beta</b>');
+    } finally {
+      vi.unstubAllEnvs();
+    }
+  });
+
+  it('순위가 없으면 왜 없는지 말한다 (사람이 없어서로 읽히면 안 된다)', () => {
+    vi.stubEnv('VITE_SYNC_URL', 'https://w.dev');
+    vi.stubGlobal('localStorage', { getItem: () => 'tester', setItem: () => {} });
+    try {
+      const top = [{ name: 'alpha', score: 300, cases: 3, at: 1 }];
+      const html = render([play()], { top, rank: null });
+      expect(html).not.toContain('class="mine"');
+      expect(html).toContain('아직 순위에 안 올랐어');
+    } finally {
+      vi.unstubAllGlobals();
+      vi.unstubAllEnvs();
+    }
+  });
+
+  it("이름을 정한 사람만 '탐정' 으로 부른다", () => {
+    // 아이디는 로그인 수단이지 불릴 이름이 아니다
+    expect(render([play()], undefined, '세진')).toContain('세진 탐정');
+    expect(render([play()], undefined, '')).toContain('내 점수');
+    expect(render([play()], undefined, '')).not.toContain('탐정');
+    // 말투는 사건 수까지 함께 바뀐다 — 한 건 풀었으면 지금은 두 번째 사건이다
+    expect(render([play()], undefined, '세진')).toContain('2번째 사건 해결 중');
+    expect(render([play()], undefined, '')).toContain('1사건 해결');
+  });
 });
 
 describe('순위 알림', () => {
-  const toast = (alert: { from: number; to: number } | null) =>
-    renderToStaticMarkup(createElement(RankToast, { alert, onClose: () => {} }));
+  const toast = (alert: { from: number; to: number } | null, detective = '') =>
+    renderToStaticMarkup(createElement(RankToast, { alert, detective, onClose: () => {} }));
 
   it('알릴 게 없어도 살아 있는 영역은 붙어 있다', () => {
     // role=status 는 붙은 뒤에 내용이 바뀌어야 읽힌다. 알림과 함께 마운트되면 조용히 지나친다
@@ -115,6 +181,13 @@ describe('순위 알림', () => {
     expect(html).toContain('5위');
     // 타이머에만 기대면 천천히 읽는 사람이 놓친다
     expect(html).toContain('aria-label="알림 닫기"');
+  });
+
+  it("이름을 정한 사람만 '탐정' 으로 부른다", () => {
+    // 받는 값은 이미 `detectiveName` 을 거친 것이다 — 부를 이름을 만드는 규칙은 한 군데뿐이다
+    expect(toast({ from: 3, to: 5 }, '세진 탐정')).toContain('세진 탐정, 누가 자리를 가져갔어');
+    expect(toast({ from: 3, to: 5 })).toContain('누가 자리를 가져갔어');
+    expect(toast({ from: 3, to: 5 })).not.toContain('탐정');
   });
 });
 
@@ -239,11 +312,13 @@ describe('순위표 워커', () => {
     expect((await board(e, code)).top).toMatchObject([{ name: 'sejin', cases: 1 }]);
   });
 
-  it('기록 코드가 아니면 400', async () => {
+  it('기록 코드가 아니면 400, 모르는 주소는 404', async () => {
     const e = env();
-    for (const path of ['/lb/', '/lb/short', '/lb/../secret']) {
+    for (const path of ['/lb/', '/lb/short']) {
       expect((await post(e, path)).status).toBe(400);
     }
+    // `..` 은 URL 이 먼저 펴서 /lb/ 로 시작하지도 않는다 — 모르는 주소로 떨어진다
+    expect((await post(e, '/lb/../secret')).status).toBe(404);
     expect(e.writes()).toBe(0);
   });
 

@@ -11,6 +11,9 @@
  *   POST /adm/get    body: {id|code}   → {id, nick, code, plays, score, cases}
  *   POST /adm/del    body: {id|code}   → {ok: true}
  *
+ * 그 밖의 주소는 404 다. **오류 본문은 사람이 읽을 한국어**라 화면에 그대로 띄울 수 있다 —
+ * 클라이언트가 상태 코드마다 문구를 따로 들고 있으면, 워커보다 앞서 나간 빌드가 엉뚱한 말을 한다.
+ *
  * 새 기록 올리기 = 내 목록을 POST. 다른 기기에서 불러오기 = 빈 배열을 POST.
  * 계정은 기록 저장 구조에 끼어들지 않는다 — (아이디, 비번) 으로 기록 코드를 꺼내올 뿐이고,
  * 그 뒤는 /h/:code 가 지금까지와 똑같이 처리한다.
@@ -354,7 +357,11 @@ export default {
       );
     }
 
-    const code = path.startsWith('/h/') ? path.slice(3) : '';
+    // 여기까지 왔는데 /h/ 도 아니면 이 워커가 모르는 주소다. 예전에는 이것까지 아래의
+    // "기록 코드가 아니다" 400 으로 떨어졌는데, 그러면 **워커보다 앞서 나간 클라이언트**가
+    // 자기 요청이 잘못됐다고 오해한다 (배포 전 /a/nick 이 그래서 400 을 받았다)
+    if (!path.startsWith('/h/')) return fail(404, '없는 주소다');
+    const code = path.slice(3);
     // 경로 조작을 막고 KV 키 공간을 22자 코드로 못박는다
     if (!isCode(code)) return fail(400, '기록 코드가 아니다');
 

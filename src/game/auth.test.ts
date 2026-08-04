@@ -4,7 +4,17 @@ import { renderToStaticMarkup } from 'react-dom/server';
 import worker from '../../worker/index';
 import { isCode, MAX_NICK_LEN } from './history';
 import { fakeEnv } from './kvFake';
-import { constantTimeEqual, derive, isDk, isNick, isUserId, MIN_PW, sha256hex } from './auth';
+import {
+  constantTimeEqual,
+  derive,
+  detectiveName,
+  isDk,
+  isNick,
+  isUserId,
+  MIN_PW,
+  setNickname,
+  sha256hex,
+} from './auth';
 import App from '../App';
 
 describe('계정 검증', () => {
@@ -50,6 +60,17 @@ describe('계정 검증', () => {
       ['세진'],
     ]) {
       expect(isNick(bad)).toBe(false);
+    }
+  });
+
+  it("이름을 정한 사람만 '탐정' 으로 부른다", () => {
+    // 아이디는 로그인 수단이지 불릴 이름이 아니다 — 없으면 빈 문자열이라 부르는 쪽이
+    // 원래 문구로 떨어진다
+    expect(detectiveName('세진')).toBe('세진 탐정');
+    expect(detectiveName('탐정 K')).toBe('탐정 K 탐정');
+    for (const bad of ['', ' 세진', '세\u200b진', 'a'.repeat(MAX_NICK_LEN + 1)]) {
+      // localStorage 에서 오는 값이라 화면에 앉기 전에 한 번 더 거른다
+      expect(detectiveName(bad)).toBe('');
     }
   });
 
@@ -338,6 +359,81 @@ describe('계정 UI', () => {
     try {
       expect(render()).not.toContain('aria-label="순위표에 띄울 이름"');
     } finally {
+      vi.unstubAllEnvs();
+    }
+  });
+
+  it("이름을 정했으면 아이디 대신 '<이름> 탐정' 으로 부른다", () => {
+    vi.stubEnv('VITE_SYNC_URL', 'https://sync.example.com');
+    const store = new Map([
+      ['murdoku.user', 'tester'],
+      ['murdoku.code', 'a'.repeat(22)],
+      ['murdoku.nick', '세진'],
+    ]);
+    vi.stubGlobal('localStorage', {
+      getItem: (k: string) => store.get(k) ?? null,
+      setItem: (k: string, v: string) => void store.set(k, v),
+    });
+    try {
+      const html = render();
+      expect(html).toMatch(/<b>세진 탐정<\/b>, 기록이 기기를 따라다닌다/);
+      // 이름이 있는 자리에 아이디로 부르는 문구가 남아 있으면 안 된다
+      expect(html).not.toContain('<b>tester</b> 로 로그인했어');
+    } finally {
+      vi.unstubAllGlobals();
+      vi.unstubAllEnvs();
+    }
+  });
+});
+
+describe('이름 바꾸기 오류 문구', () => {
+  const CODE = 'a'.repeat(22);
+
+  const withServer = async (res: Response) => {
+    vi.stubEnv('VITE_SYNC_URL', 'https://sync.example.com');
+    vi.stubGlobal('fetch', async () => res);
+    try {
+      return await setNickname(CODE, '세진');
+    } finally {
+      vi.unstubAllGlobals();
+      vi.unstubAllEnvs();
+    }
+  };
+
+  it('서버가 쓴 말을 그대로 띄운다', async () => {
+    // 상태 코드마다 문구를 여기 적어두면 두 가지가 어긋난다 — 이 화면에는 아이디·비밀번호
+    // 칸이 없는데 로그인용 문구가 뜨고, 워커가 이 주소를 아직 모르는 배포 틈에는 딴소리를 한다.
+    // 실제로 배포 전 워커가 400 을 줘서 "아이디나 비밀번호 형식이 안 맞아" 가 떴다
+    expect(await withServer(new Response('없는 주소다', { status: 404 }))).toBe('없는 주소다');
+    expect(await withServer(new Response('기록 코드가 아니다', { status: 400 }))).toBe(
+      '기록 코드가 아니다',
+    );
+    for (const bad of ['아이디', '비밀번호']) {
+      expect(await withServer(new Response('그런 계정이 없다', { status: 404 }))).not.toContain(
+        bad,
+      );
+    }
+  });
+
+  it('본문이 길거나 HTML 이면 안 믿는다', async () => {
+    // 사이에 낀 프록시가 오류 페이지를 뱉으면 그게 패널에 통째로 쏟아진다
+    const long = '가'.repeat(200);
+    expect(await withServer(new Response(long, { status: 502 }))).toBe('이름을 못 바꿨어.');
+    expect(
+      await withServer(new Response('<html><body>Bad gateway</body></html>', { status: 502 })),
+    ).toBe('이름을 못 바꿨어.');
+    expect(await withServer(new Response('', { status: 500 }))).toBe('이름을 못 바꿨어.');
+  });
+
+  it('보내기 전에 거를 수 있는 건 서버까지 안 간다', async () => {
+    vi.stubEnv('VITE_SYNC_URL', 'https://sync.example.com');
+    vi.stubGlobal('fetch', async () => {
+      throw new Error('여기까지 오면 안 된다');
+    });
+    try {
+      expect(await setNickname(CODE, ' 세진')).toContain(`1~${MAX_NICK_LEN}자`);
+    } finally {
+      vi.unstubAllGlobals();
       vi.unstubAllEnvs();
     }
   });

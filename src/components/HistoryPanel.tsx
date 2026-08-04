@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import {
-  getNick,
+  detectiveName,
   getUser,
   login,
   MIN_PW,
@@ -28,23 +28,27 @@ import {
 export default function HistoryPanel({
   plays,
   code,
+  nick: saved,
   setPlays,
   setCode,
+  setNick,
   onOpen,
 }: {
   plays: Play[];
   code: string;
+  /** 저장된 이름. 입력칸이 아니라 `useGame` 이 들고 있다 — 점수판·지목도 같은 값을 본다 */
+  nick: string;
   setPlays: (plays: Play[]) => void;
   setCode: (code: string) => void;
+  setNick: (nick: string) => void;
   /** 목록의 사건을 누르면 그 사건을 다시 연다 */
   onOpen: (n: number, seed: string) => void;
 }) {
   const [codeInput, setCodeInput] = useState('');
   const [user, setUser] = useState(getUser);
-  // 입력칸 값과 서버가 들고 있는 값을 따로 둔다 — 타이핑 중에 "순위표에 이렇게 뜬다"가
+  // 입력칸 값은 여기 두고 저장된 값은 위에서 받는다 — 타이핑 중에 "순위표에 이렇게 뜬다"가
   // 아직 저장도 안 된 이름으로 바뀌면 거짓말이 된다
-  const [nick, setNickInput] = useState(getNick);
-  const [saved, setSaved] = useState(getNick);
+  const [nick, setNickInput] = useState(saved);
   const [nickErr, setNickErr] = useState('');
   const [mode, setMode] = useState<'login' | 'signup'>('login');
   const [id, setId] = useState('');
@@ -79,7 +83,7 @@ export default function HistoryPanel({
     saveNick('');
     setUser('');
     setNickInput('');
-    setSaved('');
+    setNick('');
     setNickErr('');
     setPlays([]);
     setCode(getCode());
@@ -103,7 +107,7 @@ export default function HistoryPanel({
     saveNick(res.nick);
     setUser(id);
     setNickInput(res.nick);
-    setSaved(res.nick);
+    setNick(res.nick);
     setCode(res.code);
     setId('');
     setPw('');
@@ -122,7 +126,7 @@ export default function HistoryPanel({
       return;
     }
     setNickInput(next);
-    setSaved(next);
+    setNick(next);
   };
 
   return (
@@ -150,7 +154,16 @@ export default function HistoryPanel({
         (user ? (
           <div className="account">
             <p>
-              <b>{user}</b> 로 로그인했어. 기록이 기기를 따라다닌다.
+              {/* 이름을 정했으면 그 이름으로 부른다. 아이디는 로그인 수단이라 여기 안 쓴다 */}
+              {detectiveName(saved) ? (
+                <>
+                  <b>{detectiveName(saved)}</b>, 기록이 기기를 따라다닌다.
+                </>
+              ) : (
+                <>
+                  <b>{user}</b> 로 로그인했어. 기록이 기기를 따라다닌다.
+                </>
+              )}
             </p>
             <form className="nickform" onSubmit={submitNick}>
               <input
