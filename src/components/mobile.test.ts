@@ -195,6 +195,16 @@ describe('모바일 스타일 불변식', () => {
     expect(mobileCss).toContain('aspect-ratio: 1;');
   });
 
+  // aspect-ratio 는 세로(주축) 기준값을 만들라고 넣은 것이지 가로를 정하라고 넣은 게
+  // 아니다. 폭을 명시하지 않으면 교차축을 stretch 로 안 늘리는 엔진이 남는 세로 몫까지
+  // 부푼 높이에서 폭을 역산해 .mplay 가 셸보다 넓어지고, overflow: hidden 이 보드
+  // 오른쪽을 잘라낸다 (iPhone Safari 393px 화면에서 51px 잘렸다)
+  it('보드 칸의 폭은 비율이 아니라 컨테이너가 정한다', () => {
+    const block = mobileCss.match(/\.mplay \{[^}]*\}/)?.[0] ?? '';
+    expect(block).toContain('aspect-ratio: 1;');
+    expect(block).toContain('width: 100%;');
+  });
+
   // 부족분을 누가 지느냐. 보드 1 : 목록 100 이라 사실상 목록이 다 진다 —
   // 보드 높이를 calc() 로 역산하지 않고 순환 참조를 flex 가중치로 푼 것
   it('자리가 모자라면 증언 목록이 보드보다 먼저 줄어든다', () => {
