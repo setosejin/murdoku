@@ -23,6 +23,24 @@ describe('증언 목록 = 메모 브러시', () => {
     for (const p of puzzle.people) expect(html('X')).toContain(`>${p.name}</b>`);
   });
 
+  // V 뱃지가 죽은 사람이라는 걸 몰라 헤맸다는 피드백에서 나왔다. 튜토리얼을 안 봤어도
+  // 증언 목록은 늘 보인다 — 그림(빨간 X)·글자(꼬리표)·낭독(aria-label) 셋이 같은 말을 한다
+  it('피해자 줄만 죽음 표시를 갖는다', () => {
+    const out = html('X');
+    expect((out.match(/class="clue-badge dead"/g) ?? []).length).toBe(1);
+    expect((out.match(/class="dead-tag"/g) ?? []).length).toBe(1);
+    expect(out).toContain('(피해자) 로 표시하기');
+    // 용의자 줄은 그대로다
+    expect((out.match(/class="clue-badge"/g) ?? []).length).toBe(puzzle.people.length - 1);
+  });
+
+  // 피해자가 어디 있었는지도 추리해서 표시해야 한다. 비활성처럼 보이면 안 된다
+  it('피해자 줄도 여전히 눌리는 브러시다', () => {
+    const out = html(puzzle.people.find((p) => p.isVictim)!.id);
+    expect((out.match(/class="clue-row on"/g) ?? []).length).toBe(1);
+    expect(out).not.toContain('disabled');
+  });
+
   it('증언 문구는 puzzle.clues 를 그대로 쓴다 (문자열을 여기서 조립하지 않는다)', () => {
     const out = html('X');
     for (const c of puzzle.clues) expect(out).toContain(c.text);

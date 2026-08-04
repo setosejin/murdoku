@@ -99,6 +99,32 @@
   font-size: 12px;
   font-weight: 700;
 }
+/* 피해자 뱃지. X 를 글자 위에 그리면 V 를 먹으므로 음수 z-index 로 깐다 —
+   음수 z-index 자식은 부모의 배경 위·인라인 내용 아래에 그려진다.
+   isolation 이 없으면 스태킹 컨텍스트가 없어 X 가 .clue-row 배경 뒤로 빠져 아예 안 보인다 */
+.clue-badge.dead {
+  position: relative;
+  isolation: isolate;
+}
+.clue-badge.dead::before {
+  content: '';
+  position: absolute;
+  inset: 15%;
+  z-index: -1;
+  background: var(--dead-x);
+}
+/* 그림만으로는 "죽었다" 가 안 읽힐 수 있다. 범례의 알약과 같은 모양 */
+.dead-tag {
+  flex: none;
+  font-style: normal;
+  font-size: 11px;
+  font-weight: 700;
+  border: 2px solid var(--wall);
+  border-radius: 999px;
+  padding: 0 6px;
+  background: #f2dcd8;
+  white-space: nowrap;
+}
 .clue-row b {
   flex: none;
   font-size: 13px;
