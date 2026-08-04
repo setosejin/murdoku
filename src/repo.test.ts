@@ -87,6 +87,27 @@ describe('링크 미리보기 (Open Graph)', () => {
   });
 });
 
+// 파비콘은 SVG 가 본판이고, SVG 파비콘을 못 읽는 Safari(26.0 미만)를 위해 같은 그림의
+// PNG 를 나란히 건다. 한쪽만 지우거나 크기를 바꾸면 그 브라우저에서만 조용히 어긋난다
+describe('파비콘', () => {
+  const icons = [...html.matchAll(/<link\b[^>]*\brel="icon"[^>]*>/g)].map((m) => m[0]);
+  const attr = (tag: string, name: string) => tag.match(new RegExp(`\\b${name}="([^"]*)"`))?.[1];
+
+  it('SVG 본판과 PNG 폴백을 둘 다 건다', () => {
+    expect(icons.map((tag) => attr(tag, 'href'))).toEqual(['/favicon.svg', '/favicon.png']);
+  });
+
+  // ponytail: 크기만 맞춰본다 — 저장소에 래스터라이저가 없어 PNG 가 SVG 와 같은 그림인지는
+  // 확인하지 못한다. 그림이 어긋나 곤란해지면 빌드 때 SVG 에서 PNG 를 굽는 쪽으로 올린다
+  it('PNG 폴백이 선언한 크기 그대로다', async () => {
+    const png = icons.find((tag) => attr(tag, 'href')?.endsWith('.png'));
+    const dataUri = (await import('../public/favicon.png?inline')).default;
+    const bytes = Uint8Array.from(atob(dataUri.split(',')[1]), (c) => c.charCodeAt(0));
+    const read = (i: number) => new DataView(bytes.buffer).getUint32(i);
+    expect(`${read(16)}x${read(20)}`).toBe(attr(png ?? '', 'sizes'));
+  });
+});
+
 describe('스프라이트', () => {
   // 가구 그림은 발자국 비율대로 그려져 있다. size 만 올리고 그림을 그대로 두면
   // 늘어나거나(예전) 남는 자리에 letterbox 되어 조용히 어색해진다 — 여기서 잡는다
