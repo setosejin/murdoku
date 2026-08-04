@@ -11,6 +11,7 @@ import MobileShell from './components/MobileShell';
 import RankToast from './components/RankToast';
 import Sheet from './components/Sheet';
 import Tour from './components/Tour';
+import { petMenuItems } from './components/petMenuItems';
 import {
   AccusePanel,
   BrushBar,
@@ -40,15 +41,31 @@ export default function App() {
   const mobile = useMediaQuery(MOBILE_QUERY);
   const [dialog, setDialog] = useState<DialogId | null>(null);
   const [tour, setTour] = useState(false);
+  /** 더보기 모달을 열면서 어느 패널로 내려갈지. 손님 메뉴가 쓴다 */
+  const [jump, setJump] = useState<string | undefined>(undefined);
   const close = () => setDialog(null);
   const { puzzle } = game;
   const alerted = game.rankAlert !== null;
 
   // 메뉴를 열면 알림은 제 할 일을 다 했다 — 점수판이 바로 이 안에 있다
-  const openMenu = () => {
+  const openMenu = (to?: string) => {
+    setJump(to);
     setDialog('menu');
     game.dismissRank();
   };
+
+  /* 바깥 손님을 우클릭하면 나오는 항목. 목록은 두 셸이 공유하고, 무엇을 여는지만
+     여기서 정한다 — 데스크톱의 도움말은 온보딩 투어다 */
+  const petMenu = petMenuItems({
+    onHelp: () => {
+      close();
+      setTour(true);
+    },
+    onRank: () => openMenu('jump-scores'),
+    onName: () => openMenu('jump-account'),
+    onNew: () => game.reset(),
+    onClear: game.clearMarks,
+  });
 
   // 첫 방문에만 저절로 연다. 상태를 useState 초기값으로 읽으면 서버 렌더에서도
   // 켜진 채로 나가므로 마운트 뒤에 켠다
@@ -102,7 +119,7 @@ export default function App() {
             /* 점은 눈에만 보인다 — 이름표도 같이 바뀌어야 한다 */
             aria-label={alerted ? '더보기 (순위 알림)' : '더보기'}
             aria-haspopup="dialog"
-            onClick={openMenu}
+            onClick={() => openMenu()}
           >
             ⋯
             {alerted && <span className="alert-dot" aria-hidden="true" />}
@@ -133,6 +150,7 @@ export default function App() {
             marks={game.marks}
             onCell={game.onCell}
             revealed={game.revealed}
+            petMenu={petMenu}
           />
         </div>
 
@@ -184,7 +202,7 @@ export default function App() {
         <RulesPanel />
       </Sheet>
 
-      <Sheet modal open={dialog === 'menu'} onClose={close} title="더보기">
+      <Sheet modal open={dialog === 'menu'} onClose={close} title="더보기" jumpTo={jump}>
         <SeedPanel seed={game.seed} onOpen={(s) => game.reset(game.n, s)} />
         <Leaderboard plays={game.plays} board={game.board} nick={game.nick} />
         <HistoryPanel

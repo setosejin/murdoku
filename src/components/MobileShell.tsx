@@ -9,6 +9,7 @@ import Leaderboard from './Leaderboard';
 import RankToast from './RankToast';
 import Sheet from './Sheet';
 import { AccusePanel, DifficultySeg, LegendPanel, RulesPanel, SeedPanel } from './GamePanels';
+import { petMenuItems } from './petMenuItems';
 import type { Game } from '../hooks/useGame';
 
 type SheetId = 'case' | 'accuse' | 'menu';
@@ -22,15 +23,29 @@ type SheetId = 'case' | 'accuse' | 'menu';
  */
 export default function MobileShell({ game }: { game: Game }) {
   const [sheet, setSheet] = useState<SheetId | null>(null);
+  /** 메뉴 시트를 열면서 어느 패널로 내려갈지. 손님 메뉴가 쓴다 */
+  const [jump, setJump] = useState<string | undefined>(undefined);
   const close = () => setSheet(null);
   const { puzzle } = game;
   const alerted = game.rankAlert !== null;
 
   // 메뉴를 열면 알림은 제 할 일을 다 했다 — 점수판이 바로 이 안에 있다
-  const openMenu = () => {
+  const openMenu = (to?: string) => {
+    setJump(to);
     setSheet('menu');
     game.dismissRank();
   };
+
+  /* 바깥 손님을 우클릭(폰은 꾹 누르기)하면 나오는 항목. 목록은 데스크톱과 공유한다.
+     도움말만 갈린다 — 온보딩 투어는 데스크톱 선택자를 겨누므로 여기서는 못 쓴다.
+     대신 규칙과 범례가 들어 있는 사건 브리핑을 연다 */
+  const petMenu = petMenuItems({
+    onHelp: () => setSheet('case'),
+    onRank: () => openMenu('jump-scores'),
+    onName: () => openMenu('jump-account'),
+    onNew: () => game.reset(),
+    onClear: game.clearMarks,
+  });
 
   return (
     <div className="mshell">
@@ -57,7 +72,7 @@ export default function MobileShell({ game }: { game: Game }) {
           /* 점은 눈에만 보인다 — 이름표도 같이 바뀌어야 한다 */
           aria-label={alerted ? '메뉴 (순위 알림)' : '메뉴'}
           aria-haspopup="dialog"
-          onClick={openMenu}
+          onClick={() => openMenu()}
         >
           ☰
           {alerted && <span className="alert-dot" aria-hidden="true" />}
@@ -73,6 +88,7 @@ export default function MobileShell({ game }: { game: Game }) {
           marks={game.marks}
           onCell={game.onCell}
           revealed={game.revealed}
+          petMenu={petMenu}
         />
       </main>
 
@@ -134,7 +150,7 @@ export default function MobileShell({ game }: { game: Game }) {
         )}
       </Sheet>
 
-      <Sheet open={sheet === 'menu'} onClose={close} title="메뉴">
+      <Sheet open={sheet === 'menu'} onClose={close} title="메뉴" jumpTo={jump}>
         <div className="panel">
           <b>난이도</b>
           <DifficultySeg

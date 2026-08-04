@@ -11,6 +11,7 @@ export default function Sheet({
   onClose,
   title,
   modal,
+  jumpTo,
   children,
 }: {
   open: boolean;
@@ -18,6 +19,11 @@ export default function Sheet({
   title: string;
   /** 데스크톱: 바닥에 붙는 대신 가운데에 뜬다 (`desktop.css` 의 `.sheet.modal`) */
   modal?: boolean;
+  /**
+   * 열면서 이 id 로 스크롤한다. 시트 하나에 여러 패널이 들어 있어 "순위 보기" 와
+   * "닉네임 변경" 이 같은 시트의 다른 자리를 가리킬 때 쓴다.
+   */
+  jumpTo?: string;
   children?: ReactNode;
 }) {
   const ref = useRef<HTMLDialogElement>(null);
@@ -67,6 +73,17 @@ export default function Sheet({
       finish();
     };
   }, [open]);
+
+  /* 지정한 자리로 스크롤. 여는 효과가 끝나기 전에 재면 높이가 아직 0 이라
+     한 프레임 기다린다. `open` 이 deps 에 있어야 같은 자리를 두 번 불러도 다시 간다 */
+  useEffect(() => {
+    if (!open || !jumpTo) return;
+    const id = requestAnimationFrame(() => {
+      const el = ref.current?.querySelector(`[id="${jumpTo}"]`);
+      el?.scrollIntoView({ block: 'start', behavior: 'smooth' });
+    });
+    return () => cancelAnimationFrame(id);
+  }, [open, jumpTo]);
 
   return (
     <dialog

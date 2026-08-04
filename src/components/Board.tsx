@@ -1,9 +1,13 @@
 import { useEffect, useState, type CSSProperties } from 'react';
-import { key, spanOf } from '../game/types';
+import { key, rng, shuffled, spanOf } from '../game/types';
 import type { Cell, Furniture, Puzzle, Span } from '../game/types';
 import { indexScene } from '../game/clues';
+import type { VisitorSpec } from '../data/content';
 import { Art } from './Art';
 import YardPet from './YardPet';
+import OuterPet from './OuterPet';
+import { outerBlobs } from './outerBlobs';
+import type { PetMenuItem } from './petMenuItems';
 
 /* 가구 그림은 자기 발자국을 채운다. 두 칸을 차지하면 그림도 두 칸치 —
    침대와 스탠드가 같은 크기로 그려지면 몇 칸짜리 가구인지 그림만 봐선 알 수 없다.
@@ -17,6 +21,8 @@ type Props = {
   marks: Record<string, string>;
   onCell: (key: string) => void;
   revealed: boolean;
+  /** 바깥 손님을 우클릭하면 나오는 메뉴. 셸이 만들어 넘긴다 (`petMenu.ts`) */
+  petMenu?: PetMenuItem[];
 };
 
 /** 가구 한 점. 자리를 여러 칸 차지하면 그림도 그 발자국만큼 커진다 */
@@ -43,7 +49,7 @@ function FurnitureArt({ f, span, n }: { f: Furniture; span: Span; n: number }) {
   );
 }
 
-export default function Board({ puzzle, marks, onCell, revealed }: Props) {
+export default function Board({ puzzle, marks, onCell, revealed, petMenu }: Props) {
   const { n, rooms, furniture, wallItems, people } = puzzle;
   const idx = indexScene(puzzle);
   const roomAt = idx.roomAt;
@@ -57,7 +63,8 @@ export default function Board({ puzzle, marks, onCell, revealed }: Props) {
   } | null>(null);
   useEffect(() => {
     if (!denied) return;
-    const t = setTimeout(() => setDenied(null), 1600);
+    // 손님의 한 마디는 거절 표시보다 길다 — 읽을 시간을 더 준다
+    const t = setTimeout(() => setDenied(null), denied.key === 'guest' ? 3200 : 1600);
     return () => clearTimeout(t);
   }, [denied]);
 
@@ -120,6 +127,22 @@ export default function Board({ puzzle, marks, onCell, revealed }: Props) {
   for (let r = 0; r < n; r++)
     for (let c = 0; c < n; c++) if (idx.voidKind[r][c] === 'inner') yardCells.push({ r, c });
   const inner = yardCells.map(key);
+
+  /* 바깥 손님. 건물 밖으로 트인 빈 칸을 덩어리로 나눠 큰 것부터 최대 둘까지 손님을 둔다.
+     안뜰과 달리 덩어리가 여럿일 수 있어서(`diagonal` 은 마주보는 두 모서리를 판다)
+     bounding box 하나로 뭉뚱그릴 수 없다. 동물은 시드로 섞어 배정하므로 한 사건에
+     같은 동물이 둘 나오지 않는다 — 테마마다 둘뿐이라 셋째 덩어리는 그냥 빈 땅이다 */
+  const guests: { cells: Cell[]; visitor: VisitorSpec }[] = [];
+  const visitors = puzzle.theme.visitors;
+  if (petMenu?.length && !revealed) {
+    const outerCells: Cell[] = [];
+    for (let r = 0; r < n; r++)
+      for (let c = 0; c < n; c++) if (idx.voidKind[r][c] === 'outer') outerCells.push({ r, c });
+    const picked = shuffled(rng(`${puzzle.seed}-guest`), visitors);
+    outerBlobs(outerCells)
+      .slice(0, Math.min(2, picked.length))
+      .forEach((cells, i) => guests.push({ cells, visitor: picked[i] }));
+  }
 
   /* 위계: 외벽 5px > 방 경계 3px > 칸선 1px.
      **외벽은 방 칸이 네 변을 다 그린다.** 반대편이 빈 칸이거나 격자 밖이라 선을
@@ -301,9 +324,25 @@ export default function Board({ puzzle, marks, onCell, revealed }: Props) {
             }
           />
         )}
+        {/* 바깥 실루엣의 손님. 안뜰 짐승과 달리 막는 게 아니라 말을 건다.
+            판이 없다 — 손님 자신이 한 칸짜리 버튼이라 진짜 칸을 먹을 경로가 없다.
+            key 에 좌표를 넣는다: 덩어리가 바뀌면 걸음 상태도 새로 시작해야 한다 */}
+        {guests.map((g) => (
+          <OuterPet
+            key={`${g.visitor.kind}@${g.cells[0].r},${g.cells[0].c}`}
+            cells={g.cells}
+            n={n}
+            visitor={g.visitor}
+            seed={`${puzzle.seed}-${g.cells[0].r}-${g.cells[0].c}`}
+            menu={petMenu!}
+            onSay={(icon, text) =>
+              setDenied((prev) => ({ key: 'guest', icon, text, n: (prev?.n ?? 0) + 1 }))
+            }
+          />
+        ))}
       </div>
       {denied && (
-        <p key={denied.n} className="notice" role="status">
+        <p key={denied.n} className={denied.key === 'guest' ? 'notice say' : 'notice'} role="status">
           {denied.icon} {denied.text}
         </p>
       )}
