@@ -20,9 +20,12 @@ const AUTO_MS = 8000;
  */
 export default function RankToast({
   alert,
+  detective,
   onClose,
 }: {
   alert: RankDrop | null;
+  /** 부를 이름. 이름을 정했을 때만 채워진다 */
+  detective: string;
   onClose: () => void;
 }) {
   const [gone, setGone] = useState(false);
@@ -42,7 +45,7 @@ export default function RankToast({
       {alert !== null && !gone && (
         <div className="toast">
           <p>
-            누가 자리를 가져갔어. {alert.from}위 → {alert.to}위
+            {detective && `${detective}, `}누가 자리를 가져갔어. {alert.from}위 → {alert.to}위
           </p>
           <button type="button" className="toast-x" aria-label="알림 닫기" onClick={onClose}>
             ✕

@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { DIFFICULTIES, generatePuzzle } from '../game/generate';
-import { getUser } from '../game/auth';
+import { detectiveName, getNick, getUser } from '../game/auth';
 import {
   addPlay,
   checkRank,
@@ -37,6 +37,10 @@ export default function useGame() {
   const [earned, setEarned] = useState(0);
   const [plays, setPlays] = useState<Play[]>(loadPlays);
   const [code, setCode] = useState(getCode);
+  // 순위표에 띄우는 이름. localStorage 가 진짜 저장소인데도 여기 한 번 더 두는 건,
+  // 이름을 바꾸는 곳(기록 패널)과 그 이름으로 부르는 곳(점수판·지목·토스트)이 형제라
+  // 상태를 공유하지 않으면 저장한 뒤에도 옛 이름이 그대로 남기 때문이다
+  const [nick, setNickState] = useState(getNick);
   // undefined = 아직 받는 중, null = 못 받았다, Board = 받았다.
   // 셋을 뭉개면 서버가 죽은 걸 "아직 아무도 없다"고 말하게 된다
   const [board, setBoard] = useState<Board | null | undefined>(undefined);
@@ -136,6 +140,9 @@ export default function useGame() {
     earned,
     plays,
     code,
+    nick,
+    /** 부를 이름. 이름을 정했을 때만 채워진다 — 빈 문자열이면 화면이 원래 문구로 떨어진다 */
+    detective: detectiveName(nick),
     board,
     rankAlert,
     difficulties: DIFFICULTIES,
@@ -148,6 +155,7 @@ export default function useGame() {
     },
     setPlays,
     setCode,
+    setNick: setNickState,
     // 메뉴를 열면 알림은 제 할 일을 다 한 것이다
     dismissRank: () => setRankAlert(null),
     clearMarks: () => setMarks({}),

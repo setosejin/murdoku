@@ -153,6 +153,8 @@ export type AccuseProps = {
   peeked: boolean;
   revealed: boolean;
   setRevealed: (next: boolean) => void;
+  /** 부를 이름. 이름을 정했을 때만 채워진다 — 비면 원래 문구 그대로다 */
+  detective: string;
   /** 시트 안에서는 제목과 테두리를 생략한다 (시트 제목이 이미 `범인 지목`) */
   bare?: boolean;
 };
@@ -169,6 +171,7 @@ export function AccusePanel({
   peeked,
   revealed,
   setRevealed,
+  detective,
   bare,
 }: AccuseProps) {
   const solved = result === 'correct';
@@ -213,7 +216,8 @@ export function AccusePanel({
       )}
       {solved && (
         <p key={attempt} className="verdict ok" role="status">
-          정답! 범인은 {culpritName}! <em className="earned">+{earned}점</em>
+          {detective ? `역시 ${detective}. ` : '정답! '}범인은 {culpritName}!{' '}
+          <em className="earned">+{earned}점</em>
         </p>
       )}
       {result === 'wrong' && !peeked && (

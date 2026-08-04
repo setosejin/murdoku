@@ -149,6 +149,7 @@ export default function App() {
             peeked={game.peeked}
             revealed={game.revealed}
             setRevealed={game.setRevealed}
+            detective={game.detective}
           />
           <LegendPanel furniture={puzzle.furniture} />
         </div>
@@ -170,7 +171,7 @@ export default function App() {
         <ChangelogDialog />
       </footer>
 
-      <RankToast alert={game.rankAlert} onClose={game.dismissRank} />
+      <RankToast alert={game.rankAlert} detective={game.detective} onClose={game.dismissRank} />
 
       <Sheet modal open={dialog === 'case'} onClose={close} title={puzzle.title}>
         <p className="brief">{puzzle.brief}</p>
@@ -182,12 +183,14 @@ export default function App() {
 
       <Sheet modal open={dialog === 'menu'} onClose={close} title="더보기">
         <SeedPanel seed={game.seed} onOpen={(s) => game.reset(game.n, s)} />
-        <Leaderboard plays={game.plays} board={game.board} />
+        <Leaderboard plays={game.plays} board={game.board} nick={game.nick} />
         <HistoryPanel
           plays={game.plays}
           code={game.code}
+          nick={game.nick}
           setPlays={game.setPlays}
           setCode={game.setCode}
+          setNick={game.setNick}
           onOpen={(pn, ps) => {
             game.reset(pn, ps);
             close();

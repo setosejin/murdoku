@@ -113,7 +113,7 @@ git -c credential.https://github.com.helper= \
 | `src/components/GamePanels.tsx` | 규칙·범례·브러시바·지목·시드 패널 (두 셸 공용) |
 | `src/components/ChangelogDialog.tsx` | `CHANGELOG.md` 를 읽어 모달로 그린다 (마크다운 부분집합 렌더러) |
 | `src/components/HistoryPanel.tsx` | 기록 목록 + 계정(로그인/가입) + 복구 키 패널 |
-| `src/game/auth.ts` | 계정 — 아이디/`dk`/닉네임 검증(워커와 공용) + 브라우저 PBKDF2 |
+| `src/game/auth.ts` | 계정 — 아이디/`dk`/닉네임 검증(워커와 공용) + 브라우저 PBKDF2 + 부를 이름(`detectiveName`) |
 | `src/index.css` | `@import` 진입점. 실제 규칙은 `src/styles/*.css` (플레인 CSS, 프레임워크 없음) |
 
 ### 셸이 둘이다

@@ -319,6 +319,7 @@ describe('정답을 본 사건', () => {
     earned: 0,
     revealed: false,
     setRevealed: () => {},
+    detective: '',
   } as const;
 
   const render = (over: Partial<AccuseProps>) =>

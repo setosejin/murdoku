@@ -44,6 +44,17 @@
   border-color: var(--wall);
   background: #fff;
 }
+/* TOP 10 과 내 줄 사이가 끊겼다는 표시. 줄이 아니라 사이라서 테두리도 배경도 없다 */
+.ranks li.gap {
+  display: block;
+  border: 0;
+  background: none;
+  padding: 0;
+  text-align: center;
+  line-height: 1;
+  color: var(--muted);
+  letter-spacing: 2px;
+}
 .ranks .rk {
   font-weight: 700;
   font-size: 12px;

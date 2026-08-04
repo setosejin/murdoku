@@ -115,6 +115,18 @@ export function setNick(nick: string) {
   writeLS(NICK_KEY, nick);
 }
 
+/**
+ * 사람을 부르는 이름. 이름을 정한 사람만 `<닉> 탐정` 이라 부른다.
+ *
+ * 아이디는 로그인 수단이지 불릴 이름이 아니라, 없으면 빈 문자열을 준다 — 부르는 쪽이
+ * 원래 문구로 그대로 떨어진다. 말투를 켜고 끄는 판정을 화면마다 복제하지 않으려고
+ * 여기 하나만 둔다.
+ *
+ * `isNick` 을 다시 거는 건 이 값이 localStorage 에서 오기 때문이다. 검증을 통과한 적 없는
+ * 문자열이 그대로 화면에 앉으면 안 된다.
+ */
+export const detectiveName = (nick: string) => (isNick(nick) ? `${nick} 탐정` : '');
+
 /** 동기화 서버가 없는 빌드(포크 등)에서는 로그인 UI 를 아예 감춘다 */
 export const syncEnabled = () => Boolean(import.meta.env?.VITE_SYNC_URL);
 
@@ -123,7 +135,6 @@ export type AuthResult = { ok: true; code: string; nick: string } | { ok: false;
 const MESSAGES: Record<number, string> = {
   400: '아이디나 비밀번호 형식이 안 맞아.',
   401: '아이디나 비밀번호가 틀렸어.',
-  404: '그런 계정이 없어.',
   409: '이미 있는 아이디야.',
   413: '보낸 내용이 너무 커.',
 };
@@ -154,6 +165,11 @@ async function call(path: 'signup' | 'login', id: string, dk: string): Promise<A
  *
  * 비밀번호를 다시 안 묻는다 — 이 앱에서 기록 코드가 곧 신원이라(`/h/:code` 도 코드만 본다)
  * 코드를 쥔 사람은 이미 기록을 통째로 고칠 수 있다. 여기만 더 잠가봐야 얻는 게 없다.
+ *
+ * 오류는 **서버가 쓴 말을 그대로** 띄운다. 상태 코드마다 문구를 여기 적어두면 두 가지가 어긋난다 —
+ * 이 화면에는 아이디·비밀번호 칸이 없는데 로그인용 문구가 뜨고, 워커가 아직 이 주소를 모르는
+ * 배포 틈에는 아예 딴소리를 한다(실제로 그랬다: 배포 전 워커가 400 을 줘서 "아이디나 비밀번호
+ * 형식이 안 맞아" 가 떴다). 워커의 오류 본문은 사람이 읽을 한국어라 그게 늘 더 정확하다.
  */
 export async function setNickname(code: string, nick: string): Promise<string | null> {
   const base = import.meta.env?.VITE_SYNC_URL;
@@ -165,13 +181,22 @@ export async function setNickname(code: string, nick: string): Promise<string | 
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify({ code, nick }),
     });
-    if (!res.ok) return MESSAGES[res.status] ?? '서버가 응답을 안 해.';
+    if (!res.ok) return serverText(await res.text().catch(() => ''));
     setNick(nick);
     return null;
   } catch {
     return '연결이 안 돼.';
   }
 }
+
+/**
+ * 서버가 준 오류 문구. 사이에 낀 프록시나 터널이 HTML 오류 페이지를 뱉을 수 있어
+ * **짧은 평문일 때만** 믿는다 — 아니면 우리 문구로 떨어진다.
+ */
+const serverText = (raw: string) => {
+  const t = raw.trim();
+  return t.length > 0 && t.length <= 60 && !t.includes('<') ? t : '이름을 못 바꿨어.';
+};
 
 function check(id: string, pw: string): string | null {
   if (!isUserId(id)) return '아이디는 소문자·숫자·밑줄로 3~20자야.';
