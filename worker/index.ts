@@ -3,11 +3,12 @@
  *
  *   POST /h/:code    body: Play[]      → 병합된 Play[]
  *   POST /lb/:code   body: 없음        → {top: Rank[], rank: number|null}
- *   POST /a/signup   body: {id, dk}    → 201 {code}  (409 아이디 중복)
- *   POST /a/login    body: {id, dk}    → 200 {code}  (401 불일치)
+ *   POST /a/signup   body: {id, dk}    → 201 {code, nick}  (409 아이디 중복)
+ *   POST /a/login    body: {id, dk}    → 200 {code, nick}  (401 불일치)
+ *   POST /a/nick     body: {code,nick} → 200 {nick}        (404 계정 없음, '' 은 지우기)
  *
  *   POST /adm/list   body: 없음         → {accounts, plays}   ← 전부 ADMIN_TOKEN 필요
- *   POST /adm/get    body: {id|code}   → {id, code, plays, score, cases}
+ *   POST /adm/get    body: {id|code}   → {id, nick, code, plays, score, cases}
  *   POST /adm/del    body: {id|code}   → {ok: true}
  *
  * 새 기록 올리기 = 내 목록을 POST. 다른 기기에서 불러오기 = 빈 배열을 POST.
@@ -15,13 +16,14 @@
  * 그 뒤는 /h/:code 가 지금까지와 똑같이 처리한다.
  *
  * 순위표도 마찬가지로 기존 구조 위에 얹었다 — 점수는 저장된 Play[] 에서 계산하므로
- * 클라이언트가 점수를 올려보내지 않는다. 이름은 `c:<코드>` 로 계정 아이디를 찾아 쓴다.
+ * 클라이언트가 점수를 올려보내지 않는다. 신원은 `c:<코드>` 의 계정 아이디이고,
+ * 화면에 뜨는 이름은 `n:<코드>` 의 닉네임이다(없으면 아이디).
  *
  * 검증은 클라이언트와 같은 함수를 쓴다 — 판정을 두 군데 두지 않는다.
  *
  * 배포: worker/ 에서 `npx wrangler deploy` (설치 불필요)
  */
-import { constantTimeEqual, isDk, isUserId, randomHex, sha256hex } from '../src/game/auth';
+import { constantTimeEqual, isDk, isNick, isUserId, randomHex, sha256hex } from '../src/game/auth';
 import {
   isCode,
   MAX_BOARD,
@@ -58,9 +60,14 @@ const MAX_AUTH_BODY = 1024;
 /** KV 값. 여기 든 코드가 곧 기록 키다 */
 type Account = { s: string; h: string; code: string };
 
-/** 순위표 전체가 이 한 키에 든다. 코드 → 표시 이름은 `c:<코드>` */
+/**
+ * 순위표 전체가 이 한 키에 든다.
+ * `c:<코드>` = 코드 → 계정 아이디(신원), `n:<코드>` = 코드 → 순위표에 띄울 이름.
+ * 둘을 갈라 둔 이유는 닉네임이 겹칠 수 있어서다 — 신원까지 겹치면 순위 줄이 서로를 지운다.
+ */
 const LB_KEY = 'lb';
 const nameKey = (code: string) => `c:${code}`;
+const nickKey = (code: string) => `n:${code}`;
 
 const parse = (raw: string | null): Play[] => {
   if (raw === null) return [];
@@ -83,14 +90,18 @@ const parseBoard = (raw: string | null): Rank[] => {
 /**
  * 순위표 갱신. 기록이 실제로 바뀐 요청에서만 부른다.
  *
+ * `nick` 을 넘기면 KV 를 안 읽고 그걸 쓴다 — 방금 쓴 값을 바로 되읽으면 KV 는 옛 값을 줄 수 있어서,
+ * 아는 쪽(= /a/nick)이 알려준다.
+ *
  * ponytail: 순위 전체를 한 키에 담고 통째로 다시 쓴다. KV 에 CAS 가 없어 두 사람이 같은 순간에
  * 올리면 한쪽이 덮이는데, 다음 해결 때 제 점수로 다시 오른다. 실시간 정확도가 필요해지면
  * Durable Objects 로 올린다 (가입 경합과 같은 선택)
  */
-async function updateBoard(env: Env, code: string, plays: Play[]) {
+async function updateBoard(env: Env, code: string, plays: Play[], nick?: string) {
   // 게스트는 이름이 없어 줄을 세울 수 없다. 순위는 계정만 오른다
   const name = await env.HISTORY.get(nameKey(code));
   if (name === null) return;
+  const show = nick ?? (await env.HISTORY.get(nickKey(code))) ?? '';
 
   // 점수는 저장된 기록에서 서버가 센다 — 클라이언트가 올린 숫자를 그대로 믿지 않는다
   const { score, cases } = summarize(plays);
@@ -103,7 +114,10 @@ async function updateBoard(env: Env, code: string, plays: Play[]) {
   // 매번 새로 찍으면 아무것도 안 바뀐 요청마다 KV 쓰기가 나간다
   const at = old !== undefined && old.score === score && old.cases === cases ? old.at : Date.now();
   const next = JSON.stringify(
-    [...board.filter((e) => e.name !== name), { name, score, cases, at }]
+    [
+      ...board.filter((e) => e.name !== name),
+      { name, ...(show === '' ? {} : { nick: show }), score, cases, at },
+    ]
       .sort((a, b) => b.score - a.score || a.at - b.at)
       .slice(0, MAX_BOARD),
   );
@@ -208,14 +222,18 @@ async function handleAdmin(
     // 이름도 기록도 없는 코드는 그냥 없는 것이다 (기록을 지운 계정은 이름이 남아 200 이다).
     // 이미 읽은 값으로 판단하므로 KV 를 한 번 더 때리지 않는다
     if (who.id === null && plays.length === 0) return reply.fail(404, '그런 기록이 없다');
+    // 닉네임도 같이 준다 — 순위표는 닉네임만 보여주므로, 이게 없으면 관리자가
+    // 순위표에 보이는 줄을 어느 계정인지 짚을 수 없다
+    const nick = await env.HISTORY.get(nickKey(who.code));
     // 점수는 순위표와 같은 함수로 센다 — 관리자가 보는 숫자가 플레이어가 보는 숫자와 같아야 한다
-    return reply.json({ ...who, plays, ...summarize(plays) }, 200);
+    return reply.json({ ...who, nick, plays, ...summarize(plays) }, 200);
   }
 
   await env.HISTORY.delete(who.code);
   // 계정을 지목했으면 계정까지, 코드만 지목했으면 기록만 지운다
   if (isUserId(body.id)) {
     await env.HISTORY.delete(nameKey(who.code));
+    await env.HISTORY.delete(nickKey(who.code));
     await env.HISTORY.delete(`u:${body.id}`);
   }
   if (who.id !== null) await dropFromBoard(env, who.id);
@@ -242,6 +260,28 @@ export default {
     if (req.method !== 'POST') return fail(405, 'POST 만 받는다');
 
     const path = new URL(req.url).pathname;
+
+    if (path === '/a/nick') {
+      const raw = await req.text();
+      if (raw.length > MAX_AUTH_BODY) return fail(413, '너무 크다');
+      let body: { code?: unknown; nick?: unknown };
+      try {
+        body = (JSON.parse(raw) ?? {}) as typeof body;
+      } catch {
+        return fail(400, 'JSON 이 아니다');
+      }
+      const { code, nick } = body;
+      // 빈 문자열은 "지우고 아이디로 돌아가기"다
+      if (!isCode(code) || (nick !== '' && !isNick(nick))) return fail(400, '이름 형식이 아니다');
+      // 순위에 오르는 건 계정뿐이라, 주인 없는 코드에 이름을 달아둘 이유가 없다
+      if ((await env.HISTORY.get(nameKey(code))) === null) return fail(404, '그런 계정이 없다');
+
+      if (nick === '') await env.HISTORY.delete(nickKey(code));
+      else await env.HISTORY.put(nickKey(code), nick);
+      // 이미 올라 있는 줄도 바로 고친다 — 안 그러면 다음 사건을 풀기 전까지 옛 이름이 걸려 있다
+      await updateBoard(env, code, parse(await env.HISTORY.get(code)), nick);
+      return json({ nick }, 200);
+    }
 
     if (path === '/a/signup' || path === '/a/login') {
       const raw = await req.text();
@@ -271,7 +311,7 @@ export default {
         await env.HISTORY.put(key, JSON.stringify(account));
         // 순위표에 이름을 달아주는 역방향 매핑. /h/:code 는 코드만 알기 때문에 필요하다
         await env.HISTORY.put(nameKey(account.code), id);
-        return json({ code: account.code }, 201);
+        return json({ code: account.code, nick: '' }, 201);
       }
 
       // 아이디가 없는 경우와 비번이 틀린 경우를 구분해주지 않는다
@@ -283,7 +323,9 @@ export default {
       // 순위표가 생기기 전에 가입한 계정을 여기서 메운다. 없을 때 한 번만 쓴다
       if ((await env.HISTORY.get(nameKey(account.code))) === null)
         await env.HISTORY.put(nameKey(account.code), id);
-      return json({ code: account.code }, 200);
+      // 기기를 옮겨도 입력칸에 지금 이름이 채워지도록 같이 내려준다
+      const nick = (await env.HISTORY.get(nickKey(account.code))) ?? '';
+      return json({ code: account.code, nick }, 200);
     }
 
     if (path.startsWith('/adm/'))
@@ -295,8 +337,21 @@ export default {
       const board = parseBoard(await env.HISTORY.get(LB_KEY));
       const name = await env.HISTORY.get(nameKey(c));
       const i = name === null ? -1 : board.findIndex((e) => e.name === name);
-      // 내 점수는 브라우저가 자기 기록에서 세므로 여기서는 순위만 준다
-      return json({ top: board.slice(0, TOP_N), rank: i < 0 ? null : i + 1 }, 200);
+      // 내 점수는 브라우저가 자기 기록에서 세므로 여기서는 순위만 준다.
+      // 나가는 줄에는 보여줄 이름 하나만 담는다 — 닉네임을 단 사람의 아이디까지 남들에게
+      // 뿌릴 이유가 없고, 내 줄은 rank 로 짚을 수 있다
+      return json(
+        {
+          top: board.slice(0, TOP_N).map((e) => ({
+            name: e.nick ?? e.name,
+            score: e.score,
+            cases: e.cases,
+            at: e.at,
+          })),
+          rank: i < 0 ? null : i + 1,
+        },
+        200,
+      );
     }
 
     const code = path.startsWith('/h/') ? path.slice(3) : '';

@@ -8,6 +8,8 @@ import { SCORE_BASE, summarize, TOP_N, type Board, type Play } from '../game/his
  * 서버가 주는 건 남들의 줄과 내 순위뿐이다.
  *
  * 순위에는 계정만 오른다 — 줄을 세우려면 이름이 있어야 하고, 그 이름은 가입 때 서버가 못박은 것이다.
+ * 줄에 뜨는 이름은 닉네임을 단 사람은 닉네임, 아니면 아이디다. 어느 쪽인지는 서버가 정해서 보내고
+ * 여기서는 그리기만 한다 — 그래서 내 줄은 이름이 아니라 순위로 짚는다.
  *
  * 순위를 받아오는 건 `useGame` 이다. 시트가 닫혀 있어도 알림 점이 떠야 해서, 이 화면이
  * 열렸는지와 무관하게 돌아야 한다.
@@ -39,7 +41,9 @@ export default function Leaderboard({
       {board !== null && board !== undefined && board.top.length > 0 && (
         <ol className="ranks" aria-label={`상위 ${TOP_N}명`}>
           {board.top.map((e, i) => (
-            <li key={e.name} className={e.name === user ? 'mine' : undefined}>
+            // 닉네임은 겹칠 수 있어 이름을 열쇠로 못 쓴다. 이 목록은 순위 그 자체라
+            // 자리(i)가 곧 정체성이고, 줄마다 붙은 모션도 없다
+            <li key={i} className={board.rank === i + 1 ? 'mine' : undefined}>
               <span className="rk">{i + 1}</span>
               <b>{e.name}</b>
               <small>{e.cases}사건</small>

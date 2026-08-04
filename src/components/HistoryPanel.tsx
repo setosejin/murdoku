@@ -1,6 +1,23 @@
 import { useEffect, useState } from 'react';
-import { getUser, login, MIN_PW, setUser as saveUser, signup, syncEnabled } from '../game/auth';
-import { clearPlays, getCode, isCode, setCode as saveCode, type Play } from '../game/history';
+import {
+  getNick,
+  getUser,
+  login,
+  MIN_PW,
+  setNick as saveNick,
+  setNickname,
+  setUser as saveUser,
+  signup,
+  syncEnabled,
+} from '../game/auth';
+import {
+  clearPlays,
+  getCode,
+  isCode,
+  MAX_NICK_LEN,
+  setCode as saveCode,
+  type Play,
+} from '../game/history';
 
 /**
  * 기록 패널 — 푼 사건 목록 + 계정 + 복구 키.
@@ -24,6 +41,11 @@ export default function HistoryPanel({
 }) {
   const [codeInput, setCodeInput] = useState('');
   const [user, setUser] = useState(getUser);
+  // 입력칸 값과 서버가 들고 있는 값을 따로 둔다 — 타이핑 중에 "순위표에 이렇게 뜬다"가
+  // 아직 저장도 안 된 이름으로 바뀌면 거짓말이 된다
+  const [nick, setNickInput] = useState(getNick);
+  const [saved, setSaved] = useState(getNick);
+  const [nickErr, setNickErr] = useState('');
   const [mode, setMode] = useState<'login' | 'signup'>('login');
   const [id, setId] = useState('');
   const [pw, setPw] = useState('');
@@ -54,7 +76,11 @@ export default function HistoryPanel({
     clearPlays();
     saveCode('');
     saveUser('');
+    saveNick('');
     setUser('');
+    setNickInput('');
+    setSaved('');
+    setNickErr('');
     setPlays([]);
     setCode(getCode());
     setError('');
@@ -73,10 +99,30 @@ export default function HistoryPanel({
     }
     saveCode(res.code);
     saveUser(id);
+    // 서버가 들고 있던 이름으로 맞춘다 — 다른 기기에서 붙였어도 입력칸에 채워진다
+    saveNick(res.nick);
     setUser(id);
+    setNickInput(res.nick);
+    setSaved(res.nick);
     setCode(res.code);
     setId('');
     setPw('');
+  };
+
+  const submitNick = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (busy) return;
+    setBusy(true);
+    setNickErr('');
+    const next = nick.trim();
+    const bad = await setNickname(code, next);
+    setBusy(false);
+    if (bad !== null) {
+      setNickErr(bad);
+      return;
+    }
+    setNickInput(next);
+    setSaved(next);
   };
 
   return (
@@ -106,6 +152,27 @@ export default function HistoryPanel({
             <p>
               <b>{user}</b> 로 로그인했어. 기록이 기기를 따라다닌다.
             </p>
+            <form className="nickform" onSubmit={submitNick}>
+              <input
+                value={nick}
+                onChange={(e) => setNickInput(e.target.value)}
+                placeholder="순위표에 띄울 이름"
+                aria-label="순위표에 띄울 이름"
+                maxLength={MAX_NICK_LEN}
+              />
+              <button type="submit" className="chip" disabled={busy}>
+                {busy ? '…' : '저장'}
+              </button>
+            </form>
+            <p className="hint">
+              순위표에는 <b>{saved || user}</b> 로 뜬다. 비워두면 아이디를 그대로 쓴다. 겹치는
+              이름을 막지 않으니 남을 사칭하는 이름은 지워질 수 있어.
+            </p>
+            {nickErr && (
+              <p className="hint error" role="alert">
+                {nickErr}
+              </p>
+            )}
             <button type="button" className="link" onClick={resetDevice}>
               로그아웃
             </button>

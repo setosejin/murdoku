@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import { createElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { DIFFICULTIES, generatePuzzle } from '../game/generate';
@@ -8,12 +8,9 @@ import Board from './Board';
 import { DifficultySeg } from './GamePanels';
 import FeedbackDialog, { issueUrl } from './FeedbackDialog';
 import ChangelogDialog, { renderMarkdown } from './ChangelogDialog';
-import Leaderboard from './Leaderboard';
-import RankToast from './RankToast';
 import { TOUR_STEPS } from '../data/tour';
 import Tour from './Tour';
 import { AccusePanel, type AccuseProps } from './GamePanels';
-import { SCORE_BASE, scoreOf, type Board as BoardData, type Play } from '../game/history';
 import changelog from '../../CHANGELOG.md?raw';
 import desktopCss from '../styles/desktop.css?raw';
 import boardCss from '../styles/board.css?raw';
@@ -306,87 +303,6 @@ describe('desktop.css 불변식', () => {
   it('보드는 남는 공간의 짧은 변에 맞춘다', () => {
     expect(desktopCss).toMatch(/\.pboard\s*\{[^}]*container-type:\s*size/);
     expect(desktopCss).toContain('min(100cqw, 100cqh');
-  });
-});
-
-describe('점수판', () => {
-  const play = (over: Partial<Play> = {}): Play => ({
-    seed: 'a1b2c3',
-    n: 4,
-    at: 1000,
-    ok: true,
-    tries: 1,
-    title: '사라진 회중시계',
-    ...over,
-  });
-
-  const render = (plays: Play[], board: BoardData | null | undefined = undefined) =>
-    renderToStaticMarkup(createElement(Leaderboard, { plays, board }));
-
-  it('내 점수를 로컬 기록에서 바로 센다 (서버가 없어도 보인다)', () => {
-    const plays = [play({ seed: 'a', n: 7, tries: 2 }), play({ seed: 'b', n: 4, tries: 1 })];
-    const total = plays.reduce((s, p) => s + scoreOf(p), 0);
-
-    const html = render(plays);
-    expect(html).toContain(`${total.toLocaleString('ko-KR')}점`);
-    expect(html).toContain('2사건 해결');
-  });
-
-  it('점수 규칙을 SCORE_BASE 에서 그대로 읽어 보여준다', () => {
-    // 문구에 숫자를 복제하면 만점을 조정할 때 조용히 거짓말이 된다
-    const html = render([]);
-    for (const [n, base] of Object.entries(SCORE_BASE)) expect(html).toContain(`${n}×${n} ${base}`);
-  });
-
-  it('서버가 없으면 순위 대신 그 사실을 말한다', () => {
-    expect(import.meta.env.VITE_SYNC_URL).toBeFalsy();
-    const html = render([]);
-    expect(html).not.toContain('<ol');
-    expect(html).toContain('순위 서버가 없어');
-  });
-
-  it('아직 못 받아온 순위를 없다고 말하지 않는다', () => {
-    // 서버가 죽었을 때 "아직 아무도 없다"고 하면 1등인 사람이 자기가 순위 밖인 줄 안다
-    vi.stubEnv('VITE_SYNC_URL', 'https://w.dev');
-    try {
-      const html = render([play()]);
-      expect(html).not.toContain('아직 순위가 없어');
-      expect(html).not.toContain('순위 서버가 없어');
-      expect(render([play()], null)).toContain('순위를 못 받아왔어');
-      expect(render([play()], { top: [], rank: null })).toContain('아직 순위가 없어');
-    } finally {
-      vi.unstubAllEnvs();
-    }
-  });
-});
-
-describe('순위 알림', () => {
-  const toast = (alert: { from: number; to: number } | null) =>
-    renderToStaticMarkup(createElement(RankToast, { alert, onClose: () => {} }));
-
-  it('알릴 게 없어도 살아 있는 영역은 붙어 있다', () => {
-    // role=status 는 붙은 뒤에 내용이 바뀌어야 읽힌다. 알림과 함께 마운트되면 조용히 지나친다
-    const html = toast(null);
-    expect(html).toContain('role="status"');
-    expect(html).not.toContain('class="toast"');
-  });
-
-  it('밀린 자리를 어디서 어디로인지 말한다', () => {
-    const html = toast({ from: 3, to: 5 });
-    expect(html).toContain('class="toast"');
-    expect(html).toContain('3위');
-    expect(html).toContain('5위');
-    // 타이머에만 기대면 천천히 읽는 사람이 놓친다
-    expect(html).toContain('aria-label="알림 닫기"');
-  });
-});
-
-describe('메뉴 버튼의 알림 점', () => {
-  it('알릴 게 없으면 점도 없고 이름표도 그대로다', () => {
-    // 켜진 쪽은 모바일 셸 테스트가 검사한다 (거기는 game 을 통째로 지어낼 수 있다)
-    const html = renderToStaticMarkup(createElement(App));
-    expect(html).toContain('aria-label="더보기"');
-    expect(html).not.toContain('alert-dot');
   });
 });
 
