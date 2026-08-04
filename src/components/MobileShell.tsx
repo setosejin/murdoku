@@ -7,7 +7,7 @@ import FeedbackDialog from './FeedbackDialog';
 import HistoryPanel from './HistoryPanel';
 import Leaderboard from './Leaderboard';
 import Sheet from './Sheet';
-import { AccusePanel, LegendPanel, RulesPanel, SeedPanel } from './GamePanels';
+import { AccusePanel, DifficultySeg, LegendPanel, RulesPanel, SeedPanel } from './GamePanels';
 import type { Game } from '../hooks/useGame';
 
 type SheetId = 'case' | 'legend' | 'accuse' | 'menu';
@@ -127,22 +127,14 @@ export default function MobileShell({ game }: { game: Game }) {
       <Sheet open={sheet === 'menu'} onClose={close} title="메뉴">
         <div className="panel">
           <b>난이도</b>
-          <div className="controls">
-            {game.difficulties.map((d) => (
-              <button
-                key={d.n}
-                type="button"
-                className={`chip${d.n === game.n ? ' on' : ''}`}
-                aria-pressed={d.n === game.n}
-                onClick={() => {
-                  game.reset(d.n);
-                  close();
-                }}
-              >
-                {d.label}
-              </button>
-            ))}
-          </div>
+          <DifficultySeg
+            difficulties={game.difficulties}
+            n={game.n}
+            onPick={(n) => {
+              game.reset(n);
+              close();
+            }}
+          />
           <button
             type="button"
             className="chip primary"

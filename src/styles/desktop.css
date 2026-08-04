@@ -178,13 +178,39 @@
 }
 .dcase-more {
   flex: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
   color: var(--muted);
   font-size: 13px;
   line-height: 1;
 }
+/* 홑화살표를 글자 옆에 맨몸으로 두지 않는다 — 제 원 안에 넣어
+   버튼 오른쪽 안쪽 여백에 딱 맞춰 앉힌다 */
+.dcase-more i {
+  width: 26px;
+  height: 26px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  border: 2px solid var(--tile-line);
+  background: var(--paper);
+  font-style: normal;
+  font-size: 14px;
+  /* ⌄ 글리프가 원 아래쪽에 치우쳐 앉는다 */
+  padding-bottom: 3px;
+  transition:
+    transform var(--dur-fast) var(--ease-out),
+    border-color var(--dur-fast) var(--ease-out);
+}
 @media (hover: hover) and (pointer: fine) {
   .dcase:hover {
     transform: translateY(-1px);
+  }
+  /* 껍데기가 올라가는 만큼 안쪽 원은 반대로 내려가며 커진다 — 버튼 안에서 장력이 생긴다 */
+  .dcase:hover .dcase-more i {
+    transform: translateY(1px) scale(1.08);
+    border-color: var(--wall);
   }
 }
 .dcase:active {

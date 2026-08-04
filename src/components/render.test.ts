@@ -4,6 +4,7 @@ import { renderToStaticMarkup } from 'react-dom/server';
 import { DIFFICULTIES, generatePuzzle } from '../game/generate';
 import App from '../App';
 import Board from './Board';
+import { DifficultySeg } from './GamePanels';
 import FeedbackDialog, { issueUrl } from './FeedbackDialog';
 import ChangelogDialog, { renderMarkdown } from './ChangelogDialog';
 import Leaderboard from './Leaderboard';
@@ -131,6 +132,20 @@ describe('App 렌더링', () => {
 
   it('아이콘 스프라이트를 한 번만 심는다', () => {
     expect((html.match(/id="i-bed"/g) ?? []).length).toBe(1);
+  });
+
+  // 알약의 폭과 이동량은 TS 가 계산해 인라인으로 넣는다. 어긋나면 켜진 칸이
+  // 아닌 데로 미끄러져 앉는데, 색 대비만 보면 멀쩡해 보여서 눈으로는 늦게 잡힌다
+  it('난이도 알약이 켜진 칸에 정확히 앉는다', () => {
+    const seg = renderToStaticMarkup(
+      createElement(DifficultySeg, { difficulties: DIFFICULTIES, n: 6, onPick: () => {} }),
+    );
+    const at = DIFFICULTIES.findIndex((d) => d.n === 6);
+    expect(seg).toContain(`width:calc((100% - 6px) / ${DIFFICULTIES.length})`);
+    expect(seg).toContain(`translate:${at * 100}%`);
+    // 라벨은 판 크기이고 쉬움·보통 같은 말은 aria-label 이 갖는다
+    expect(seg).toContain('aria-label="어려움 (6×6)"');
+    expect((seg.match(/aria-pressed="true"/g) ?? []).length).toBe(1);
   });
 
   it('증언 목록과 보드와 지목이 한 화면에 같이 있다', () => {

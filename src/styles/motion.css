@@ -45,8 +45,14 @@
   .chip:active,
   .dcase:hover,
   .dcase:active,
+  .dcase:hover .dcase-more i,
   .clue-row:active,
   .mbar-btn:active {
     transform: none;
+  }
+  /* 난이도 알약은 미끄러지지 않고 바로 옮겨 앉는다 — 어느 쪽이 켜졌는지는
+     색 대비가 이미 말해준다 */
+  .seg-pill {
+    transition: none;
   }
 }
