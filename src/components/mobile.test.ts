@@ -127,4 +127,26 @@ describe('모바일 스타일 불변식', () => {
   it('노치 안전영역을 쓴다', () => {
     expect(mobileCss).toContain('env(safe-area-inset-bottom');
   });
+
+  // 인원수가 곧 증언 줄 수라, 보드에 기준 크기가 없으면 목록이 세로 공간을 먼저
+  // 다 챙겨서 난이도가 오를수록 보드가 깎인다 (iPhone SE 에서 355 → 247px 이었다).
+  // .mplay 는 container-type: size 라 내용이 크기에 관여하지 못한다 —
+  // aspect-ratio 가 유일한 기준값이다
+  it('보드에 정사각 기준 크기가 있다', () => {
+    expect(mobileCss).toContain('aspect-ratio: 1;');
+  });
+
+  // 부족분을 누가 지느냐. 보드 1 : 목록 100 이라 사실상 목록이 다 진다 —
+  // 보드 높이를 calc() 로 역산하지 않고 순환 참조를 flex 가중치로 푼 것
+  it('자리가 모자라면 증언 목록이 보드보다 먼저 줄어든다', () => {
+    expect(mobileCss).toContain('flex: 1 1 auto'); // .mplay
+    expect(mobileCss).toContain('flex: 0 100 auto'); // .mshell > .clue-list
+    expect(mobileCss).toContain('min-height: 132px'); // 증언 3줄 바닥
+  });
+
+  // 가로 모드는 grid 라 aspect-ratio 가 트랙 계산을 어긋나게 하고,
+  // 구형 Safari 경로는 폭에만 맞추고 넘치면 스크롤하는 다른 배분이다
+  it('가로 모드와 구형 Safari 경로에서는 정사각 기준을 되돌린다', () => {
+    expect((mobileCss.match(/aspect-ratio: auto;/g) ?? []).length).toBe(2);
+  });
 });
