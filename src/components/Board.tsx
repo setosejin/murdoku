@@ -155,9 +155,49 @@ export default function Board({ puzzle, marks, onCell, revealed }: Props) {
   revealDelay.set(puzzle.culpritId, beat + 240);
 
   const cells = [];
+  /* 안뜰(갇힌 빈 칸)은 방처럼 이름표를 하나만 단다 — 그림은 첫 칸, 이름은 마지막 칸.
+     ponytail: 안뜰이 격자당 한 덩어리라는 전제다 (`donut` 마스크만 만들고, 다른
+     마스크는 테두리에서 파고들어 전부 `바깥`이 된다). 갇힌 덩어리를 둘 이상 만드는
+     마스크를 넣으면 여기서 덩어리별로 나눠야 한다 */
+  const yard = puzzle.theme.courtyard;
+  const inner: string[] = [];
+  for (let r = 0; r < n; r++)
+    for (let c = 0; c < n; c++) if (idx.voidKind[r][c] === 'inner') inner.push(`${r},${c}`);
+
+  /* 칸의 위·왼쪽만 그린다. 나머지 절반은 이웃 칸이 그린다.
+     위계: 방 경계 3px > 칸선 1px > 실루엣 밖끼리 0 (건물 바깥에는 격자를 안 긋는다) */
+  const edgeW = (a: number, b: number) => (a !== b ? 3 : a < 0 ? 0 : 1);
+  const edgeC = (a: number, b: number) => (a !== b ? 'var(--wall)' : 'var(--tile-line)');
+  const borders = (r: number, c: number) => ({
+    borderTopWidth: r === 0 ? 0 : edgeW(roomAt[r - 1][c], roomAt[r][c]),
+    borderLeftWidth: c === 0 ? 0 : edgeW(roomAt[r][c - 1], roomAt[r][c]),
+    borderTopColor: r > 0 ? edgeC(roomAt[r - 1][c], roomAt[r][c]) : 'var(--tile-line)',
+    borderLeftColor: c > 0 ? edgeC(roomAt[r][c - 1], roomAt[r][c]) : 'var(--tile-line)',
+  });
+
   for (let r = 0; r < n; r++) {
     for (let c = 0; c < n; c++) {
       const k = `${r},${c}`;
+      const kind = idx.voidKind[r][c];
+      if (kind) {
+        cells.push(
+          <div
+            key={k}
+            className={`cell void ${kind}`}
+            data-floor={kind === 'inner' ? yard.floor : undefined}
+            style={borders(r, c)}
+          >
+            {kind === 'inner' && k === inner[0] && (
+              <Art emoji={yard.emoji} label={yard.label} />
+            )}
+            {kind === 'inner' && k === inner[inner.length - 1] && (
+              <span className="room-label yard">{yard.label}</span>
+            )}
+          </div>,
+        );
+        continue;
+      }
+
       const fur = furnAt.get(k);
       const wall = wallAt.get(k);
       const room = labelAt.get(k);
@@ -195,12 +235,7 @@ export default function Board({ puzzle, marks, onCell, revealed }: Props) {
                 }))
               : onCell(k)
           }
-          style={{
-            borderTopWidth: r === 0 ? 0 : roomAt[r - 1][c] !== roomAt[r][c] ? 3 : 1,
-            borderLeftWidth: c === 0 ? 0 : roomAt[r][c - 1] !== roomAt[r][c] ? 3 : 1,
-            borderTopColor: r > 0 && roomAt[r - 1][c] !== roomAt[r][c] ? 'var(--wall)' : 'var(--tile-line)',
-            borderLeftColor: c > 0 && roomAt[r][c - 1] !== roomAt[r][c] ? 'var(--wall)' : 'var(--tile-line)',
-          }}
+          style={borders(r, c)}
         >
           {fur && fur.first && (
             <FurnitureArt f={fur.f} span={spanOf(fur.f)} n={n} />

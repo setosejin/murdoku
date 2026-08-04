@@ -96,7 +96,8 @@ git -c credential.https://github.com.helper= \
 | `src/game/types.ts` | 데이터 모델, 시드 RNG(`rng`), `pick`/`shuffled` |
 | `src/game/clues.ts` | `indexScene`(파생 인덱스) + `matchingCells`(규칙 판정) + `clueText`(한국어 문구) |
 | `src/game/solve.ts` | 백트래킹 솔버 + 유일해 판정 |
-| `src/game/generate.ts` | BSP 평면도 → 가구 → 배치 → 증언 → 유일해 검증 재시도 루프 |
+| `src/game/floorplan.ts` | 실루엣 마스크(`MASKS`) + BSP 분할 + 방 지터 → `buildFloorplan` |
+| `src/game/generate.ts` | 평면도 → 가구 → 배치 → 증언 → 유일해 검증 재시도 루프 |
 | `src/data/content.ts` | 이름·가구·방 이름·사건 제목 풀 |
 | `src/hooks/useGame.ts` | 게임 상태 전부. 두 셸이 나눠 쓴다 |
 | `src/hooks/useMediaQuery.ts` | `MOBILE_QUERY` + 미디어 쿼리 구독 (셸 선택) |
@@ -133,12 +134,15 @@ git -c credential.https://github.com.helper= \
 `generatePuzzle(n, seed)` 는 성공할 때까지 되던지는 3중 루프다 — 평면도 300회 × 배치 20회 × 증언 60회.
 
 ```
-buildRooms(BSP) → placeFurniture → placeWallItems → indexScene
+buildFloorplan(마스크 → BSP → void 빼기 → 조각 흡수 → 지터)
+  → placeFurniture → placeWallItems → indexScene
   → randomPlacement → 피해자 칸 선택 → trueStatements → 증언 뽑기
   → solve(limit=2) 로 유일해 확인 → 실패하면 다음 시도
 ```
 
-실패 시 그냥 다음 후보로 넘어가므로, 제약을 잘못 넣으면 **조용히 재시도만 하다가 끝에서 throw** 한다. 새 제약을 넣었으면 세 난이도(4·5·6) 전부 실제로 생성되는지 확인할 것.
+실패 시 그냥 다음 후보로 넘어가므로, 제약을 잘못 넣으면 **조용히 재시도만 하다가 끝에서 throw** 한다. 새 제약을 넣었으면 네 난이도(4·5·6·7) 전부 실제로 생성되는지 확인할 것.
+
+**마스크는 재시도 루프 *안*에서 뽑는다.** 테마는 밖에서 시드로 한 번만 정하지만, 마스크는 그 평면도가 실패하면 다른 걸 뽑아야 한다 — 감당 안 되는 마스크는 조용히 걸러진다. `buildFloorplan` 이 `null` 을 돌려주면 다음 sceneTry 다.
 
 ### 규칙을 바꿀 때 손대야 하는 곳
 
@@ -153,9 +157,14 @@ buildRooms(BSP) → placeFurniture → placeWallItems → indexScene
 
 방마다 용의자 1명 제약 때문에 **방 개수가 인원수를 감당해야 한다**. 4×4를 늘 2×2 사분면으로 자르면 인원이 `2,2` 로만 갈려서 범인 방을 만들 수 없다. 그래서 `splitRect` 는 8칸짜리 사각형을 확률적으로 안 쪼갠다(→ 4×2 + 2×2 + 2×2 평면도). 이 랜덤 정지를 "정리"하면 쉬움 난이도가 영구히 생성 실패한다.
 
+**실루엣 마스크는 행·열 완전 매칭을 깰 수 있다.** 인물은 행마다 하나·열마다 하나씩 서므로, 남은 칸으로 그 매칭이 안 되면 배치가 **원천 불가**다. 7×7에서 네 모서리 2×2를 다 파면(`十`) 0·1·5·6행이 남은 3개 열을 놓고 싸워 매칭이 없다 — 생성기는 에러 없이 재시도만 하다 끝에서 throw 한다. `floorplan.test.ts` 가 모든 `(마스크, n)` 조합에 대해 이분 매칭을 직접 돌려 이걸 막는다. **마스크를 추가하면 그 테스트가 자동으로 검사한다** (`MASKS` 를 순회하므로 테스트에 손댈 필요 없다).
+
+`donut`(안뜰)은 격자 테두리에 닿으면 안 된다. 닿는 순간 `classifyVoids` 의 flood fill 이 `outer` 로 판정해 안뜰이 아니라 그냥 ㄱ자가 된다.
+
 ### 렌더링
 
-- 방 경계는 `Board.tsx` 가 이웃 칸의 `roomAt` 을 비교해 테두리 굵기로 그린다 (3px = 방 경계, 1px = 칸 선).
+- 방 경계는 `Board.tsx` 가 이웃 칸의 `roomAt` 을 비교해 테두리 굵기로 그린다 (3px = 방 경계, 1px = 칸 선, 0 = 실루엣 밖끼리).
+- **실루엣 밖 칸은 `<button>` 이 아니라 `<div class="cell void ...">` 다.** 누를 수도 포커스할 수도 없어야 한다. `roomById.get(roomAt[r][c])!` 앞에서 갈라야 한다 — void 는 `-1` 이라 그대로 두면 `undefined` 에서 터진다. 갇힌 칸(`inner`)만 테마 `courtyard` 의 바닥·그림·이름을 받고, 바깥(`outer`)은 그냥 빈 땅이다.
 - 2칸 가구는 `cells[0]` 에서 한 번만 그리고 `width/height: 200%` 로 옆 칸을 덮는다.
 - 창문·문은 절대 위치 부착물이라 칸을 막지 않는다. `~앞` 은 그 칸을 뜻한다.
 - 가구 타일에는 이모지와 한국어 라벨을 **함께** 그린다. 증언이 가구 이름을 부르기 때문에 이름 없이는 매칭이 안 된다.
@@ -211,7 +220,8 @@ Safari 를 실측하는 법 — **환경마다 되는 경로가 다르다. 아�
 | 파일 | 검사 |
 |---|---|
 | `src/game/generate.test.ts` | 여러 시드에서 유일해·행/열·방 제약·증언 정합 |
-| `src/game/clues.test.ts` | `matchingCells` 판정 (ON·NEXT_TO·IN_ROOM) |
+| `src/game/floorplan.test.ts` | 마스크별 행·열 완전 매칭 존재 · void 비율 · 건물 연결성 · 결정성 |
+| `src/game/clues.test.ts` | `matchingCells` 판정 (ON·NEXT_TO·IN_ROOM·FROM_ROOM) |
 | `src/game/history.test.ts` | 기록 검증·병합 + 동기화 워커 라우트 |
 | `src/game/auth.test.ts` | 계정 검증·워커 라우트·로그인 UI |
 | `src/components/render.test.ts` | 보드·앱(데스크톱 셸)·모달 렌더링 |

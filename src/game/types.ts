@@ -3,7 +3,7 @@ import type { Theme } from '../data/content';
 export type Cell = { r: number; c: number };
 
 /** 방 바닥 재질. 판정에는 안 쓰이고 그림에만 쓴다 */
-export type FloorKind = 'wood' | 'tile' | 'carpet' | 'grass' | 'soil' | 'straw';
+export type FloorKind = 'wood' | 'tile' | 'carpet' | 'grass' | 'soil' | 'straw' | 'water';
 
 export type Room = {
   id: number;
@@ -54,7 +54,7 @@ export type Person = {
   isVictim: boolean;
 };
 
-export type ClueType = 'ON' | 'NEXT_TO' | 'IN_ROOM';
+export type ClueType = 'ON' | 'NEXT_TO' | 'IN_ROOM' | 'FROM_ROOM';
 
 export type Clue = {
   personId: string;

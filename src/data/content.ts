@@ -62,6 +62,11 @@ export type Theme = {
    * 없으면 실내 것을 그대로 쓴다 — 저택은 야외 방이 없어서 필요가 없다.
    */
   outdoorItems?: readonly WallItemSpec[];
+  /**
+   * 건물 안쪽에 갇힌 빈 칸(안뜰·연못)을 그리는 법. 실루엣이 `donut` 일 때만 쓴다.
+   * 건물 바깥으로 트인 빈 칸은 그냥 빈 땅이라 그리지 않는다.
+   */
+  courtyard: { label: string; emoji: string; floor: FloorKind };
   titles: readonly string[];
   briefs: readonly string[];
   roles: readonly string[];
@@ -81,6 +86,7 @@ const MANSION: Theme = {
     { name: '작업실', floor: 'wood' },
     { name: '복도', floor: 'tile' },
   ],
+  courtyard: { label: '안뜰', emoji: '⛲', floor: 'grass' },
   furniture: [
     { kind: 'bed', label: '침대', emoji: '🛏️', size: 2, standable: true, rooms: ['침실', '손님방'] },
     { kind: 'sofa', label: '소파', emoji: '🛋️', size: 3, standable: true, rooms: ['거실', '서재', '손님방'] },
@@ -131,6 +137,7 @@ const FARM: Theme = {
     { name: '작업실', floor: 'wood' },
     { name: '우물가', floor: 'soil' },
   ],
+  courtyard: { label: '연못', emoji: '💧', floor: 'water' },
   furniture: [
     { kind: 'haystack', label: '건초더미', emoji: '🌾', size: 4, standable: true, rooms: ['외양간', '헛간', '돼지우리', '창고'] },
     { kind: 'trough', label: '여물통', emoji: '🥣', size: 3, standable: false, rooms: ['외양간', '돼지우리', '목초지'] },

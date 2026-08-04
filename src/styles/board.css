@@ -126,10 +126,27 @@
   --floor-tint: #f7edc9;
   --floor-img: repeating-linear-gradient(-30deg, #0000 0 4px, #a9822d29 4px 5px);
 }
+/* 안뜰 연못 — 물결은 한 방향으로만 그어야 잔물결로 읽힌다 */
+.cell[data-floor='water'] {
+  --floor-tint: #dfeef4;
+  --floor-img: repeating-linear-gradient(20deg, #0000 0 5px, #2f7d9c26 5px 7px);
+}
+
+/* ---- 실루엣 밖 ----
+   건물 모양이 격자를 다 채우지 않는다. 방이 아닌 칸은 <div> 라 눌리지도 포커스도 안 잡힌다.
+   테두리는 방 칸과 똑같은 규칙을 탄다 — 건물 외곽선은 방↔빈칸 경계의 3px 벽이 그린다.
+   (빈칸끼리는 Board.tsx 가 굵기 0 을 넣는다) */
+.cell.void {
+  cursor: default;
+}
+/* 건물 바깥 = 빈 땅. 무늬 없이 종이보다 한 톤 낮게 깔아 건물이 떠 보이게 한다 */
+.cell.void.outer {
+  --floor-tint: #ece4d1;
+}
 
 /* 상태 표시는 배경을 갈아끼우는 대신 위에 덧칠한다 (바닥 무늬가 살아 있게) */
 @media (hover: hover) and (pointer: fine) {
-  .cell:hover {
+  .cell:not(.void):hover {
     box-shadow: inset 0 0 0 200px #0000000f;
   }
 }
@@ -360,6 +377,12 @@ img.art,
   padding: 0 6px;
   pointer-events: none;
   z-index: 4;
+}
+/* 안뜰은 방이 아니다 — 증언이 부르지도 않고 설 수도 없다.
+   같은 알약 모양이면 방 이름으로 읽히므로 점선·흐린 글자로 갈라 둔다 */
+.room-label.yard {
+  border-style: dashed;
+  color: var(--muted);
 }
 
 .token {
