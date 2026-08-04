@@ -113,7 +113,7 @@ git -c credential.https://github.com.helper= \
 | `src/components/GamePanels.tsx` | 규칙·범례·브러시바·지목·시드 패널 (두 셸 공용) |
 | `src/components/ChangelogDialog.tsx` | `CHANGELOG.md` 를 읽어 모달로 그린다 (마크다운 부분집합 렌더러) |
 | `src/components/HistoryPanel.tsx` | 기록 목록 + 계정(로그인/가입) + 복구 키 패널 |
-| `src/game/auth.ts` | 계정 — 아이디/`dk` 검증(워커와 공용) + 브라우저 PBKDF2 |
+| `src/game/auth.ts` | 계정 — 아이디/`dk`/닉네임 검증(워커와 공용) + 브라우저 PBKDF2 |
 | `src/index.css` | `@import` 진입점. 실제 규칙은 `src/styles/*.css` (플레인 CSS, 프레임워크 없음) |
 
 ### 셸이 둘이다
@@ -243,7 +243,8 @@ Safari 를 실측하는 법 — **환경마다 되는 경로가 다르다. 아�
 | `src/game/generate.test.ts` | 여러 시드에서 유일해·행/열·방 제약·증언 정합 |
 | `src/game/floorplan.test.ts` | 마스크별 행·열 완전 매칭 존재 · void 비율 · 건물 연결성 · 결정성 |
 | `src/game/clues.test.ts` | `matchingCells` 판정 (ON·NEXT_TO·IN_ROOM·FROM_ROOM) |
-| `src/game/history.test.ts` | 기록 검증·병합 + 동기화 워커 라우트 |
+| `src/game/history.test.ts` | 기록 검증·병합·점수 + 동기화 워커 라우트 |
+| `src/game/rank.test.ts` | 순위표 — 워커 라우트·닉네임·`rankDrop` + 점수판/토스트/점 렌더 |
 | `src/game/auth.test.ts` | 계정 검증·워커 라우트·로그인 UI |
 | `src/components/render.test.ts` | 보드·앱(데스크톱 셸)·모달 렌더링 |
 | `src/components/yard.test.ts` | 안뜰 짐승 — 걸음 규칙·판 범위·테마별 그림 + `yard.css` 불변식 |

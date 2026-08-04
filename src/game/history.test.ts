@@ -4,16 +4,15 @@ import { fakeEnv } from './kvFake';
 import worker from '../../worker/index';
 import {
   isCode,
+  MAX_NICK_LEN,
   MAX_PLAYS,
   mergePlays,
   N_RANGE,
-  rankDrop,
   sanitizeBoard,
   sanitizePlays,
   SCORE_BASE,
   scoreOf,
   summarize,
-  TOP_N,
   type Play,
 } from './history';
 
@@ -178,6 +177,17 @@ describe('점수', () => {
     const [clean] = sanitizeBoard([{ ...row(), evil: '×'.repeat(9999) }]);
     expect(Object.keys(clean).sort()).toEqual(['at', 'cases', 'name', 'score']);
   });
+
+  it('닉네임은 있으면 지키고 이상하면 버린다 (아이디로 돌아갈 뿐이라 줄은 살린다)', () => {
+    const row = (nick: unknown) => ({ name: 'sejin', score: 100, cases: 1, at: 1, nick });
+    expect(sanitizeBoard([row('세진')])[0].nick).toBe('세진');
+    // 이상한 닉네임 때문에 순위 줄이 통째로 사라지면 안 된다
+    for (const bad of ['', 'x'.repeat(MAX_NICK_LEN + 1), 42, null]) {
+      const [e] = sanitizeBoard([row(bad)]);
+      expect(e.name).toBe('sejin');
+      expect(e.nick).toBeUndefined();
+    }
+  });
 });
 
 describe('기록 동기화 워커', () => {
@@ -275,166 +285,5 @@ describe('기록 동기화 워커', () => {
       );
       expect(await res.json()).toEqual([play(1)]);
     }
-  });
-});
-
-describe('순위표 워커', () => {
-  const DK = '0123456789abcdef'.repeat(4);
-
-  const env = () => fakeEnv();
-
-  const post = (e: ReturnType<typeof env>, path: string, body?: unknown) =>
-    worker.fetch(
-      new Request(`https://w.dev${path}`, {
-        method: 'POST',
-        ...(body === undefined ? {} : { body: JSON.stringify(body) }),
-      }),
-      e,
-    );
-
-  /** 가입해서 이름 붙은 코드를 받고, 그 코드로 사건 하나를 푼 기록을 올린다 */
-  const solve = async (
-    e: ReturnType<typeof env>,
-    id: string,
-    plays: { seed: string; n: number; tries: number; at?: number }[],
-  ) => {
-    const res = await post(e, '/a/signup', { id, dk: DK });
-    const { code } = (await res.json()) as { code: string };
-    await post(
-      e,
-      `/h/${code}`,
-      plays.map((p) => ({ ...p, at: p.at ?? 1000, ok: true, title: '사건' })),
-    );
-    return code;
-  };
-
-  const board = async (e: ReturnType<typeof env>, code: string) =>
-    (await (await post(e, `/lb/${code}`)).json()) as {
-      top: { name: string; score: number; cases: number }[];
-      rank: number | null;
-    };
-
-  it('점수순으로 세우고 내 순위를 알려준다', async () => {
-    const e = env();
-    const low = await solve(e, 'low', [{ seed: 'a', n: 4, tries: 1 }]);
-    const high = await solve(e, 'high', [{ seed: 'b', n: 7, tries: 1 }]);
-
-    const seen = await board(e, high);
-    expect(seen.top.map((r) => r.name)).toEqual(['high', 'low']);
-    expect(seen.top[0].score).toBe(SCORE_BASE[7]);
-    expect(seen.rank).toBe(1);
-    expect((await board(e, low)).rank).toBe(2);
-  });
-
-  it('점수는 저장된 기록에서 서버가 센다 (클라이언트가 올린 숫자를 안 믿는다)', async () => {
-    const e = env();
-    // 점수·순위 같은 걸 끼워 보내도 sanitizePlays 가 버린다
-    const res = await post(e, '/a/signup', { id: 'cheat', dk: DK });
-    const { code } = (await res.json()) as { code: string };
-    await post(e, `/h/${code}`, [
-      { seed: 'a', n: 4, at: 1, ok: true, tries: 9, title: '사건', score: 999_999 },
-    ]);
-    expect((await board(e, code)).top[0].score).toBe(SCORE_BASE[4] / 5);
-  });
-
-  it('게스트는 순위에 오르지 않는다', async () => {
-    const e = env();
-    await post(e, `/h/${'g'.repeat(22)}`, [
-      { seed: 'a', n: 4, at: 1, ok: true, tries: 1, title: '사건' },
-    ]);
-    const seen = await board(e, 'g'.repeat(22));
-    expect(seen.top).toEqual([]);
-    expect(seen.rank).toBe(null);
-  });
-
-  it('같은 사람이 두 줄을 차지하지 않는다', async () => {
-    const e = env();
-    const code = await solve(e, 'sejin', [{ seed: 'a', n: 4, tries: 1 }]);
-    await post(e, `/h/${code}`, [
-      { seed: 'a', n: 4, at: 1000, ok: true, tries: 1, title: '사건' },
-      { seed: 'b', n: 5, at: 2000, ok: true, tries: 1, title: '사건' },
-    ]);
-
-    const seen = await board(e, code);
-    expect(seen.top).toHaveLength(1);
-    expect(seen.top[0]).toMatchObject({ cases: 2, score: SCORE_BASE[4] + SCORE_BASE[5] });
-  });
-
-  it('TOP 10 만 내려주고, 밖에 있어도 순위는 알려준다', async () => {
-    const e = env();
-    let last = '';
-    // 점수가 낮은 순으로 12명 — 마지막에 가입한 사람이 꼴찌다
-    for (let i = 0; i < 12; i++)
-      last = await solve(e, `pp${i}`, [{ seed: `s${i}`, n: 4, tries: Math.min(i + 1, 5) }]);
-
-    const seen = await board(e, last);
-    expect(seen.top).toHaveLength(TOP_N);
-    expect(seen.rank).toBeGreaterThan(TOP_N);
-  });
-
-  it('기록이 안 바뀌면 순위표도 안 쓴다', async () => {
-    const e = env();
-    const code = await solve(e, 'sejin', [{ seed: 'a', n: 4, tries: 1 }]);
-    const before = e.writes();
-    await post(e, `/h/${code}`, []);
-    await post(e, `/lb/${code}`);
-    expect(e.writes()).toBe(before);
-  });
-
-  it('순위표보다 먼저 쌓인 기록도 올라간다', async () => {
-    const e = env();
-    const code = await solve(e, 'sejin', [{ seed: 'a', n: 4, tries: 1 }]);
-    // 순위표만 지운다 — 기록은 그대로다. 순위표 없이 굴러가던 서버를 나중에 올린 상황이고,
-    // 새 사건을 풀어야만 순위가 생긴다면 이미 다 푼 사람은 영영 순위 밖이 된다
-    await e.HISTORY.delete('lb');
-    await post(e, `/h/${code}`, []);
-    expect((await board(e, code)).top).toMatchObject([{ name: 'sejin', cases: 1 }]);
-  });
-
-  it('기록 코드가 아니면 400', async () => {
-    const e = env();
-    for (const path of ['/lb/', '/lb/short', '/lb/../secret']) {
-      expect((await post(e, path)).status).toBe(400);
-    }
-    expect(e.writes()).toBe(0);
-  });
-
-  it('망가진 순위표가 응답을 깨뜨리지 않는다', async () => {
-    const e = env();
-    const code = await solve(e, 'sejin', [{ seed: 'a', n: 4, tries: 1 }]);
-    await e.HISTORY.put('lb', '찢어진 json');
-    expect(await board(e, code)).toEqual({ top: [], rank: null });
-  });
-});
-
-describe('순위 탈환 알림', () => {
-  const seen = { name: 'sejin', rank: 3 };
-
-  it('밀렸을 때만 알린다', () => {
-    expect(rankDrop(seen, 'sejin', 5)).toEqual({ from: 3, to: 5 });
-  });
-
-  it('올라간 것과 그대로인 것은 안 알린다', () => {
-    // 오른 건 자기가 사건을 풀어서 오른 것이라 이미 아는 사실이다
-    expect(rankDrop(seen, 'sejin', 1)).toBeNull();
-    expect(rankDrop(seen, 'sejin', 3)).toBeNull();
-  });
-
-  it('게스트에게는 알리지 않는다', () => {
-    // 순위에는 계정만 오른다 — 게스트는 잃을 자리가 없다
-    expect(rankDrop(seen, '', 5)).toBeNull();
-  });
-
-  it('처음 본 순위는 견줄 기준이 없다', () => {
-    expect(rankDrop(null, 'sejin', 5)).toBeNull();
-  });
-
-  it('계정이 갈리면 남의 순위와 견주지 않는다', () => {
-    expect(rankDrop(seen, 'minji', 5)).toBeNull();
-  });
-
-  it('순위 밖으로 밀린 것은 안 알린다', () => {
-    // 순위표가 비었을 때도 rank 가 null 이라 오탐이 난다
-    expect(rankDrop(seen, 'sejin', null)).toBeNull();
   });
 });

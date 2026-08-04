@@ -2,9 +2,9 @@ import { describe, expect, it, vi } from 'vitest';
 import { createElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import worker from '../../worker/index';
-import { isCode } from './history';
+import { isCode, MAX_NICK_LEN } from './history';
 import { fakeEnv } from './kvFake';
-import { constantTimeEqual, derive, isDk, isUserId, MIN_PW, sha256hex } from './auth';
+import { constantTimeEqual, derive, isDk, isNick, isUserId, MIN_PW, sha256hex } from './auth';
 import App from '../App';
 
 describe('계정 검증', () => {
@@ -27,6 +27,29 @@ describe('계정 검증', () => {
       { toString: () => 'abc' },
     ]) {
       expect(isUserId(bad)).toBe(false);
+    }
+  });
+
+  it('닉네임은 아이디와 규칙이 다르다 — 보이는 글자면 뭐든 받고 안 보이는 글자는 막는다', () => {
+    for (const ok of ['세진', 'Sejin', '탐정 K', '🕵', 'a'.repeat(MAX_NICK_LEN), '.']) {
+      expect(isNick(ok)).toBe(true);
+    }
+    for (const bad of [
+      '', // 빈 이름은 순위표에 빈 칸으로 앉는다
+      ' 세진', // 앞뒤 공백은 자른 뒤라야 통과다
+      '세진 ',
+      '   ',
+      'a'.repeat(MAX_NICK_LEN + 1),
+      '세\u200b진', // 폭 0 — 눈에 안 보이면서 다른 이름 행세를 한다
+      '세\u202e진', // 방향 뒤집기
+      '세\n진',
+      '세\u0000진',
+      '\ud800', // 짝 잃은 서로게이트
+      42,
+      null,
+      ['세진'],
+    ]) {
+      expect(isNick(bad)).toBe(false);
     }
   });
 
@@ -276,6 +299,45 @@ describe('계정 UI', () => {
       expect(html).not.toContain('type="password"');
     } finally {
       vi.unstubAllGlobals();
+      vi.unstubAllEnvs();
+    }
+  });
+
+  it('순위표에 띄울 이름 칸을 로그인 중에만 보여주고, 지금 값을 채워준다', () => {
+    const loggedIn = (extra: [string, string][] = []) => {
+      const store = new Map([
+        ['murdoku.user', 'tester'],
+        ['murdoku.code', 'a'.repeat(22)],
+        ...extra,
+      ]);
+      vi.stubEnv('VITE_SYNC_URL', 'https://sync.example.com');
+      vi.stubGlobal('localStorage', {
+        getItem: (k: string) => store.get(k) ?? null,
+        setItem: (k: string, v: string) => void store.set(k, v),
+      });
+      return render();
+    };
+    try {
+      // 이름을 달아둔 사람에게는 그 이름이 칸에 들어 있어야 한다. 비어 있으면 지운 줄 안다
+      const named = loggedIn([['murdoku.nick', '세진']]);
+      expect(named).toContain('aria-label="순위표에 띄울 이름"');
+      expect(named).toMatch(/value="세진"/);
+      expect(named).toMatch(/순위표에는 <b>세진<\/b>/);
+
+      // 안 달았으면 아이디로 뜬다고 말해준다
+      expect(loggedIn()).toMatch(/순위표에는 <b>tester<\/b>/);
+    } finally {
+      vi.unstubAllGlobals();
+      vi.unstubAllEnvs();
+    }
+  });
+
+  it('로그인 안 했으면 이름 칸도 없다', () => {
+    // 게스트는 순위에 오르지 않는다. 달아봐야 아무 데도 안 뜨는 칸이다
+    vi.stubEnv('VITE_SYNC_URL', 'https://sync.example.com');
+    try {
+      expect(render()).not.toContain('aria-label="순위표에 띄울 이름"');
+    } finally {
       vi.unstubAllEnvs();
     }
   });
