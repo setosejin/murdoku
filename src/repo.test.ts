@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import sprite from './assets/sprite.svg?raw';
+import html from '../index.html?raw';
 import { THEMES } from './data/content';
 
 const MAX_LINES = 500;
@@ -41,6 +42,48 @@ describe('저장소 규약', () => {
       .map(([path]) => path);
 
     expect(bad).toEqual([]);
+  });
+});
+
+// 링크 미리보기(카카오톡·트위터)는 배포 후 실물로 확인하기 전까지 깨진 걸 알 수 없다.
+// 여기서 막는 건 조용히 깨지는 세 가지다 — 상대 경로화, SVG 교체, 주소 불일치
+describe('링크 미리보기 (Open Graph)', () => {
+  const meta = (prop: string) =>
+    html.match(new RegExp(`<meta\\s+property="${prop}"\\s+content="([^"]*)"`))?.[1];
+
+  const SITE = 'https://setosejin.github.io/murdoku/';
+
+  it('og:url 이 실제 배포 주소와 같다', () => {
+    // 카카오는 og:url 이 공유한 주소와 다르면 그쪽 메타데이터를 다시 긁는다
+    expect(meta('og:url')).toBe(SITE);
+  });
+
+  // vite 의 base 가 './' 라 favicon 처럼 상대 경로로 "정리"되기 쉬운데,
+  // 스크래퍼는 상대 경로를 해석하지 않아서 이미지가 통째로 빠진다
+  it('og:image 가 절대 URL 이고 카카오가 읽는 포맷이다', () => {
+    const src = meta('og:image') ?? '';
+    expect(src.startsWith(`${SITE}og.png`)).toBe(true);
+    // 카카오는 JPG/PNG 만 긁는다. favicon 처럼 SVG 로 바꾸면 미리보기가 빈다
+    expect(src).not.toMatch(/\.svg/);
+  });
+
+  it('선언한 크기가 카카오가 크롭하는 2:1 이다', () => {
+    const w = Number(meta('og:image:width'));
+    const h = Number(meta('og:image:height'));
+    expect(w / h).toBe(2);
+  });
+
+  it('og.png 가 선언한 크기 그대로 존재한다', async () => {
+    // node:fs 를 안 쓰는 이유는 위 sources 와 같다 (tsconfig 에 node 타입이 없다).
+    // ?inline 은 파일을 data URI 로 넣어주므로 바이트를 그대로 볼 수 있다
+    const dataUri = (await import('../public/og.png?inline')).default;
+    const bytes = Uint8Array.from(atob(dataUri.split(',')[1]), (c) => c.charCodeAt(0));
+    // PNG 는 IHDR 이 늘 첫 청크다 — 폭·높이가 바이트 16..24 에 빅엔디언으로 박혀 있다
+    const read = (i: number) => new DataView(bytes.buffer).getUint32(i);
+    expect([read(16), read(20)]).toEqual([
+      Number(meta('og:image:width')),
+      Number(meta('og:image:height')),
+    ]);
   });
 });
 
