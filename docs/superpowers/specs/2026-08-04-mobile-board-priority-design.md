@@ -148,6 +148,46 @@ Safari 26+ 라 주 대상인 아이폰 대부분이 못 받는다. JS 로 상태
 지금은 목록이 통째로 보여서 눈에 덜 띄지만, 스크롤하는 목록에서는 "내가 뭘 고른 거지"가
 된다. 이 변경이 직접 악화시키는 버그라 같이 고친다 — `reset` 에 `setBrush('X')` 한 줄.
 
+### 5. 모바일에 게임 이름 헤더
+
+모바일 셸에는 게임 이름이 없다. 데스크톱만 `.topbar` 에 `murdoku 머도쿠` 를 갖는다.`<h1>` 자체가 없어서 문서 구조도 비어 있다.
+
+`.mtop` 의 왼쪽에 워드마크를 넣는다.
+
+```tsx
+<header className="mtop">
+  <h1 className="mbrand">murdoku</h1>
+  <button className="mtitle" …>   {/* 사건 제목 */}
+  <button className="micon" …>    {/* ☰ */}
+</header>
+```
+
+```css
+.mbrand {
+  flex: none;
+  margin: 0;
+  font-size: 15px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  line-height: 1;
+  white-space: nowrap;
+}
+```
+
+**세로 비용이 0 이라 이 자리다.** `.mtop` 의 높이는 `.mtitle`·`.micon` 의 44px 이
+정하고 15px 워드마크는 그 안에 든다. 실측으로 보드 크기가 전 구간 그대로임을 확인했다
+(SE n=7 에서 355px). 상단바를 두 줄로 만들면 SE 보드가 355 → 331 로 줄어 1절에서
+되찾은 것을 도로 내주고, 메뉴 시트 안에 두는 건 "보인다"가 아니다.
+
+**대가는 가로다.** 사건 제목 상자가 SE 기준 222 → 149px 로 줄어, 풀에서 가장 긴 제목
+(`아침에는 잉글리시 브렉퍼스트`, 222px)이 말줄임된다. `.mtitle b` 에 이미
+`text-overflow: ellipsis` 가 있어 모양은 무너지지 않고, 320px 화면에서는 오늘도 이미
+잘린다. 전체 제목은 한 번 눌러 여는 사건 시트가 갖는다.
+
+데스크톱의 `머도쿠` 부제는 안 넣는다 — 45px 을 더 먹고, 이름은 `murdoku` 하나로 선다.
+`<h1>` 둘을 셸이 각자 갖는 건 중복이 아니다. 마크업이 다른 두 화면이고, 공용으로 뺄
+만큼의 내용이 없다.
+
 ## 기대 결과
 
 시안을 스타일 주입으로 WebKit 에서 미리 측정했다.
@@ -181,6 +221,7 @@ Safari 26+ 라 주 대상인 아이폰 대부분이 못 받는다. JS 로 상태
   되돌린다
 - `clues.css` 에 `[data-fade]` 세 상태의 `mask-image` 규칙이 있다
 - `motion.css` 가 `prefers-reduced-motion` 에서 `scroll-behavior` 를 되돌린다
+- 모바일 셸이 `<h1 class="mbrand">murdoku</h1>` 를 그린다 (마크업 단언)
 
 `useGame` 의 브러시 초기화는 로직으로 확인한다 — 난이도를 바꾼 뒤 `brush` 가 `'X'` 다.
 
