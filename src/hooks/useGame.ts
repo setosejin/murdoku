@@ -40,6 +40,9 @@ export default function useGame() {
     setN(nextN);
     setSeed(nextSeed);
     setMarks({});
+    // 브러시도 같이 돌려놓는다. 7×7 에서 F 를 고른 채 4×4 로 가면 F 인 사람이
+    // 없어 목록에 켜진 줄이 하나도 없고, 칸에는 색 없는 F 토큰이 찍힌다
+    setBrush('X');
     setAccused('');
     setResult(null);
     setRevealed(false);
