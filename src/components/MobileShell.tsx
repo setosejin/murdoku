@@ -129,6 +129,7 @@ export default function MobileShell({ game }: { game: Game }) {
       <Sheet open={sheet === 'accuse'} onClose={close} title="범인 지목">
         <AccusePanel
           suspects={game.suspects}
+          victim={game.victim}
           accused={game.accused}
           setAccused={game.setAccused}
           accuse={game.accuse}

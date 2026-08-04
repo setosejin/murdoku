@@ -169,6 +169,8 @@ export function BrushBar({
 
 export type AccuseProps = {
   suspects: Person[];
+  /** 피해자. 지목 후보가 아니라 규칙을 말하기 위해 받는다 */
+  victim: Person;
   accused: string;
   setAccused: (id: string) => void;
   accuse: () => void;
@@ -190,6 +192,7 @@ export type AccuseProps = {
 
 export function AccusePanel({
   suspects,
+  victim,
   accused,
   setAccused,
   accuse,
@@ -207,6 +210,17 @@ export function AccusePanel({
   return (
     <div className={bare ? 'accuse bare' : 'panel accuse'}>
       {!bare && <b>범인은?</b>}
+      {/* 규칙 전문은 브리핑 모달 안에만 있어서, 모달을 안 연 사람에게는 없는 것과 같다.
+          지목하는 순간이 규칙이 필요한 순간이라 여기 상시로 둔다.
+          조사(와/과)를 피하려고 이름 뒤에서 문장을 끊는다 — 받침에 상관없이 늘 맞는다.
+          앞의 뱃지는 증언 목록의 그것과 같은 모양이다: 문장 속 기호가 화면의
+          기호와 같아야 이어진다 */}
+      <p className="accuse-why">
+        <span className="clue-badge dead" style={{ background: victim.color }} aria-hidden="true">
+          V
+        </span>
+        피해자는 <b>{victim.name}</b>. 그와 같은 방에 있던 용의자가 범인이야.
+      </p>
       {/* 증언 목록과 같은 줄 모양이다 — 보드 위 토큰·증언·여기의 뱃지가 같은 색이라
           "이 사람" 을 세 곳에서 다시 찾을 필요가 없다.
           select 였을 때는 열고·고르고·누르는 세 번이었다.

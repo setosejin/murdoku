@@ -141,9 +141,12 @@ describe('desktop.css 불변식', () => {
 });
 
 describe('정답을 본 사건', () => {
-  const suspects = generatePuzzle(4, 'peek-check').people.filter((p) => !p.isVictim);
+  const puzzle = generatePuzzle(4, 'peek-check');
+  const suspects = puzzle.people.filter((p) => !p.isVictim);
+  const victim = puzzle.people.find((p) => p.isVictim)!;
   const props = {
     suspects,
+    victim,
     accused: suspects[0].id,
     setAccused: () => {},
     accuse: () => {},
@@ -177,6 +180,24 @@ describe('정답을 본 사건', () => {
     expect(html).toContain('+150점');
     expect(html).not.toContain('이 사건은 여기까지야');
     expect(html).toContain('정답 숨기기');
+  });
+
+  // 무엇을 맞히는 게임인지 모르고 헤맸다는 피드백에서 나왔다. 규칙 전문은 모달 안에만
+  // 있어서, 모달을 안 연 사람에게는 없는 것과 같다. 지목하는 자리에 늘 둔다
+  it('지목하는 자리에서 승리 조건을 말한다', () => {
+    for (const bare of [false, true]) {
+      const html = render({ bare });
+      expect(html).toContain(victim.name);
+      expect(html).toContain('그와 같은 방에 있던 용의자가 범인이야');
+      // 문장 속 기호가 화면의 기호와 같아야 이어진다
+      expect(html).toContain('class="clue-badge dead"');
+    }
+  });
+
+  // V 가 왜 목록에 없는지도 이 한 줄이 답한다 — 지목 후보는 용의자뿐이다
+  it('피해자는 지목 후보에 없다', () => {
+    const html = render({});
+    expect((html.match(/aria-pressed/g) ?? []).length).toBe(suspects.length);
   });
 });
 
