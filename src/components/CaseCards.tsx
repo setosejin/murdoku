@@ -1,4 +1,4 @@
-import { Art } from './Board';
+import { Art } from './Art';
 import type { Puzzle } from '../game/types';
 
 /**

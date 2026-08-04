@@ -56,6 +56,10 @@
      **보드에는 테두리가 없다.** 외벽은 칸이 그린다 — 건물이 격자를 꽉 채우지
      않으므로 사각 테두리를 두르면 ㄱ자 건물에도 정사각형 액자가 남는다.
      바탕도 없다. 건물 밖 칸이 투명이라 그 자리는 종이가 그대로 보인다 */
+  /* 안뜰의 주인이 보드 기준으로 자리를 잡는다 (`.yard-pet` · `.yard-plate`).
+     `container-type` 의 layout containment 가 이미 containing block 을 만들지만,
+     그 부수효과에 기대지 않는다 */
+  position: relative;
   /* 트랙 계산이 어긋나도(webkit#202259) 레이아웃을 밀지 않게 잘라 둔다 */
   overflow: hidden;
   max-width: 620px;
