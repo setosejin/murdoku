@@ -45,6 +45,15 @@ describe('증언 목록 = 메모 브러시', () => {
     expect(cluesCss).toContain('scroll-behavior: smooth');
     expect(motionCss).toContain('scroll-behavior: auto !important');
   });
+
+  // 넘치는 쪽 가장자리만 흐리게 한다. 늘 켜두면 끝까지 내려도 마지막 줄이
+  // 영영 흐려 보인다 — 끝에 닿은 쪽은 ClueList 가 data-fade 에서 뺀다
+  it('잘린 가장자리만 흐리게 하고 끝에 닿은 쪽은 걷는다', () => {
+    for (const state of ['top', 'bottom', 'both'])
+      expect(cluesCss).toContain(`.clue-list[data-fade='${state}']`);
+    // 안 넘치면 속성 자체가 없다 (서버 렌더에는 effect 가 안 돈다)
+    expect(html('X')).not.toContain('data-fade');
+  });
 });
 
 describe('바텀시트', () => {

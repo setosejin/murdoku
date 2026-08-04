@@ -21,6 +21,26 @@
     opacity: 0;
   }
 }
+/* 넘치는 목록의 잘린 가장자리를 흐리게 — "더 있다" 는 신호다.
+   끝에 닿은 쪽은 걷는다(ClueList 가 data-fade 로 알려준다). 늘 켜두면
+   끝까지 내려도 마지막 줄이 영영 흐려 보인다.
+   calc() 안에 var() 를 쓰지 않는다 — WebKit 이 값을 캐싱한다 (webkit#202259).
+   mask-image 는 Safari 15.4+ 다. 그 아래는 페이드만 없고 스크롤은 그대로 된다 */
+.clue-list[data-fade='top'] {
+  mask-image: linear-gradient(to bottom, transparent, #000 24px);
+}
+.clue-list[data-fade='bottom'] {
+  mask-image: linear-gradient(to top, transparent, #000 24px);
+}
+.clue-list[data-fade='both'] {
+  mask-image: linear-gradient(
+    to bottom,
+    transparent,
+    #000 24px,
+    #000 calc(100% - 24px),
+    transparent
+  );
+}
 .clue-row {
   width: 100%;
   min-height: 40px;
