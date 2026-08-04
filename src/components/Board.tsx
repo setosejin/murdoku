@@ -67,15 +67,21 @@ export default function Board({ puzzle, marks, onCell, revealed }: Props) {
 
   const wallAt = new Map(wallItems.map((w) => [`${w.cell.r},${w.cell.c}`, w]));
   const roomById = new Map(rooms.map((r) => [r.id, r]));
-  /* 방 이름표는 그 방의 마지막 칸(오른쪽 아래)에 붙는다. 다만 **벽부착물이 붙은 칸은
-     피한다** — 문·창문 라벨과 방 이름표가 같은 모서리에서 겹친다(넷 중 하나꼴).
-     방이 통째로 벽부착물 칸이면 어쩔 수 없이 원래 자리로 돌아간다 */
+  /* 방 이름표는 그 방의 마지막 칸(오른쪽 아래)에 붙는다. 다만 이름표는 z-index 4 라
+     뭐든 덮는데, 증언이 가구·부착물을 이름으로 부르니 덮이면 못 푼다. 그래서
+     빈 바닥 → 부착물 없는 칸 → 가구 없는 칸 → 마지막 칸 순으로 양보한다.
+     여러 칸짜리 가구는 제 이름을 발치 칸에 떨어뜨리므로 가구도 자리를 차지한다.
+     가구와 겹치는 건 이름표를 위로 올려 피할 수 있어서(아래 `high`) 부착물을 먼저 피한다 */
   const labelAt = new Map(
     rooms.map((r): [string, (typeof rooms)[number]] => {
+      const back = [...r.cells].reverse();
+      const key = (c: (typeof back)[number]) => `${c.r},${c.c}`;
       const spot =
-        [...r.cells].reverse().find((c) => !wallAt.has(`${c.r},${c.c}`)) ??
+        back.find((x) => !furnAt.has(key(x)) && !wallAt.has(key(x))) ??
+        back.find((x) => !wallAt.has(key(x))) ??
+        back.find((x) => !furnAt.has(key(x))) ??
         r.cells[r.cells.length - 1];
-      return [`${spot.r},${spot.c}`, r];
+      return [key(spot), r];
     }),
   );
   const personAt = new Map(
@@ -219,7 +225,18 @@ export default function Board({ puzzle, marks, onCell, revealed }: Props) {
               <span className="wall-label">{wall.label}</span>
             </span>
           )}
-          {room && <span className="room-label">{room.name}</span>}
+          {room && (
+            /* 칸 아래쪽은 가구 이름(발치에 깔린다)과 아래쪽 부착물 이름표 차지다.
+               거기가 찼으면 이름표를 위로 올린다 — 단 위쪽 부착물이 있으면 그 이름표가
+               칸 위를 쓰므로 올리지 않는다. 부착물은 칸마다 하나뿐이라 둘은 못 겹친다 */
+            <span
+              className={`room-label${
+                (fur || wall?.side === 'bottom') && wall?.side !== 'top' ? ' high' : ''
+              }`}
+            >
+              {room.name}
+            </span>
+          )}
           {person ? (
             <span
               className={`token solved${person.id === puzzle.culpritId ? ' culprit' : ''}`}

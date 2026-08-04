@@ -27,6 +27,49 @@ describe('Board 렌더링', () => {
     for (const room of p.rooms) expect(html).toContain(room.name);
   });
 
+  /* 이름표는 z-index 4 라 같은 칸의 무엇이든 덮는다. 증언이 가구·부착물을 이름으로
+     부르니 그 이름이 덮이면 사건이 안 풀린다. 가구 이름은 늘 제 발치(발자국의 아래쪽
+     줄)에 깔리므로, 아래가 찬 칸에 붙은 이름표는 위로 올라가 있어야 한다.
+
+     발자국은 마크업으로 볼 수 없다 — 여러 칸짜리 가구는 첫 칸에서 한 번만 그려지고
+     이름은 마지막 칸에 떨어진다. 그래서 자리는 퍼즐 데이터에서 직접 센다 */
+  it('방 이름표가 가구·부착물 이름을 덮지 않는다', () => {
+    for (const { n } of DIFFICULTIES)
+      for (let i = 0; i < 8; i++) {
+        const p = generatePuzzle(n, `label-${n}-${i}`);
+        const html = renderToStaticMarkup(
+          createElement(Board, { puzzle: p, marks: {}, onCell: () => {}, revealed: false }),
+        );
+
+        const takenBelow = new Set<string>();
+        for (const f of p.furniture) {
+          const foot = Math.max(...f.cells.map((c) => c.r));
+          for (const c of f.cells) if (c.r === foot) takenBelow.add(`${c.r},${c.c}`);
+        }
+        for (const w of p.wallItems)
+          if (w.side === 'bottom') takenBelow.add(`${w.cell.r},${w.cell.c}`);
+
+        // 칸은 행 우선으로 그려진다 — 순서가 곧 좌표다
+        const cells = html.split(/(?=<(?:button|div) [^>]*class="cell)/).slice(1);
+        expect(cells.length).toBe(n * n);
+
+        cells.forEach((cell, at) => {
+          const chip = /class="room-label( high)?"/.exec(cell);
+          if (!chip) return;
+          const low = !chip[1];
+          const key = `${Math.floor(at / n)},${at % n}`;
+          expect(
+            low && takenBelow.has(key),
+            `${n}x${n} ${i}번 시드 ${key}: 아래가 찬 칸에 이름표가 낮게 붙었다`,
+          ).toBe(false);
+        });
+
+        // 방마다 이름표는 정확히 하나 — 자리를 고르다 잃거나 겹쳐 붙이면 안 된다
+        const chips = html.match(/class="room-label(?: high)?">([^<]+)/g) ?? [];
+        expect(chips.length, `${n}x${n} ${i}번 시드`).toBe(p.rooms.length);
+      }
+  });
+
   it('가구는 자기 발자국만큼 자리와 그림을 차지한다', () => {
     const { p, html } = render(false);
     for (const f of p.furniture) {
@@ -240,8 +283,11 @@ describe('벽 부착물', () => {
       expect(chunks.length).toBeGreaterThan(0);
       for (const cell of chunks)
         expect(cell.includes('wall-item') && cell.includes('room-label')).toBe(false);
-      // 방 이름표는 여전히 방마다 하나씩 다 나온다
-      for (const room of p.rooms) expect(html).toContain(`class="room-label">${room.name}<`);
+      // 방 이름표는 여전히 방마다 하나씩 다 나온다 (가구를 피해 위로 올라간 것도 포함)
+      for (const room of p.rooms) {
+        const hits = html.match(new RegExp(`class="room-label(?: high)?">${room.name}<`, 'g')) ?? [];
+        expect(hits.length, room.name).toBe(1);
+      }
     }
   });
 

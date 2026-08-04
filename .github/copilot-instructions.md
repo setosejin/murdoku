@@ -247,11 +247,11 @@ Safari 를 실측하는 법 — **환경마다 되는 경로가 다르다. 아�
 | `src/game/history.test.ts` | 기록 검증·병합·점수 + 동기화 워커 라우트 |
 | `src/game/rank.test.ts` | 순위표 — 워커 라우트·닉네임·`rankDrop` + 점수판/토스트/점 렌더 |
 | `src/game/auth.test.ts` | 계정 검증·워커 라우트·로그인 UI |
-| `src/components/board.test.ts` | 보드 렌더링 — 칸·가구·실루엣·벽 부착물 + `board.css`/`wall.css` 불변식 |
+| `src/components/board.test.ts` | 보드 렌더링 — 칸·가구·이름표 자리·실루엣·벽 부착물 + `board.css`/`wall.css` 불변식 |
 | `src/components/render.test.ts` | 앱(데스크톱 셸)·모달·온보딩·점수판 렌더링 |
 | `src/components/yard.test.ts` | 안뜰 짐승 — 걸음 규칙·판 범위·테마별 그림 + `yard.css` 불변식 |
 | `src/components/mobile.test.ts` | 모바일 셸·증언 목록·시트 + `mobile.css` 불변식 |
-| `src/repo.test.ts` | 500줄 규약 + CSS 전역 금지 패턴(`repeat(var(`) |
+| `src/repo.test.ts` | 500줄 규약 · CSS 전역 금지 패턴(`repeat(var(`) · 바닥 재질 질감 · 테마 안 이름 겹침 |
 
 렌더링은 jsdom 없이 `react-dom/server` 의 `renderToStaticMarkup` 으로 HTML 문자열을 확인한다. **문자열이 아니라 마크업으로 단언할 것** — 버전 기록 모달이 `CHANGELOG.md` 를 그대로 그려서 UI 문구를 인용하면 거짓 양성이 난다.
 
