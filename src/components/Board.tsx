@@ -164,16 +164,35 @@ export default function Board({ puzzle, marks, onCell, revealed }: Props) {
   for (let r = 0; r < n; r++)
     for (let c = 0; c < n; c++) if (idx.voidKind[r][c] === 'inner') inner.push(`${r},${c}`);
 
-  /* 칸의 위·왼쪽만 그린다. 나머지 절반은 이웃 칸이 그린다.
-     위계: 방 경계 3px > 칸선 1px > 실루엣 밖끼리 0 (건물 바깥에는 격자를 안 긋는다) */
-  const edgeW = (a: number, b: number) => (a !== b ? 3 : a < 0 ? 0 : 1);
-  const edgeC = (a: number, b: number) => (a !== b ? 'var(--wall)' : 'var(--tile-line)');
-  const borders = (r: number, c: number) => ({
-    borderTopWidth: r === 0 ? 0 : edgeW(roomAt[r - 1][c], roomAt[r][c]),
-    borderLeftWidth: c === 0 ? 0 : edgeW(roomAt[r][c - 1], roomAt[r][c]),
-    borderTopColor: r > 0 ? edgeC(roomAt[r - 1][c], roomAt[r][c]) : 'var(--tile-line)',
-    borderLeftColor: c > 0 ? edgeC(roomAt[r][c - 1], roomAt[r][c]) : 'var(--tile-line)',
-  });
+  /* 위계: 외벽 5px > 방 경계 3px > 칸선 1px.
+     **외벽은 방 칸이 네 변을 다 그린다.** 반대편이 빈 칸이거나 격자 밖이라 선을
+     나눠 그릴 상대가 없어서다. 그래서 `.board` 에는 테두리가 없고 건물 실루엣이
+     곧 맨 바깥 선이 된다 — ㄱ자 건물이면 맨 바깥 선도 ㄱ자다.
+     방↔방·같은 방 선은 예전처럼 위·왼쪽만 그리고 나머지 절반은 이웃이 그린다.
+     빈 칸은 아무것도 안 그린다 (건물 바깥에는 격자가 없다).
+     격자 밖과 빈 칸을 똑같이 `-1` 로 보는 게 이 함수의 요령이다 */
+  const at = (r: number, c: number) => (r < 0 || c < 0 || r >= n || c >= n ? -1 : roomAt[r][c]);
+  const borders = (r: number, c: number): CSSProperties => {
+    const me = at(r, c);
+    if (me < 0) return { borderWidth: 0 };
+    // half = 위·왼쪽. 오른쪽·아래의 방 경계선은 이웃 칸 몫이다
+    const side = (nr: number, nc: number, half: boolean) => {
+      const nb = at(nr, nc);
+      if (nb < 0) return 5;
+      if (!half) return 0;
+      return nb === me ? 1 : 3;
+    };
+    const w = [
+      side(r - 1, c, true),
+      side(r, c + 1, false),
+      side(r + 1, c, false),
+      side(r, c - 1, true),
+    ];
+    return {
+      borderWidth: w.map((x) => `${x}px`).join(' '),
+      borderColor: w.map((x) => (x === 1 ? 'var(--tile-line)' : 'var(--wall)')).join(' '),
+    };
+  };
 
   for (let r = 0; r < n; r++) {
     for (let c = 0; c < n; c++) {
