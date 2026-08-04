@@ -302,10 +302,10 @@ function trueStatements(cell: Cell, scene: Scene, idx: SceneIndex): Statement[] 
 export type Difficulty = { n: number; label: string };
 
 export const DIFFICULTIES: Difficulty[] = [
-  { n: 4, label: '쉬움 (4×4)' },
-  { n: 5, label: '보통 (5×5)' },
-  { n: 6, label: '어려움 (6×6)' },
-  { n: 7, label: '매우 어려움 (7×7)' },
+  { n: 4, label: '쉬움' },
+  { n: 5, label: '보통' },
+  { n: 6, label: '어려움' },
+  { n: 7, label: '매우 어려움' },
 ];
 
 export function generatePuzzle(n: number, seed = String(Date.now())): Puzzle {
