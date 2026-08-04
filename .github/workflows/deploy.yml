@@ -22,8 +22,8 @@ jobs:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
         with:
           node-version: 24
           cache: npm
@@ -38,8 +38,8 @@ jobs:
       # configure-pages 는 안 쓴다. base 가 상대 경로라 base_path 주입이 필요 없고,
       # GITHUB_TOKEN 으로는 Pages 사이트 생성이 막혀 있다.
       # Settings → Pages → Source 를 "GitHub Actions" 로 한 번만 지정할 것.
-      - uses: actions/upload-pages-artifact@v3
+      - uses: actions/upload-pages-artifact@v5
         with:
           path: dist
       - id: deployment
-        uses: actions/deploy-pages@v4
+        uses: actions/deploy-pages@v5

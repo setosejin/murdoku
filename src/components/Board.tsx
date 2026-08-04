@@ -67,7 +67,23 @@ export default function Board({ puzzle, marks, onCell, revealed }: Props) {
 
   const wallAt = new Map(wallItems.map((w) => [`${w.cell.r},${w.cell.c}`, w]));
   const roomById = new Map(rooms.map((r) => [r.id, r]));
-  const labelAt = new Map(rooms.map((r) => [`${r.cells[r.cells.length - 1].r},${r.cells[r.cells.length - 1].c}`, r]));
+  /* 방 이름표는 그 방의 마지막 칸(오른쪽 아래)에 붙는다. 다만 이름표는 z-index 4 라
+     뭐든 덮는데, 증언이 가구·부착물을 이름으로 부르니 덮이면 못 푼다. 그래서
+     빈 바닥 → 부착물 없는 칸 → 가구 없는 칸 → 마지막 칸 순으로 양보한다.
+     여러 칸짜리 가구는 제 이름을 발치 칸에 떨어뜨리므로 가구도 자리를 차지한다.
+     가구와 겹치는 건 이름표를 위로 올려 피할 수 있어서(아래 `high`) 부착물을 먼저 피한다 */
+  const labelAt = new Map(
+    rooms.map((r): [string, (typeof rooms)[number]] => {
+      const back = [...r.cells].reverse();
+      const key = (c: (typeof back)[number]) => `${c.r},${c.c}`;
+      const spot =
+        back.find((x) => !furnAt.has(key(x)) && !wallAt.has(key(x))) ??
+        back.find((x) => !wallAt.has(key(x))) ??
+        back.find((x) => !furnAt.has(key(x))) ??
+        r.cells[r.cells.length - 1];
+      return [key(spot), r];
+    }),
+  );
   const personAt = new Map(
     people.map((p) => [`${puzzle.solution[p.id].r},${puzzle.solution[p.id].c}`, p]),
   );
@@ -202,11 +218,25 @@ export default function Board({ puzzle, marks, onCell, revealed }: Props) {
             <FurnitureArt f={fur.f} span={spanOf(fur.f)} n={n} />
           )}
           {wall && (
-            <span className={`wall-item ${wall.side} ${wall.kind}`} title={wall.label}>
+            /* 외벽을 타고 앉는다 — 칸 안이 아니라 선 위에 있어야 "여기가 트였다"
+               로 읽힌다. 자리·크기는 board.css 가 정하고 방향 클래스만 넘긴다 */
+            <span className={`wall-item ${wall.side} ${wall.kind}`}>
               <Art emoji={wall.emoji} image={wall.image} icon={wall.kind} label={wall.label} />
+              <span className="wall-label">{wall.label}</span>
             </span>
           )}
-          {room && <span className="room-label">{room.name}</span>}
+          {room && (
+            /* 칸 아래쪽은 가구 이름(발치에 깔린다)과 아래쪽 부착물 이름표 차지다.
+               거기가 찼으면 이름표를 위로 올린다 — 단 위쪽 부착물이 있으면 그 이름표가
+               칸 위를 쓰므로 올리지 않는다. 부착물은 칸마다 하나뿐이라 둘은 못 겹친다 */
+            <span
+              className={`room-label${
+                (fur || wall?.side === 'bottom') && wall?.side !== 'top' ? ' high' : ''
+              }`}
+            >
+              {room.name}
+            </span>
+          )}
           {person ? (
             <span
               className={`token solved${person.id === puzzle.culpritId ? ' culprit' : ''}`}

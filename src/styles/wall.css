@@ -1,0 +1,118 @@
+/* 벽 부착물 — 창문·문·울타리·대문.
+   `board.css` 에서 갈라져 나왔다(500줄 규약). `.cell` 안에 절대배치되므로
+   캐스케이드 순서는 `board.css` 바로 다음이어야 한다. */
+
+/* 창문·문·울타리·대문은 벽(또는 경계)에 박힌 물건이라 칸을 막지 않는다.
+
+   **외벽을 타고 앉는다.** 예전에는 칸 안쪽에 1px 띄워 붙인 10px 짜리 탭이라
+   외곽선은 멀쩡한 채로 그 앞에 점이 하나 찍힌 꼴이었고, 6×6 부터는 눈에 안 띄었다.
+   이제 바깥 모서리를 외벽 바깥선에 맞추고(-5px) 벽을 덮으며 방 안쪽으로 들어온다 —
+   실루엣 선이 그 자리에서 트여 보인다. 바깥쪽 모서리는 각지고 안쪽만 둥글어서
+   "벽에 끼운 판" 으로 읽힌다.
+
+   -5px 는 `Board.tsx` 의 외벽 두께다. 거기 숫자를 바꾸면 여기도 같이 바꿔야 한다
+   (`render.test.ts` 가 둘이 어긋나지 않는지 본다) */
+.wall-item {
+  position: absolute;
+  display: grid;
+  place-items: center;
+  background: var(--paper);
+  border: 2px solid var(--wall);
+  pointer-events: none;
+  z-index: 3;
+  line-height: 1;
+}
+.wall-item.window {
+  background: #cbe4f6;
+}
+.wall-item.door {
+  background: #e6cda6;
+}
+/* 야외 경계 — 하늘이 뚫린 칸에는 창문 대신 울타리, 문 대신 대문이 선다 */
+.wall-item.fence {
+  background: #d5e4c6;
+}
+.wall-item.gate {
+  background: #ddc59a;
+}
+.wall-item .art {
+  font-size: clamp(8px, 2.1cqw, 12px);
+}
+.wall-item svg.art {
+  width: clamp(8px, 2.1cqw, 13px);
+  height: clamp(8px, 2.1cqw, 13px);
+  stroke-width: 2.4;
+}
+.wall-item.top,
+.wall-item.bottom {
+  left: 50%;
+  translate: -50% 0;
+  width: clamp(24px, 58%, 56px);
+  height: clamp(13px, 3.2cqw, 19px);
+}
+.wall-item.top {
+  top: -5px;
+  border-radius: 0 0 4px 4px;
+  box-shadow: 0 2px 0 #23201c24;
+}
+.wall-item.bottom {
+  bottom: -5px;
+  border-radius: 4px 4px 0 0;
+  box-shadow: 0 -2px 0 #23201c24;
+}
+.wall-item.left,
+.wall-item.right {
+  top: 50%;
+  translate: 0 -50%;
+  height: clamp(24px, 58%, 56px);
+  width: clamp(13px, 3.2cqw, 19px);
+}
+.wall-item.left {
+  left: -5px;
+  border-radius: 0 4px 4px 0;
+  box-shadow: 2px 0 0 #23201c24;
+}
+.wall-item.right {
+  right: -5px;
+  border-radius: 4px 0 0 4px;
+  box-shadow: -2px 0 0 #23201c24;
+}
+
+/* 이름표는 늘 방 안쪽으로 붙는다 — 바깥은 건물 밖이라 붙일 데가 없다.
+   증언이 `창문 앞` 처럼 이름을 부르는데 그림만으로는 어느 게 문이고 어느 게
+   창문인지 안 보였다. 방 이름표와 겹치지 않게 `Board.tsx` 가 방 이름표를 옆
+   칸으로 비켜준다.
+
+   **가구 이름표와 같은 모양이다** — 증언이 부르는 지형지물은 다 같은 종이 조각으로
+   읽히고, 테두리 있는 알약은 방 이름 몫으로 남긴다 */
+.wall-label {
+  position: absolute;
+  font-size: clamp(8px, 2cqw, 11px);
+  line-height: 1.4;
+  color: #3b342a;
+  font-weight: 700;
+  white-space: nowrap;
+  background: #fffdf7d9;
+  border-radius: 3px;
+  padding: 0 3px;
+}
+.wall-item.top .wall-label {
+  top: calc(100% + 2px);
+  left: 50%;
+  translate: -50% 0;
+}
+.wall-item.bottom .wall-label {
+  bottom: calc(100% + 2px);
+  left: 50%;
+  translate: -50% 0;
+}
+.wall-item.left .wall-label {
+  left: calc(100% + 2px);
+  top: 50%;
+  translate: 0 -50%;
+}
+.wall-item.right .wall-label {
+  right: calc(100% + 2px);
+  top: 50%;
+  translate: 0 -50%;
+}

@@ -11,7 +11,7 @@ import Sheet from './Sheet';
 import { AccusePanel, DifficultySeg, LegendPanel, RulesPanel, SeedPanel } from './GamePanels';
 import type { Game } from '../hooks/useGame';
 
-type SheetId = 'case' | 'legend' | 'accuse' | 'menu';
+type SheetId = 'case' | 'accuse' | 'menu';
 
 /**
  * 모바일 셸 — 한 화면 안에 다 들어오고 스크롤이 없다.
@@ -92,14 +92,6 @@ export default function MobileShell({ game }: { game: Game }) {
         </button>
         <button
           type="button"
-          className="mbar-btn"
-          aria-haspopup="dialog"
-          onClick={() => setSheet('legend')}
-        >
-          범례
-        </button>
-        <button
-          type="button"
           className="mbar-btn primary"
           aria-haspopup="dialog"
           onClick={() => setSheet('accuse')}
@@ -111,11 +103,11 @@ export default function MobileShell({ game }: { game: Game }) {
       <Sheet open={sheet === 'case'} onClose={close} title={puzzle.title}>
         <p className="brief">{puzzle.brief}</p>
         <CaseCards puzzle={puzzle} />
+        {/* 범례는 사건마다 다른 기준(어느 가구를 밟을 수 있나)이라 사건 브리핑에
+            같이 둔다. 시트 하나와 하단 액션바 버튼 하나가 줄었다 — 바 높이는
+            그대로지만 남은 두 버튼이 그만큼 넓어져 누르기 쉬워졌다 */}
+        <LegendPanel furniture={puzzle.furniture} />
         <RulesPanel />
-      </Sheet>
-
-      <Sheet open={sheet === 'legend'} onClose={close} title="범례">
-        <LegendPanel furniture={puzzle.furniture} bare />
       </Sheet>
 
       <Sheet open={sheet === 'accuse'} onClose={close} title="범인 지목">

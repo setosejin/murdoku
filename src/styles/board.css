@@ -136,6 +136,19 @@
   --floor-img: repeating-linear-gradient(20deg, #0000 0 5px, #2f7d9c26 5px 7px);
 }
 
+/* 사무실 코팅바닥 — 에폭시 광택. 반사는 한 방향으로 넓게 흘러야 무늬가 아니라 빛으로 읽힌다 */
+.cell[data-floor='coated'] {
+  --floor-tint: #eceef0;
+  --floor-img: repeating-linear-gradient(115deg, #0000 0 22px, #ffffffcc 22px 30px, #0000 30px 44px);
+}
+/* 사무실 아크릴바닥 — 반투명 패널. 이음매만 보이고 면은 비어 있어야 유리처럼 보인다 */
+.cell[data-floor='acrylic'] {
+  --floor-tint: #e8f0f1;
+  --floor-img:
+    repeating-linear-gradient(0deg, #7fa6ad2e 0 1px, #0000 1px 26px),
+    repeating-linear-gradient(90deg, #7fa6ad2e 0 1px, #0000 1px 26px);
+}
+
 /* ---- 실루엣 밖 ----
    건물 모양이 격자를 다 채우지 않는다. 방이 아닌 칸은 <div> 라 눌리지도 포커스도 안 잡힌다.
    선은 방 칸이 다 그린다 (Board.tsx) — 빈 칸은 굵기 0 이다. */
@@ -307,68 +320,6 @@ img.art,
   outline-offset: -1px;
 }
 
-/* 창문·문·울타리·대문은 벽(또는 경계)에 박힌 물건이라 칸을 막지 않는다 */
-.wall-item {
-  position: absolute;
-  display: grid;
-  place-items: center;
-  background: var(--paper);
-  border: 2px solid var(--wall);
-  border-radius: 3px;
-  pointer-events: none;
-  z-index: 3;
-  font-size: 10px;
-  font-weight: 700;
-  line-height: 1;
-}
-.wall-item.window {
-  background: #d9ecfa;
-}
-.wall-item.door {
-  background: #efdcc4;
-}
-/* 야외 경계 — 하늘이 뚫린 칸에는 창문 대신 울타리, 문 대신 대문이 선다 */
-.wall-item.fence {
-  background: #dfe9d4;
-}
-.wall-item.gate {
-  background: #e8dcc0;
-}
-.wall-item .art {
-  font-size: clamp(8px, 1.9cqw, 11px);
-}
-.wall-item svg.art {
-  width: clamp(8px, 2cqw, 12px);
-  height: clamp(8px, 2cqw, 12px);
-  stroke-width: 2.4;
-}
-.wall-item.top,
-.wall-item.bottom {
-  left: 50%;
-  translate: -50% 0;
-  width: clamp(18px, 40%, 40px);
-  height: clamp(10px, 2.6cqw, 15px);
-}
-.wall-item.top {
-  top: 1px;
-}
-.wall-item.bottom {
-  bottom: 1px;
-}
-.wall-item.left,
-.wall-item.right {
-  top: 50%;
-  translate: 0 -50%;
-  height: clamp(18px, 40%, 40px);
-  width: clamp(10px, 2.6cqw, 15px);
-}
-.wall-item.left {
-  left: 1px;
-}
-.wall-item.right {
-  right: 1px;
-}
-
 .room-label {
   position: absolute;
   right: 3px;
@@ -386,6 +337,12 @@ img.art,
 .room-label.yard {
   border-style: dashed;
   color: var(--muted);
+}
+/* 방이 가구로 꽉 차서 이름표가 가구 위에 앉을 수밖에 없을 때. 가구 이름은 늘
+   제 발치(칸 아래쪽)에 깔리므로, 이름표만 칸 위로 올리면 둘 다 읽힌다 */
+.room-label.high {
+  top: 3px;
+  bottom: auto;
 }
 
 .token {

@@ -74,25 +74,19 @@ export function RulesPanel() {
   );
 }
 
-export function LegendPanel({ furniture, bare }: { furniture: Furniture[]; bare?: boolean }) {
-  const list = (
-    <ul>
-      {furniture.map((f) => (
-        <li key={f.id} className={f.standable ? 'ok' : 'no'}>
-          <Art emoji={f.emoji} image={f.image} icon={f.kind} label={f.label} span={spanOf(f)} />
-          <span>{f.label}</span>
-          <em>{f.standable ? '설 수 있음' : '설 수 없음'}</em>
-        </li>
-      ))}
-    </ul>
-  );
-
-  // 시트 안에서는 시트 제목이 이미 `범례` 다 — 제목과 테두리를 두 번 그리지 않는다
-  if (bare) return <div className="legend bare">{list}</div>;
+export function LegendPanel({ furniture }: { furniture: Furniture[] }) {
   return (
     <div className="panel legend">
       <b>범례</b>
-      {list}
+      <ul>
+        {furniture.map((f) => (
+          <li key={f.id} className={f.standable ? 'ok' : 'no'}>
+            <Art emoji={f.emoji} image={f.image} icon={f.kind} label={f.label} span={spanOf(f)} />
+            <span>{f.label}</span>
+            <em>{f.standable ? '설 수 있음' : '설 수 없음'}</em>
+          </li>
+        ))}
+      </ul>
     </div>
   );
 }

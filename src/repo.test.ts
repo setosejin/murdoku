@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import sprite from './assets/sprite.svg?raw';
 import html from '../index.html?raw';
 import { THEMES } from './data/content';
+import { FLOOR_KINDS } from './game/types';
 
 const MAX_LINES = 500;
 
@@ -42,6 +43,35 @@ describe('저장소 규약', () => {
       .map(([path]) => path);
 
     expect(bad).toEqual([]);
+  });
+
+  // FloorKind 에만 넣고 CSS 를 안 그리면 그 방은 조용히 기본 타일색으로 깔린다.
+  // 눈으로 보기 전까지 아무도 모르므로 값 목록과 스타일을 직접 맞춰 본다
+  it('바닥 재질마다 질감이 있다', () => {
+    // 키가 '/src/styles/board.css' 지만 glob 패턴이 바뀌어도 조용히 undefined 가
+    // 되지 않게 끝자락으로 찾는다
+    const board = Object.entries(sources).find(([p]) => p.endsWith('/styles/board.css'))?.[1];
+    expect(board, 'board.css 를 못 읽었다').toBeTruthy();
+    for (const kind of FLOOR_KINDS)
+      expect(board, `${kind} 바닥에 스타일이 없다`).toContain(`[data-floor='${kind}']`);
+  });
+
+  /* 증언은 방·가구·부착물을 이름으로만 부른다. 같은 이름이 둘이면 문구가 같아도
+     뜻이 갈린다 — 방 이름이 가구 이름과 겹치면 "난 X 옆에 있었어!"(가구에 인접)와
+     "난 X 에 있었어!"(그 방 안)가 서로 다른 칸을 가리키는데 플레이어는 구별할 수 없다.
+     generate.test.ts 는 가구끼리·방끼리만 봐서 이 교차 충돌을 놓친다 */
+  it('테마 안에서 방·가구·부착물 이름이 서로 겹치지 않는다', () => {
+    for (const theme of THEMES) {
+      const named = [
+        ...theme.rooms.map((r) => r.name),
+        ...theme.furniture.map((f) => f.label),
+        ...theme.wallItems.map((w) => w.label),
+        ...(theme.outdoorItems ?? []).map((w) => w.label),
+        theme.courtyard.label,
+      ];
+      const dupes = [...new Set(named.filter((x, i) => named.indexOf(x) !== i))];
+      expect(dupes, `${theme.label} 테마에 겹치는 이름이 있다`).toEqual([]);
+    }
   });
 });
 
@@ -84,6 +114,27 @@ describe('링크 미리보기 (Open Graph)', () => {
       Number(meta('og:image:width')),
       Number(meta('og:image:height')),
     ]);
+  });
+});
+
+// 파비콘은 SVG 가 본판이고, SVG 파비콘을 못 읽는 Safari(26.0 미만)를 위해 같은 그림의
+// PNG 를 나란히 건다. 한쪽만 지우거나 크기를 바꾸면 그 브라우저에서만 조용히 어긋난다
+describe('파비콘', () => {
+  const icons = [...html.matchAll(/<link\b[^>]*\brel="icon"[^>]*>/g)].map((m) => m[0]);
+  const attr = (tag: string, name: string) => tag.match(new RegExp(`\\b${name}="([^"]*)"`))?.[1];
+
+  it('SVG 본판과 PNG 폴백을 둘 다 건다', () => {
+    expect(icons.map((tag) => attr(tag, 'href'))).toEqual(['/favicon.svg', '/favicon.png']);
+  });
+
+  // ponytail: 크기만 맞춰본다 — 저장소에 래스터라이저가 없어 PNG 가 SVG 와 같은 그림인지는
+  // 확인하지 못한다. 그림이 어긋나 곤란해지면 빌드 때 SVG 에서 PNG 를 굽는 쪽으로 올린다
+  it('PNG 폴백이 선언한 크기 그대로다', async () => {
+    const png = icons.find((tag) => attr(tag, 'href')?.endsWith('.png'));
+    const dataUri = (await import('../public/favicon.png?inline')).default;
+    const bytes = Uint8Array.from(atob(dataUri.split(',')[1]), (c) => c.charCodeAt(0));
+    const read = (i: number) => new DataView(bytes.buffer).getUint32(i);
+    expect(`${read(16)}x${read(20)}`).toBe(attr(png ?? '', 'sizes'));
   });
 });
 
