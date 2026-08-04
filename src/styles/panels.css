@@ -61,6 +61,65 @@
 .legend .no em {
   background: #f2dcd8;
 }
+/* ---- 난이도 세그먼트 ----
+   껍데기(트레이) 안에 알약 하나가 미끄러진다. 동심 반경: 바깥도 안쪽도 999px 라
+   패딩 3px 만큼 자연히 겹쳐 앉는다. 두 셸이 함께 쓴다 */
+.seg {
+  position: relative;
+  display: flex;
+  flex: none;
+  border: 2px solid var(--wall);
+  border-radius: 999px;
+  background: var(--tile);
+  padding: 3px;
+}
+/* 폭·이동량은 GamePanels.tsx 가 인라인으로 넣는다 (Safari 의 calc(var()) 캐싱 회피).
+   ponytail: 알약 폭은 계산식이고 버튼 폭은 flex 분배라, WebKit 의 서브픽셀 반올림
+   때문에 끝 칸에서 1.3px 어긋난다. 눈에 안 보이는 크기라 둔다 —
+   거슬리면 ResizeObserver 로 버튼을 실측해 넘길 것 */
+.seg-pill {
+  position: absolute;
+  top: 3px;
+  bottom: 3px;
+  left: 3px;
+  border-radius: 999px;
+  background: var(--wall);
+  transition: translate 340ms var(--ease-out);
+}
+.seg-btn {
+  /* 알약보다 위에 그려야 글씨가 안 가린다 (DOM 순서상 알약이 먼저) */
+  position: relative;
+  flex: 1 1 0;
+  min-height: 40px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  border-radius: 999px;
+  background: none;
+  color: var(--muted);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  padding: 4px 12px;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: color var(--dur-fast) var(--ease-out);
+}
+.seg-btn.on {
+  color: var(--paper);
+}
+@media (hover: hover) and (pointer: fine) {
+  .seg-btn:not(.on):hover {
+    color: var(--ink);
+  }
+}
+.seg-btn:focus-visible {
+  outline: 3px solid var(--accent);
+  outline-offset: 2px;
+}
+
 /* ---- 누름 피드백 ---- */
 .chip {
   transition: transform var(--dur-press) var(--ease-out), background var(--dur-fast) var(--ease-out);

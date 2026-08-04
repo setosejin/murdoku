@@ -2,11 +2,59 @@ import { useState } from 'react';
 import { Art } from './Board';
 import { spanOf } from '../game/types';
 import type { Furniture, Person } from '../game/types';
+import type { Difficulty } from '../game/generate';
 
 /**
  * 사이드 패널의 내용물들. 데스크톱은 `.side` 열에 세로로 쌓고,
  * 모바일은 같은 컴포넌트를 바텀시트 안에 넣는다 — 마크업을 복제하지 않는다.
  */
+
+/**
+ * 난이도 선택. 칩 넷을 나란히 두면 상단바에서 `새 사건` 과 같은 무게로 경쟁하고
+ * 폭도 370px 을 먹었다. 하나의 트레이 안에 든 알약 넷으로 묶는다 —
+ * 껍데기가 "이건 한 개의 선택"이라고 말해주고, 알약이 미끄러져 옮겨가므로
+ * 어디서 어디로 갔는지가 보인다.
+ *
+ * 라벨은 판 크기다. 스도쿠류에서 4×4 와 7×7 은 그 자체로 난이도이고,
+ * 쉬움·보통 같은 말은 `title`·`aria-label` 이 갖는다.
+ */
+export function DifficultySeg({
+  difficulties,
+  n,
+  onPick,
+}: {
+  difficulties: Difficulty[];
+  n: number;
+  onPick: (n: number) => void;
+}) {
+  const at = difficulties.findIndex((d) => d.n === n);
+  return (
+    <div className="seg" role="group" aria-label="난이도">
+      {/* 폭·이동량은 TS 에서 계산해 인라인으로 넣는다 — Safari 가 calc() 안의 var() 를 캐싱한다 */}
+      <span
+        className="seg-pill"
+        aria-hidden="true"
+        style={{
+          width: `calc((100% - 6px) / ${difficulties.length})`,
+          translate: `${at * 100}%`,
+        }}
+      />
+      {difficulties.map((d) => (
+        <button
+          key={d.n}
+          type="button"
+          className={`seg-btn${d.n === n ? ' on' : ''}`}
+          aria-pressed={d.n === n}
+          aria-label={`${d.label} (${d.n}×${d.n})`}
+          title={`${d.label} (${d.n}×${d.n})`}
+          onClick={() => onPick(d.n)}
+        >
+          {d.n}×{d.n}
+        </button>
+      ))}
+    </div>
+  );
+}
 
 export function RulesPanel() {
   return (
