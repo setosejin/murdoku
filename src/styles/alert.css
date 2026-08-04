@@ -1,0 +1,83 @@
+/* ---- 알림: 순위 토스트 + 메뉴 버튼의 점 ---- */
+
+/* 껍데기는 늘 붙어 있다(RankToast.tsx 참고). 비었을 때 아무것도 안 그리도록
+   상자 모양은 안쪽 .toast 가 갖는다 */
+.toast-live {
+  position: fixed;
+  /* 보드 위 안내(.notice)가 화면 아래를 쓰고 있어서 자리를 나눈다 */
+  top: calc(env(safe-area-inset-top, 0px) + 12px);
+  left: 50%;
+  translate: -50% 0;
+  z-index: 7;
+  /* left:50% 만 준 고정 박스는 남은 절반 안에서 줄바꿈한다 — 390px 화면에서
+     한 줄짜리 문구가 두 줄로 접혔다. 내용만큼 넓히고 화면 폭으로만 자른다 */
+  width: max-content;
+  max-width: calc(100% - 24px);
+  /* 비어 있을 때 아래 버튼을 가로막지 않는다 */
+  pointer-events: none;
+}
+
+.toast {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 8px 8px 14px;
+  border-radius: 999px;
+  background: #2f2a24;
+  color: #fdf6e6;
+  box-shadow: 0 6px 18px rgb(47 42 36 / 0.28);
+  pointer-events: auto;
+  animation: toast-in var(--dur-fast) var(--ease-out);
+}
+.toast p {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 600;
+  /* 순위는 자릿수가 달라져도 흔들리면 안 된다 */
+  font-variant-numeric: tabular-nums;
+  text-wrap: balance;
+}
+.toast-x {
+  flex: none;
+  /* 손가락이 닿는 넓이는 40px 인데 눈에 보이는 건 작은 ✕ 다.
+     음수 여백으로 알약 높이는 안 늘리고 히트영역만 패딩 위로 넓힌다 */
+  width: 40px;
+  height: 40px;
+  margin: -8px -6px -8px 0;
+  border: none;
+  border-radius: 999px;
+  background: none;
+  color: inherit;
+  font-size: 13px;
+  line-height: 1;
+  cursor: pointer;
+}
+.toast-x:focus-visible {
+  /* 어두운 알약 위에서는 빨간 링이 안 보인다 */
+  outline: 3px solid #fdf6e6;
+  outline-offset: -6px;
+}
+
+@keyframes toast-in {
+  from {
+    opacity: 0;
+    translate: 0 -8px;
+  }
+}
+
+/* 점은 메뉴 버튼에 붙는다. 버튼의 전역 클래스(.chip · .micon)를 부모 선택자로
+   묶지 않는다 — 전역 클래스를 감싸면 다른 화면에서 스타일이 통째로 빠진다 */
+.alerted {
+  position: relative;
+}
+.alert-dot {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--accent);
+  /* 타일색 테두리로 버튼 테두리와 겹쳐도 점이 뭉개지지 않는다 */
+  border: 2px solid var(--tile);
+}

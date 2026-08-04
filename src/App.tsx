@@ -8,6 +8,7 @@ import FeedbackDialog from './components/FeedbackDialog';
 import HistoryPanel from './components/HistoryPanel';
 import Leaderboard from './components/Leaderboard';
 import MobileShell from './components/MobileShell';
+import RankToast from './components/RankToast';
 import Sheet from './components/Sheet';
 import Tour from './components/Tour';
 import {
@@ -41,6 +42,13 @@ export default function App() {
   const [tour, setTour] = useState(false);
   const close = () => setDialog(null);
   const { puzzle } = game;
+  const alerted = game.rankAlert !== null;
+
+  // 메뉴를 열면 알림은 제 할 일을 다 했다 — 점수판이 바로 이 안에 있다
+  const openMenu = () => {
+    setDialog('menu');
+    game.dismissRank();
+  };
 
   // 첫 방문에만 저절로 연다. 상태를 useState 초기값으로 읽으면 서버 렌더에서도
   // 켜진 채로 나가므로 마운트 뒤에 켠다
@@ -90,12 +98,14 @@ export default function App() {
           </button>
           <button
             type="button"
-            className="chip"
-            aria-label="더보기"
+            className={alerted ? 'chip alerted' : 'chip'}
+            /* 점은 눈에만 보인다 — 이름표도 같이 바뀌어야 한다 */
+            aria-label={alerted ? '더보기 (순위 알림)' : '더보기'}
             aria-haspopup="dialog"
-            onClick={() => setDialog('menu')}
+            onClick={openMenu}
           >
             ⋯
+            {alerted && <span className="alert-dot" aria-hidden="true" />}
           </button>
         </div>
       </header>
@@ -160,6 +170,8 @@ export default function App() {
         <ChangelogDialog />
       </footer>
 
+      <RankToast alert={game.rankAlert} onClose={game.dismissRank} />
+
       <Sheet modal open={dialog === 'case'} onClose={close} title={puzzle.title}>
         <p className="brief">{puzzle.brief}</p>
         <CaseCards puzzle={puzzle} />
@@ -170,7 +182,7 @@ export default function App() {
 
       <Sheet modal open={dialog === 'menu'} onClose={close} title="더보기">
         <SeedPanel seed={game.seed} onOpen={(s) => game.reset(game.n, s)} />
-        <Leaderboard plays={game.plays} code={game.code} />
+        <Leaderboard plays={game.plays} board={game.board} />
         <HistoryPanel
           plays={game.plays}
           code={game.code}

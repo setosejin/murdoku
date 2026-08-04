@@ -49,8 +49,15 @@ describe('증언 목록 = 메모 브러시', () => {
   // 넘치는 쪽 가장자리만 흐리게 한다. 늘 켜두면 끝까지 내려도 마지막 줄이
   // 영영 흐려 보인다 — 끝에 닿은 쪽은 ClueList 가 data-fade 에서 뺀다
   it('잘린 가장자리만 흐리게 하고 끝에 닿은 쪽은 걷는다', () => {
-    for (const state of ['top', 'bottom', 'both'])
-      expect(cluesCss).toContain(`.clue-list[data-fade='${state}']`);
+    for (const state of ['top', 'bottom', 'both']) {
+      const at = cluesCss.indexOf(`.clue-list[data-fade='${state}']`);
+      expect(at).toBeGreaterThan(-1);
+      // 접두사 없는 mask-image 는 Safari 15.4+ 다. 그 아래는 -webkit- 만 알아들으므로
+      // 규칙마다 두 표기를 같이 든다 — "중복 속성" 이라고 지우면 옛 사파리에서 페이드가 통째로 사라진다
+      const rule = cluesCss.slice(at, cluesCss.indexOf('}', at));
+      expect(rule).toMatch(/-webkit-mask-image:/);
+      expect(rule).toMatch(/(?:^|[^-])mask-image:/);
+    }
     // 안 넘치면 속성 자체가 없다 (서버 렌더에는 effect 가 안 돈다)
     expect(html('X')).not.toContain('data-fade');
   });
@@ -87,12 +94,15 @@ describe('모바일 셸 렌더링', () => {
     earned: 0,
     plays: [],
     code: 'a'.repeat(22),
+    board: undefined,
+    rankAlert: null,
     difficulties: DIFFICULTIES,
     setBrush: () => {},
     setAccused: () => {},
     setRevealed: () => {},
     setPlays: () => {},
     setCode: () => {},
+    dismissRank: () => {},
     clearMarks: () => {},
     onCell: () => {},
     accuse: () => {},
@@ -127,6 +137,19 @@ describe('모바일 셸 렌더링', () => {
   it('열 개수를 grid-template-columns 에 직접 박는다 (Safari webkit#202259)', () => {
     expect(html).toContain('grid-template-columns:repeat(6, minmax(0, 1fr))');
     expect(html).not.toContain('--n');
+  });
+
+  it('순위를 뺏기면 메뉴 버튼에 점이 켜지고 이름표도 같이 바뀐다', () => {
+    // 점은 눈에만 보인다 — aria-label 이 그대로면 스크린리더는 알 길이 없다
+    expect(html).toContain('aria-label="메뉴"');
+    expect(html).not.toContain('alert-dot');
+
+    const lit = renderToStaticMarkup(
+      createElement(MobileShell, { game: { ...game, rankAlert: { from: 3, to: 5 } } }),
+    );
+    expect(lit).toContain('aria-label="메뉴 (순위 알림)"');
+    expect(lit).toContain('class="micon alerted"');
+    expect(lit).toContain('alert-dot');
   });
 });
 
