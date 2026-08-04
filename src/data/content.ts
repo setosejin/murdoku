@@ -178,4 +178,58 @@ const FARM: Theme = {
   ],
 };
 
-export const THEMES: readonly Theme[] = [MANSION, FARM];
+const OFFICE: Theme = {
+  id: 'office',
+  label: '사무실',
+  rooms: [
+    { name: 'A존', floor: 'wood' },
+    { name: 'B존', floor: 'wood' },
+    { name: '라운지', floor: 'wood' },
+    { name: '복도', floor: 'coated' },
+    { name: '창고', floor: 'coated' },
+    { name: '화장실', floor: 'tile' },
+    { name: '기계실', floor: 'tile' },
+    { name: '엘리베이터', floor: 'acrylic' },
+    { name: '회의실', floor: 'acrylic' },
+  ],
+  courtyard: { label: '아트리움', emoji: '🪴', floor: 'grass' },
+  furniture: [
+    { kind: 'desk', label: '책상', emoji: '🗄️', size: 2, standable: false, rooms: ['A존', 'B존', '회의실'] },
+    { kind: 'sofa', label: '소파', emoji: '🛋️', size: 3, standable: true, rooms: ['라운지'] },
+    { kind: 'bench', label: '작업대', emoji: '🔨', size: 2, standable: false, rooms: ['기계실', '창고'] },
+    { kind: 'cart', label: '청소카트', emoji: '🛒', size: 2, standable: false, rooms: ['화장실', '창고', '복도'] },
+    { kind: 'tv', label: '모니터', emoji: '🖥️', size: 1, standable: false, rooms: ['회의실', 'A존', 'B존', '라운지'] },
+    { kind: 'copier', label: '복사기', emoji: '🖨️', size: 1, standable: false, rooms: ['A존', 'B존', '복도', '창고'] },
+    { kind: 'cooler', label: '정수기', emoji: '🚰', size: 1, standable: false, rooms: ['복도', '라운지', 'A존', 'B존'] },
+    { kind: 'server', label: '서버랙', emoji: '💽', size: 2, standable: false, rooms: ['기계실', '창고'] },
+    { kind: 'sink', label: '세면대', emoji: '🧼', size: 2, standable: false, rooms: ['화장실'] },
+    { kind: 'elevator', label: '엘리베이터', emoji: '🛗', size: 2, standable: false, rooms: ['엘리베이터'] },
+    { kind: 'whiteboard', label: '화이트보드', emoji: '📋', size: 2, standable: false, rooms: ['회의실', 'A존', 'B존'] },
+    { kind: 'plant', label: '화분', emoji: '🪴', size: 1, standable: false },
+    { kind: 'rug', label: '러그', emoji: '🟫', size: 4, standable: true },
+    { kind: 'bucket', label: '양동이', emoji: '🪣', size: 1, standable: false },
+  ],
+  // 사무실은 전부 실내다. 바닥에 잔디·흙이 없어서 야외 분기를 타지 않는다
+  wallItems: [
+    { kind: 'window', label: '창문', emoji: '🪟' },
+    { kind: 'door', label: '문', emoji: '🚪' },
+  ],
+  titles: [
+    '야근하던 밤', '출입카드는 한 장뿐', '꺼지지 않은 모니터', '서버실의 경고음',
+    '삭제된 커밋', '엘리베이터는 12층에서 멈췄다', '식어버린 아메리카노',
+    '금요일 여섯 시의 회의', '화이트보드에 남은 글씨', '정전된 3분',
+  ],
+  briefs: [
+    '어젯밤 이 층에 남아 있던 사람은 이 안에 있다.',
+    '출입 기록에는 나간 사람이 없다. 범인은 아직 이 층에 있다.',
+    '기계실 문은 카드로만 열린다. 그 카드를 쓴 사람은 하나뿐이었다.',
+    '모두가 제자리에 있었다고 했지만, 모니터 하나만 꺼져 있었다.',
+    '피해자와 마지막까지 같은 방에 있던 사람을 찾아라.',
+  ],
+  roles: [
+    '팀장', '개발자', '디자이너', '기획자', '인턴',
+    '경비원', '미화원', '인사담당자', '영업사원', '외주 개발자',
+  ],
+};
+
+export const THEMES: readonly Theme[] = [MANSION, FARM, OFFICE];
