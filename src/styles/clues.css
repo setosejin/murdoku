@@ -12,6 +12,9 @@
      보드는 150ms 로 페이드해 들어오는데 이름만 제자리에서 갈리면
      화면의 절반은 바뀌고 절반은 순간이동한 것처럼 보인다 */
   transition: opacity 150ms var(--ease-out);
+  /* 고른 줄을 끌어올 때 튀지 않게 (ClueList 의 scrollIntoView).
+     두 셸 모두 이 요소가 스크롤 주체다 — mobile.css 와 desktop.css 가 각자 건다 */
+  scroll-behavior: smooth;
 }
 @starting-style {
   .clue-list {

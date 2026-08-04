@@ -8,6 +8,8 @@ import ClueList from './ClueList';
 import MobileShell from './MobileShell';
 import Sheet from './Sheet';
 import mobileCss from '../styles/mobile.css?raw';
+import cluesCss from '../styles/clues.css?raw';
+import motionCss from '../styles/motion.css?raw';
 
 const puzzle = generatePuzzle(5, 'mobile-check');
 
@@ -35,6 +37,13 @@ describe('증언 목록 = 메모 브러시', () => {
 
   it('빈 칸 브러시(X)일 때는 눌린 줄이 없다', () => {
     expect(html('X')).not.toContain('aria-pressed="true"');
+  });
+
+  // 목록이 넘치면 마지막 줄이 반쯤 걸친다. 그 줄을 골랐을 때 걸친 채로 두지 않는다 —
+  // 어디로 갈지는 JS(scrollIntoView), 어떻게 갈지는 CSS 가 정한다
+  it('고른 줄로 미끄러진다 (모션은 CSS 가 정한다)', () => {
+    expect(cluesCss).toContain('scroll-behavior: smooth');
+    expect(motionCss).toContain('scroll-behavior: auto !important');
   });
 });
 
