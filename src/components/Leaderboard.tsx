@@ -1,6 +1,5 @@
-import { useEffect, useState } from 'react';
 import { getUser, syncEnabled } from '../game/auth';
-import { fetchBoard, SCORE_BASE, summarize, TOP_N, type Board, type Play } from '../game/history';
+import { SCORE_BASE, summarize, TOP_N, type Board, type Play } from '../game/history';
 
 /**
  * 점수판 — 모든 유저 TOP 10 과 내 점수.
@@ -9,26 +8,20 @@ import { fetchBoard, SCORE_BASE, summarize, TOP_N, type Board, type Play } from 
  * 서버가 주는 건 남들의 줄과 내 순위뿐이다.
  *
  * 순위에는 계정만 오른다 — 줄을 세우려면 이름이 있어야 하고, 그 이름은 가입 때 서버가 못박은 것이다.
+ *
+ * 순위를 받아오는 건 `useGame` 이다. 시트가 닫혀 있어도 알림 점이 떠야 해서, 이 화면이
+ * 열렸는지와 무관하게 돌아야 한다.
  */
-export default function Leaderboard({ plays, code }: { plays: Play[]; code: string }) {
-  // undefined = 아직 받는 중, null = 못 받았다, Board = 받았다.
-  // 셋을 뭉개면 서버가 죽은 걸 "아직 아무도 없다"고 말하게 된다
-  const [board, setBoard] = useState<Board | null | undefined>(undefined);
+export default function Leaderboard({
+  plays,
+  board,
+}: {
+  plays: Play[];
+  /** undefined = 아직 받는 중, null = 못 받았다, Board = 받았다 */
+  board: Board | null | undefined;
+}) {
   const me = summarize(plays);
   const user = getUser();
-
-  // 기록이 바뀔 때마다 다시 받는다. 시트는 닫혀도 마운트된 채라 한 번만 받으면
-  // 사건을 풀고 열었을 때 방금 올린 점수가 순위에 안 보인다.
-  // sync 가 끝나면서 plays 가 한 번 더 갈리므로 마지막 응답은 워커가 순위를 쓴 뒤의 것이다
-  useEffect(() => {
-    let live = true;
-    fetchBoard(code).then((b) => {
-      if (live) setBoard(b);
-    });
-    return () => {
-      live = false;
-    };
-  }, [code, plays]);
 
   return (
     <div className="panel scores">

@@ -9,10 +9,11 @@ import { DifficultySeg } from './GamePanels';
 import FeedbackDialog, { issueUrl } from './FeedbackDialog';
 import ChangelogDialog, { renderMarkdown } from './ChangelogDialog';
 import Leaderboard from './Leaderboard';
+import RankToast from './RankToast';
 import { TOUR_STEPS } from '../data/tour';
 import Tour from './Tour';
 import { AccusePanel, type AccuseProps } from './GamePanels';
-import { SCORE_BASE, scoreOf, type Play } from '../game/history';
+import { SCORE_BASE, scoreOf, type Board as BoardData, type Play } from '../game/history';
 import changelog from '../../CHANGELOG.md?raw';
 import desktopCss from '../styles/desktop.css?raw';
 import boardCss from '../styles/board.css?raw';
@@ -319,8 +320,8 @@ describe('점수판', () => {
     ...over,
   });
 
-  const render = (plays: Play[]) =>
-    renderToStaticMarkup(createElement(Leaderboard, { plays, code: 'a'.repeat(22) }));
+  const render = (plays: Play[], board: BoardData | null | undefined = undefined) =>
+    renderToStaticMarkup(createElement(Leaderboard, { plays, board }));
 
   it('내 점수를 로컬 기록에서 바로 센다 (서버가 없어도 보인다)', () => {
     const plays = [play({ seed: 'a', n: 7, tries: 2 }), play({ seed: 'b', n: 4, tries: 1 })];
@@ -351,9 +352,41 @@ describe('점수판', () => {
       const html = render([play()]);
       expect(html).not.toContain('아직 순위가 없어');
       expect(html).not.toContain('순위 서버가 없어');
+      expect(render([play()], null)).toContain('순위를 못 받아왔어');
+      expect(render([play()], { top: [], rank: null })).toContain('아직 순위가 없어');
     } finally {
       vi.unstubAllEnvs();
     }
+  });
+});
+
+describe('순위 알림', () => {
+  const toast = (alert: { from: number; to: number } | null) =>
+    renderToStaticMarkup(createElement(RankToast, { alert, onClose: () => {} }));
+
+  it('알릴 게 없어도 살아 있는 영역은 붙어 있다', () => {
+    // role=status 는 붙은 뒤에 내용이 바뀌어야 읽힌다. 알림과 함께 마운트되면 조용히 지나친다
+    const html = toast(null);
+    expect(html).toContain('role="status"');
+    expect(html).not.toContain('class="toast"');
+  });
+
+  it('밀린 자리를 어디서 어디로인지 말한다', () => {
+    const html = toast({ from: 3, to: 5 });
+    expect(html).toContain('class="toast"');
+    expect(html).toContain('3위');
+    expect(html).toContain('5위');
+    // 타이머에만 기대면 천천히 읽는 사람이 놓친다
+    expect(html).toContain('aria-label="알림 닫기"');
+  });
+});
+
+describe('메뉴 버튼의 알림 점', () => {
+  it('알릴 게 없으면 점도 없고 이름표도 그대로다', () => {
+    // 켜진 쪽은 모바일 셸 테스트가 검사한다 (거기는 game 을 통째로 지어낼 수 있다)
+    const html = renderToStaticMarkup(createElement(App));
+    expect(html).toContain('aria-label="더보기"');
+    expect(html).not.toContain('alert-dot');
   });
 });
 

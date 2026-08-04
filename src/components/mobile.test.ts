@@ -94,12 +94,15 @@ describe('모바일 셸 렌더링', () => {
     earned: 0,
     plays: [],
     code: 'a'.repeat(22),
+    board: undefined,
+    rankAlert: null,
     difficulties: DIFFICULTIES,
     setBrush: () => {},
     setAccused: () => {},
     setRevealed: () => {},
     setPlays: () => {},
     setCode: () => {},
+    dismissRank: () => {},
     clearMarks: () => {},
     onCell: () => {},
     accuse: () => {},
@@ -134,6 +137,19 @@ describe('모바일 셸 렌더링', () => {
   it('열 개수를 grid-template-columns 에 직접 박는다 (Safari webkit#202259)', () => {
     expect(html).toContain('grid-template-columns:repeat(6, minmax(0, 1fr))');
     expect(html).not.toContain('--n');
+  });
+
+  it('순위를 뺏기면 메뉴 버튼에 점이 켜지고 이름표도 같이 바뀐다', () => {
+    // 점은 눈에만 보인다 — aria-label 이 그대로면 스크린리더는 알 길이 없다
+    expect(html).toContain('aria-label="메뉴"');
+    expect(html).not.toContain('alert-dot');
+
+    const lit = renderToStaticMarkup(
+      createElement(MobileShell, { game: { ...game, rankAlert: { from: 3, to: 5 } } }),
+    );
+    expect(lit).toContain('aria-label="메뉴 (순위 알림)"');
+    expect(lit).toContain('class="micon alerted"');
+    expect(lit).toContain('alert-dot');
   });
 });
 

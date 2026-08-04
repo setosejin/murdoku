@@ -1,6 +1,18 @@
 import { useEffect, useMemo, useState } from 'react';
 import { DIFFICULTIES, generatePuzzle } from '../game/generate';
-import { addPlay, getCode, loadPlays, scoreOf, sync, type Play } from '../game/history';
+import { getUser } from '../game/auth';
+import {
+  addPlay,
+  checkRank,
+  fetchBoard,
+  getCode,
+  loadPlays,
+  scoreOf,
+  sync,
+  type Board,
+  type Play,
+  type RankDrop,
+} from '../game/history';
 
 const newSeed = () => Math.random().toString(36).slice(2, 8);
 
@@ -25,11 +37,41 @@ export default function useGame() {
   const [earned, setEarned] = useState(0);
   const [plays, setPlays] = useState<Play[]>(loadPlays);
   const [code, setCode] = useState(getCode);
+  // undefined = 아직 받는 중, null = 못 받았다, Board = 받았다.
+  // 셋을 뭉개면 서버가 죽은 걸 "아직 아무도 없다"고 말하게 된다
+  const [board, setBoard] = useState<Board | null | undefined>(undefined);
+  /** 순위를 뺏겼다. 토스트와 메뉴 버튼의 점이 이걸 본다 */
+  const [rankAlert, setRankAlert] = useState<RankDrop | null>(null);
 
   // 기록 코드가 정해지거나 바뀌면 서버와 합친다. 실패는 sync 안에서 삼켜진다
   useEffect(() => {
     sync(code, loadPlays()).then(setPlays);
   }, [code]);
+
+  // 순위표는 점수판이 아니라 여기가 갖는다 — 알림 점이 시트 밖(메뉴 버튼)에 붙어서,
+  // 시트를 안 열어도 순위를 알고 있어야 한다.
+  // 받는 때는 앱을 켤 때·기록이 바뀔 때·탭으로 돌아왔을 때. 주기적으로 캐묻지는 않는다
+  useEffect(() => {
+    let live = true;
+    const pull = () => {
+      fetchBoard(code).then((b) => {
+        if (!live) return;
+        setBoard(b);
+        // 못 받아온 응답으로 순위를 갱신하면 다음에 진짜 순위가 왔을 때 헛알림이 난다
+        const drop = b === null ? null : checkRank(getUser(), b.rank);
+        if (drop !== null) setRankAlert(drop);
+      });
+    };
+    pull();
+    const onShow = () => {
+      if (document.visibilityState === 'visible') pull();
+    };
+    document.addEventListener('visibilitychange', onShow);
+    return () => {
+      live = false;
+      document.removeEventListener('visibilitychange', onShow);
+    };
+  }, [code, plays]);
 
   const puzzle = useMemo(() => generatePuzzle(n, seed), [n, seed]);
   const suspects = puzzle.people.filter((p) => !p.isVictim);
@@ -94,6 +136,8 @@ export default function useGame() {
     earned,
     plays,
     code,
+    board,
+    rankAlert,
     difficulties: DIFFICULTIES,
     setBrush,
     setAccused,
@@ -104,6 +148,8 @@ export default function useGame() {
     },
     setPlays,
     setCode,
+    // 메뉴를 열면 알림은 제 할 일을 다 한 것이다
+    dismissRank: () => setRankAlert(null),
     clearMarks: () => setMarks({}),
     onCell,
     accuse,
