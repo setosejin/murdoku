@@ -8,6 +8,8 @@ import ClueList from './ClueList';
 import MobileShell from './MobileShell';
 import Sheet from './Sheet';
 import mobileCss from '../styles/mobile.css?raw';
+import cluesCss from '../styles/clues.css?raw';
+import motionCss from '../styles/motion.css?raw';
 
 const puzzle = generatePuzzle(5, 'mobile-check');
 
@@ -35,6 +37,22 @@ describe('증언 목록 = 메모 브러시', () => {
 
   it('빈 칸 브러시(X)일 때는 눌린 줄이 없다', () => {
     expect(html('X')).not.toContain('aria-pressed="true"');
+  });
+
+  // 목록이 넘치면 마지막 줄이 반쯤 걸친다. 그 줄을 골랐을 때 걸친 채로 두지 않는다 —
+  // 어디로 갈지는 JS(scrollIntoView), 어떻게 갈지는 CSS 가 정한다
+  it('고른 줄로 미끄러진다 (모션은 CSS 가 정한다)', () => {
+    expect(cluesCss).toContain('scroll-behavior: smooth');
+    expect(motionCss).toContain('scroll-behavior: auto !important');
+  });
+
+  // 넘치는 쪽 가장자리만 흐리게 한다. 늘 켜두면 끝까지 내려도 마지막 줄이
+  // 영영 흐려 보인다 — 끝에 닿은 쪽은 ClueList 가 data-fade 에서 뺀다
+  it('잘린 가장자리만 흐리게 하고 끝에 닿은 쪽은 걷는다', () => {
+    for (const state of ['top', 'bottom', 'both'])
+      expect(cluesCss).toContain(`.clue-list[data-fade='${state}']`);
+    // 안 넘치면 속성 자체가 없다 (서버 렌더에는 effect 가 안 돈다)
+    expect(html('X')).not.toContain('data-fade');
   });
 });
 
@@ -91,6 +109,12 @@ describe('모바일 셸 렌더링', () => {
     expect(html).not.toContain('class="side"');
   });
 
+  // 데스크톱 .topbar 에만 게임 이름이 있어서 모바일에는 h1 자체가 없었다.
+  // 상단바 높이는 옆의 44px 버튼이 정하므로 여기 넣는 건 세로 비용이 0 이다
+  it('게임 이름을 h1 으로 세운다', () => {
+    expect(html).toContain('<h1 class="mbrand">murdoku</h1>');
+  });
+
   it('나머지는 전부 시트로 들어간다', () => {
     expect((html.match(/class="sheet"/g) ?? []).length).toBe(4);
     for (const title of ['범례', '범인 지목', '메뉴'])
@@ -142,5 +166,27 @@ describe('모바일 스타일 불변식', () => {
 
   it('노치 안전영역을 쓴다', () => {
     expect(mobileCss).toContain('env(safe-area-inset-bottom');
+  });
+
+  // 인원수가 곧 증언 줄 수라, 보드에 기준 크기가 없으면 목록이 세로 공간을 먼저
+  // 다 챙겨서 난이도가 오를수록 보드가 깎인다 (iPhone SE 에서 355 → 247px 이었다).
+  // .mplay 는 container-type: size 라 내용이 크기에 관여하지 못한다 —
+  // aspect-ratio 가 유일한 기준값이다
+  it('보드에 정사각 기준 크기가 있다', () => {
+    expect(mobileCss).toContain('aspect-ratio: 1;');
+  });
+
+  // 부족분을 누가 지느냐. 보드 1 : 목록 100 이라 사실상 목록이 다 진다 —
+  // 보드 높이를 calc() 로 역산하지 않고 순환 참조를 flex 가중치로 푼 것
+  it('자리가 모자라면 증언 목록이 보드보다 먼저 줄어든다', () => {
+    expect(mobileCss).toContain('flex: 1 1 auto'); // .mplay
+    expect(mobileCss).toContain('flex: 0 100 auto'); // .mshell > .clue-list
+    expect(mobileCss).toContain('min-height: 132px'); // 증언 3줄 바닥
+  });
+
+  // 가로 모드는 grid 라 aspect-ratio 가 트랙 계산을 어긋나게 하고,
+  // 구형 Safari 경로는 폭에만 맞추고 넘치면 스크롤하는 다른 배분이다
+  it('가로 모드와 구형 Safari 경로에서는 정사각 기준을 되돌린다', () => {
+    expect((mobileCss.match(/aspect-ratio: auto;/g) ?? []).length).toBe(2);
   });
 });

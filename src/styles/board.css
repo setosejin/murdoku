@@ -52,12 +52,12 @@
 .board {
   display: grid;
   /* grid-template-columns 는 Board.tsx 가 인라인으로 넣는다 (Safari 가 var() 를 캐싱한다) */
-  /* 위계: 외벽 5px > 방 경계 3px > 칸선 1px */
-  border: 5px solid var(--wall);
-  border-radius: 4px;
-  /* 칸이 모서리를 덮어서 라운딩이 안 보이던 것 */
+  /* 위계: 외벽 5px > 방 경계 3px > 칸선 1px.
+     **보드에는 테두리가 없다.** 외벽은 칸이 그린다 — 건물이 격자를 꽉 채우지
+     않으므로 사각 테두리를 두르면 ㄱ자 건물에도 정사각형 액자가 남는다.
+     바탕도 없다. 건물 밖 칸이 투명이라 그 자리는 종이가 그대로 보인다 */
+  /* 트랙 계산이 어긋나도(webkit#202259) 레이아웃을 밀지 않게 잘라 둔다 */
   overflow: hidden;
-  background: var(--tile);
   max-width: 620px;
   width: 100%;
   margin: 0 auto;
@@ -134,14 +134,13 @@
 
 /* ---- 실루엣 밖 ----
    건물 모양이 격자를 다 채우지 않는다. 방이 아닌 칸은 <div> 라 눌리지도 포커스도 안 잡힌다.
-   테두리는 방 칸과 똑같은 규칙을 탄다 — 건물 외곽선은 방↔빈칸 경계의 3px 벽이 그린다.
-   (빈칸끼리는 Board.tsx 가 굵기 0 을 넣는다) */
+   선은 방 칸이 다 그린다 (Board.tsx) — 빈 칸은 굵기 0 이다. */
 .cell.void {
   cursor: default;
 }
-/* 건물 바깥 = 빈 땅. 무늬 없이 종이보다 한 톤 낮게 깔아 건물이 떠 보이게 한다 */
+/* 건물 바깥은 종이다. 색을 깔면 실루엣이 아니라 액자 안의 여백처럼 읽힌다 */
 .cell.void.outer {
-  --floor-tint: #ece4d1;
+  --floor-tint: transparent;
 }
 
 /* 상태 표시는 배경을 갈아끼우는 대신 위에 덧칠한다 (바닥 무늬가 살아 있게) */
