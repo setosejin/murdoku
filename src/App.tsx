@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
-import Board, { SpriteDefs } from './components/Board';
+import Board from './components/Board';
+import { SpriteDefs } from './components/Art';
 import CaseCards from './components/CaseCards';
 import ChangelogDialog from './components/ChangelogDialog';
 import ClueList from './components/ClueList';
@@ -149,7 +150,6 @@ export default function App() {
             revealed={game.revealed}
             setRevealed={game.setRevealed}
           />
-          <LegendPanel furniture={puzzle.furniture} />
         </div>
       </section>
 
@@ -174,8 +174,12 @@ export default function App() {
       <Sheet modal open={dialog === 'case'} onClose={close} title={puzzle.title}>
         <p className="brief">{puzzle.brief}</p>
         <CaseCards puzzle={puzzle} />
-        {/* 규칙은 처음 한 번 읽고 마는 것이라 사이드 열을 계속 차지할 이유가 없다.
-            6x6 에서는 범례만으로도 열이 꽉 찬다 (모바일 `사건` 시트도 같은 자리에 둔다) */}
+        {/* 규칙도 범례도 처음 한 번 읽고 마는 것이라 사이드 열을 계속 차지할 이유가
+            없다. 열 폭은 clamp 로 고정이라 보드가 넓어지지는 않지만, 늘 보이던
+            가구 목록이 빠져서 기본 화면에 남는 건 보드와 증언뿐이다.
+            범례 기준은 사건마다 다르므로 브리핑에서 사건과 같이 읽는 게 맞다
+            (모바일 `사건` 시트도 같은 자리) */}
+        <LegendPanel furniture={puzzle.furniture} />
         <RulesPanel />
       </Sheet>
 

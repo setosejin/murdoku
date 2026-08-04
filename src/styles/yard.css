@@ -1,0 +1,141 @@
+/* ---- 안뜰의 주인 ----
+   `donut` 실루엣이 만든 갇힌 빈 칸(안뜰·연못)을 돌아다니는 짐승.
+   못 누르는 칸이라는 걸 글자보다 먼저 몸으로 말한다.
+
+   두 겹이다 — 그림(`.yard-pet`, 칸 하나 크기)과 안뜰 전체를 덮는 투명한 판(`.yard-plate`).
+   판이 포인터를 받아 짐승을 그 칸으로 부른다.
+   좌표·크기·트랙 수는 `YardPet.tsx` 가 인라인으로 넣는다 — 값이 바뀌는 자리에
+   `calc(var())` 를 쓰면 Safari 가 옛 값을 붙잡는다 (webkit#202259). */
+
+.yard-pet {
+  position: absolute;
+  top: 0;
+  left: 0;
+  display: grid;
+  place-items: center;
+  /* 포인터는 판이 받는다. 그림이 가로채면 자기가 선 칸에서만 반응하게 된다 */
+  pointer-events: none;
+  /* 바닥 그림 위, 안뜰 이름표(4) 아래 */
+  z-index: 3;
+  /* 걸음. translate 는 자기 크기 기준이고 크기가 정확히 한 칸이라 100% = 한 칸이다 */
+  transition: translate 550ms var(--ease-out);
+}
+
+/* 왼쪽으로 걸을 때만 뒤집는다. 스프라이트는 전부 오른쪽을 보게 그려져 있다.
+   translate·scale 은 별개 속성이라 서로 덮어쓰지 않는다 */
+.yard-pet.left {
+  scale: -1 1;
+}
+
+.yard-pet .art {
+  /* 가구(칸의 68%)보다 작다 — 세간이 아니라 지나다니는 것으로 읽히게 */
+  width: 56%;
+  height: 56%;
+  /* 스프라이트에 아이콘이 없어 이모지로 떨어졌을 때 */
+  font-size: clamp(11px, 3.6cqw, 22px);
+  /* 바닥 무늬에 눌어붙지 않게 가구와 같은 그림자를 깐다 */
+  filter: drop-shadow(1.5px 2px 0 #23201c2e);
+  animation: pet-breathe 2.6s ease-in-out infinite;
+}
+
+/* 눌렸을 때: 폴짝 + 느낌표.
+   ponytail: 이름만 다른 쌍둥이 키프레임. 연달아 누를 때 animation-name 이 바뀌어야
+   처음부터 다시 돈다 (`.cell.denied` 가 쓰는 것과 같은 수법 — 재마운트하면
+   산책 상태가 통째로 날아간다).
+   숨쉬기는 `scale`, 폴짝은 `translate` 을 건드려서 둘이 겹쳐 돌아도 안 싸운다 */
+.yard-pet.startled .art {
+  animation:
+    pet-breathe 2.6s ease-in-out infinite,
+    pet-hop 520ms var(--ease-out);
+}
+.yard-pet.startled.alt .art {
+  animation-name: pet-breathe, pet-hop-alt;
+}
+
+.yard-pet.startled::after,
+.yard-pet.startled.alt::after {
+  content: '!';
+  position: absolute;
+  top: 0;
+  right: 8%;
+  font-size: clamp(10px, 3.2cqw, 20px);
+  font-weight: 800;
+  color: var(--wall);
+  /* 애니메이션이 끝나면 저절로 사라진다 — 상태를 되돌릴 필요가 없다 */
+  opacity: 0;
+  animation: pet-bang 900ms var(--ease-out);
+}
+.yard-pet.startled.alt::after {
+  animation-name: pet-bang-alt;
+}
+
+@keyframes pet-breathe {
+  50% {
+    scale: 1.07;
+  }
+}
+@keyframes pet-hop {
+  35% {
+    translate: 0 -24%;
+  }
+  70% {
+    translate: 0 0;
+  }
+  85% {
+    translate: 0 -8%;
+  }
+}
+@keyframes pet-hop-alt {
+  35% {
+    translate: 0 -24%;
+  }
+  70% {
+    translate: 0 0;
+  }
+  85% {
+    translate: 0 -8%;
+  }
+}
+@keyframes pet-bang {
+  20% {
+    opacity: 1;
+    translate: 0 -20%;
+  }
+  70% {
+    opacity: 1;
+    translate: 0 -20%;
+  }
+}
+@keyframes pet-bang-alt {
+  20% {
+    opacity: 1;
+    translate: 0 -20%;
+  }
+  70% {
+    opacity: 1;
+    translate: 0 -20%;
+  }
+}
+
+/* 안뜰을 덮는 투명한 판. 안뜰 칸은 <div> 라 아무 이벤트도 안 받는데,
+   여기서 받아 짐승을 부르고 안내문을 띄운다. <button> 이 아닌 이유:
+   누를 수 없다는 게 요지라 포커스 대상이 되면 안 된다 */
+.yard-plate {
+  position: absolute;
+  display: grid;
+  /* grid-template-columns 는 YardPet.tsx 가 인라인으로 넣는다 */
+  grid-auto-rows: minmax(0, 1fr);
+  /* 그림보다 위. 판 자체는 투명하다 */
+  z-index: 5;
+  cursor: default;
+}
+.yard-plate > span {
+  /* iOS 더블탭 확대를 끈다 */
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+/* 안뜰이 아닌 칸까지 판이 덮으면 진짜 칸의 클릭을 먹는다.
+   (지금은 안뜰이 늘 직사각형이라 안 생기지만, 모양이 늘면 여기서 걸러진다) */
+.yard-plate > .yard-gap {
+  pointer-events: none;
+}

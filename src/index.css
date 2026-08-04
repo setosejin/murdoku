@@ -6,6 +6,8 @@
 @import './styles/footer.css';
 @import './styles/case.css';
 @import './styles/board.css';
+@import './styles/wall.css';
+@import './styles/yard.css';
 @import './styles/panels.css';
 @import './styles/clues.css';
 @import './styles/history.css';

@@ -56,6 +56,10 @@
      **보드에는 테두리가 없다.** 외벽은 칸이 그린다 — 건물이 격자를 꽉 채우지
      않으므로 사각 테두리를 두르면 ㄱ자 건물에도 정사각형 액자가 남는다.
      바탕도 없다. 건물 밖 칸이 투명이라 그 자리는 종이가 그대로 보인다 */
+  /* 안뜰의 주인이 보드 기준으로 자리를 잡는다 (`.yard-pet` · `.yard-plate`).
+     `container-type` 의 layout containment 가 이미 containing block 을 만들지만,
+     그 부수효과에 기대지 않는다 */
+  position: relative;
   /* 트랙 계산이 어긋나도(webkit#202259) 레이아웃을 밀지 않게 잘라 둔다 */
   overflow: hidden;
   max-width: 620px;
@@ -314,68 +318,6 @@ img.art,
 .portrait img {
   outline: 1px solid oklch(0 0 0 / 0.1);
   outline-offset: -1px;
-}
-
-/* 창문·문·울타리·대문은 벽(또는 경계)에 박힌 물건이라 칸을 막지 않는다 */
-.wall-item {
-  position: absolute;
-  display: grid;
-  place-items: center;
-  background: var(--paper);
-  border: 2px solid var(--wall);
-  border-radius: 3px;
-  pointer-events: none;
-  z-index: 3;
-  font-size: 10px;
-  font-weight: 700;
-  line-height: 1;
-}
-.wall-item.window {
-  background: #d9ecfa;
-}
-.wall-item.door {
-  background: #efdcc4;
-}
-/* 야외 경계 — 하늘이 뚫린 칸에는 창문 대신 울타리, 문 대신 대문이 선다 */
-.wall-item.fence {
-  background: #dfe9d4;
-}
-.wall-item.gate {
-  background: #e8dcc0;
-}
-.wall-item .art {
-  font-size: clamp(8px, 1.9cqw, 11px);
-}
-.wall-item svg.art {
-  width: clamp(8px, 2cqw, 12px);
-  height: clamp(8px, 2cqw, 12px);
-  stroke-width: 2.4;
-}
-.wall-item.top,
-.wall-item.bottom {
-  left: 50%;
-  translate: -50% 0;
-  width: clamp(18px, 40%, 40px);
-  height: clamp(10px, 2.6cqw, 15px);
-}
-.wall-item.top {
-  top: 1px;
-}
-.wall-item.bottom {
-  bottom: 1px;
-}
-.wall-item.left,
-.wall-item.right {
-  top: 50%;
-  translate: 0 -50%;
-  height: clamp(18px, 40%, 40px);
-  width: clamp(10px, 2.6cqw, 15px);
-}
-.wall-item.left {
-  left: 1px;
-}
-.wall-item.right {
-  right: 1px;
 }
 
 .room-label {

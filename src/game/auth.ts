@@ -5,13 +5,27 @@
  *
  * history.ts 와 같은 규약: 앞쪽은 워커도 import 하므로 localStorage·import.meta.env 를 건드리지 않는다.
  */
-import { isCode, readLS, writeLS } from './history';
+import { isCode, MAX_NICK_LEN, readLS, writeLS } from './history';
 
 const ID_RE = /^[a-z0-9_]{3,20}$/;
 const DK_RE = /^[0-9a-f]{64}$/;
 
 /** 소문자로 못박아 대소문자만 다른 계정이 생기는 걸 막고, KV 키 공간도 여기서 결정된다 */
 export const isUserId = (v: unknown): v is string => typeof v === 'string' && ID_RE.test(v);
+
+/**
+ * 순위표에 띄울 닉네임. 아이디와 달리 남들 화면에 그려지는 값이라 규칙이 다르다.
+ *
+ * 글자 종류는 안 따진다 — 한글도 이모지도 받는다. 대신 `\p{C}` (제어·서식·짝 잃은 서로게이트)
+ * 는 막는다. 폭 0 문자나 방향 뒤집기 문자는 눈에 안 보이면서 남의 줄까지 흐트러뜨린다.
+ * 앞뒤 공백은 자른 뒤라야 통과다. 안 그러면 `  ` 같은 이름이 빈 칸으로 앉는다.
+ */
+export const isNick = (v: unknown): v is string =>
+  typeof v === 'string' &&
+  v === v.trim() &&
+  v.length > 0 &&
+  v.length <= MAX_NICK_LEN &&
+  !/\p{C}/u.test(v);
 
 /** 서버가 받는 건 비밀번호가 아니라 늘린 결과(32바이트 hex)다 */
 export const isDk = (v: unknown): v is string => typeof v === 'string' && DK_RE.test(v);
@@ -74,6 +88,7 @@ export function constantTimeEqual(a: string, b: string): boolean {
 // ── 여기서부터는 브라우저 전용 ──
 
 const USER_KEY = 'murdoku.user';
+const NICK_KEY = 'murdoku.nick';
 
 /** 로그인한 아이디. 없으면 빈 문자열 = 게스트 */
 export function getUser(): string {
@@ -85,14 +100,30 @@ export function setUser(id: string) {
   writeLS(USER_KEY, id);
 }
 
+/**
+ * 순위표에 띄우는 이름. 없으면 빈 문자열 = 아이디를 그대로 쓴다.
+ *
+ * 진짜 값은 서버에 있고 여기 있는 건 사본이다 — 입력칸에 지금 이름을 채워 넣으려고 둔다.
+ * 로그인할 때 서버가 같이 내려주므로 기기를 옮겨도 맞춰진다.
+ */
+export function getNick(): string {
+  const saved = readLS(NICK_KEY);
+  return isNick(saved) ? saved : '';
+}
+
+export function setNick(nick: string) {
+  writeLS(NICK_KEY, nick);
+}
+
 /** 동기화 서버가 없는 빌드(포크 등)에서는 로그인 UI 를 아예 감춘다 */
 export const syncEnabled = () => Boolean(import.meta.env?.VITE_SYNC_URL);
 
-export type AuthResult = { ok: true; code: string } | { ok: false; error: string };
+export type AuthResult = { ok: true; code: string; nick: string } | { ok: false; error: string };
 
 const MESSAGES: Record<number, string> = {
   400: '아이디나 비밀번호 형식이 안 맞아.',
   401: '아이디나 비밀번호가 틀렸어.',
+  404: '그런 계정이 없어.',
   409: '이미 있는 아이디야.',
   413: '보낸 내용이 너무 커.',
 };
@@ -108,11 +139,37 @@ async function call(path: 'signup' | 'login', id: string, dk: string): Promise<A
     });
     if (!res.ok) return { ok: false, error: MESSAGES[res.status] ?? '서버가 응답을 안 해.' };
     const body: unknown = await res.json();
-    const code = (body as { code?: unknown })?.code;
+    const { code, nick } = (body ?? {}) as { code?: unknown; nick?: unknown };
     // 서버가 준 코드도 검증한다. 이 값이 곧 KV 키가 된다
-    return isCode(code) ? { ok: true, code } : { ok: false, error: '서버 응답이 이상해.' };
+    return isCode(code)
+      ? { ok: true, code, nick: isNick(nick) ? nick : '' }
+      : { ok: false, error: '서버 응답이 이상해.' };
   } catch {
     return { ok: false, error: '연결이 안 돼.' };
+  }
+}
+
+/**
+ * 순위표에 띄울 이름을 바꾼다. 빈 문자열이면 지우고 아이디로 돌아간다.
+ *
+ * 비밀번호를 다시 안 묻는다 — 이 앱에서 기록 코드가 곧 신원이라(`/h/:code` 도 코드만 본다)
+ * 코드를 쥔 사람은 이미 기록을 통째로 고칠 수 있다. 여기만 더 잠가봐야 얻는 게 없다.
+ */
+export async function setNickname(code: string, nick: string): Promise<string | null> {
+  const base = import.meta.env?.VITE_SYNC_URL;
+  if (!base) return '이 빌드에는 동기화 서버가 없어.';
+  if (nick !== '' && !isNick(nick)) return `이름은 보이는 글자로 1~${MAX_NICK_LEN}자야.`;
+  try {
+    const res = await fetch(`${base}/a/nick`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ code, nick }),
+    });
+    if (!res.ok) return MESSAGES[res.status] ?? '서버가 응답을 안 해.';
+    setNick(nick);
+    return null;
+  } catch {
+    return '연결이 안 돼.';
   }
 }
 

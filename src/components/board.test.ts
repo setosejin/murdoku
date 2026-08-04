@@ -1,3 +1,7 @@
+/**
+ * 보드 자체의 렌더링 — 칸·가구·메모·실루엣·벽 부착물.
+ * 앱 셸과 모달은 `render.test.ts`, 안뜰의 주인은 `yard.test.ts` 가 본다.
+ */
 import { describe, expect, it } from 'vitest';
 import { createElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
@@ -5,6 +9,8 @@ import { DIFFICULTIES, generatePuzzle } from '../game/generate';
 import { indexScene } from '../game/clues';
 import Board from './Board';
 import boardCss from '../styles/board.css?raw';
+import wallCss from '../styles/wall.css?raw';
+import indexCss from '../index.css?raw';
 
 describe('Board 렌더링', () => {
   const render = (revealed: boolean, marks: Record<string, string> = {}) => {
@@ -241,5 +247,77 @@ describe('실루엣 렌더링', () => {
         for (const c of f.cells) expect(idx.voidKind[c.r][c.c]).toBeNull();
       for (const w of p.wallItems) expect(idx.voidKind[w.cell.r][w.cell.c]).toBeNull();
     }
+  });
+});
+
+// 증언이 `창문 앞` 처럼 이름을 불러서, 그림만 있고 이름이 없으면 문과 창문을
+// 가려낼 수가 없다. 그리고 예전 10px 탭은 6×6 부터 눈에 안 띄었다
+describe('벽 부착물', () => {
+  const seeds = ['render-check', 'wall-1', 'wall-2', 'wall-3', 'wall-4'];
+  const scenes = seeds.map((seed) => {
+    const p = generatePuzzle(6, seed);
+    return {
+      p,
+      html: renderToStaticMarkup(
+        createElement(Board, { puzzle: p, marks: {}, onCell: () => {}, revealed: false }),
+      ),
+    };
+  });
+
+  it('전부 방향 클래스와 이름표를 달고 나온다', () => {
+    for (const { p, html } of scenes) {
+      expect(p.wallItems.length).toBeGreaterThan(0);
+      for (const w of p.wallItems) {
+        expect(['top', 'right', 'bottom', 'left']).toContain(w.side);
+        expect(html).toContain(`class="wall-item ${w.side} ${w.kind}"`);
+        expect(html).toContain(`<span class="wall-label">${w.label}</span>`);
+      }
+      expect((html.match(/class="wall-label"/g) ?? []).length).toBe(p.wallItems.length);
+    }
+  });
+
+  // 둘 다 칸 모서리에 붙어서 넷 중 하나꼴로 같은 자리를 놓고 싸웠다
+  it('방 이름표와 같은 칸에 겹치지 않는다', () => {
+    for (const { p, html } of scenes) {
+      const chunks = html.split('<button type="button"').slice(1);
+      expect(chunks.length).toBeGreaterThan(0);
+      for (const cell of chunks)
+        expect(cell.includes('wall-item') && cell.includes('room-label')).toBe(false);
+      // 방 이름표는 여전히 방마다 하나씩 다 나온다 (가구를 피해 위로 올라간 것도 포함)
+      for (const room of p.rooms) {
+        const hits = html.match(new RegExp(`class="room-label(?: high)?">${room.name}<`, 'g')) ?? [];
+        expect(hits.length, room.name).toBe(1);
+      }
+    }
+  });
+
+  // 바깥 모서리를 외벽 바깥선에 맞춘다. `Board.tsx` 가 외벽을 5px 로 그리는데
+  // 절대배치 자식의 top/left 는 padding box 기준이라 -5px 가 정확히 그 바깥선이다
+  it('바깥 모서리 오프셋이 Board 의 외벽 두께와 같다', () => {
+    for (const side of ['top', 'bottom', 'left', 'right'] as const) {
+      const offsets = [
+        ...wallCss.matchAll(new RegExp(`\\.wall-item\\.${side}\\s*\\{([^}]*)\\}`, 'g')),
+      ]
+        .map((m) => m[1].match(new RegExp(`(?:^|;)\\s*${side}:\\s*(-?\\d+)px`))?.[1])
+        .filter((x) => x !== undefined);
+      expect(offsets, side).toEqual(['-5']);
+    }
+
+    const { html } = scenes[0];
+    const outer = [...html.matchAll(/border-width:([^;"]*)/g)]
+      .flatMap((m) => m[1].split(' ').map((x) => parseInt(x, 10)))
+      .filter((x) => x === 5);
+    expect(outer.length).toBeGreaterThan(0);
+  });
+
+  it('board.css 다음에 인라인된다 (import 순서 = 캐스케이드 순서)', () => {
+    expect(indexCss.indexOf('wall.css')).toBeGreaterThan(indexCss.indexOf('board.css'));
+    expect(indexCss.indexOf('wall.css')).toBeLessThan(indexCss.indexOf('mobile.css'));
+  });
+
+  // 칸 <button> 위에 앉으므로 포인터를 먹으면 그 칸을 못 누른다
+  it('포인터를 가로채지 않는다', () => {
+    const block = wallCss.slice(wallCss.indexOf('.wall-item {'));
+    expect(block.slice(0, block.indexOf('}'))).toContain('pointer-events: none');
   });
 });

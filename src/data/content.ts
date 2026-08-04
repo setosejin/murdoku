@@ -46,6 +46,20 @@ export type WallItemSpec = {
 };
 
 /**
+ * 안뜰에 사는 짐승. 못 누르는 칸을 몸으로 막아서 이유를 그림으로 먼저 말한다.
+ * 테마마다 안뜰이 달라서(잔디 안뜰 · 물 연못) 주인도 같이 갈린다.
+ */
+export type PetSpec = {
+  /** 스프라이트 아이콘 이름. `i-<kind>` 와 `i-<kind>-sit` 이 둘 다 있어야 한다 */
+  kind: string;
+  label: string;
+  emoji: string;
+  /** 안뜰을 눌렀을 때 띄우는 한 줄. 조사가 이름마다 달라 조립하지 않고 통째로 둔다 */
+  deny: string;
+  image?: string;
+};
+
+/**
  * 사건 테마. 방·가구·벽부착물·제목·직업이 한 묶음이라
  * `욕실`과 `돼지우리`가 같은 사건에 섞이지 않는다.
  */
@@ -66,7 +80,7 @@ export type Theme = {
    * 건물 안쪽에 갇힌 빈 칸(안뜰·연못)을 그리는 법. 실루엣이 `donut` 일 때만 쓴다.
    * 건물 바깥으로 트인 빈 칸은 그냥 빈 땅이라 그리지 않는다.
    */
-  courtyard: { label: string; emoji: string; floor: FloorKind };
+  courtyard: { label: string; emoji: string; floor: FloorKind; pet: PetSpec };
   titles: readonly string[];
   briefs: readonly string[];
   roles: readonly string[];
@@ -86,7 +100,12 @@ const MANSION: Theme = {
     { name: '작업실', floor: 'wood' },
     { name: '복도', floor: 'tile' },
   ],
-  courtyard: { label: '안뜰', emoji: '⛲', floor: 'grass' },
+  courtyard: {
+    label: '안뜰',
+    emoji: '⛲',
+    floor: 'grass',
+    pet: { kind: 'cat', label: '고양이', emoji: '🐈', deny: '고양이가 막아섰다 — 안뜰은 건물 밖이야' },
+  },
   furniture: [
     { kind: 'bed', label: '침대', emoji: '🛏️', size: 2, standable: true, rooms: ['침실', '손님방'] },
     { kind: 'sofa', label: '소파', emoji: '🛋️', size: 3, standable: true, rooms: ['거실', '서재', '손님방'] },
@@ -137,7 +156,12 @@ const FARM: Theme = {
     { name: '작업실', floor: 'wood' },
     { name: '우물가', floor: 'soil' },
   ],
-  courtyard: { label: '연못', emoji: '💧', floor: 'water' },
+  courtyard: {
+    label: '연못',
+    emoji: '💧',
+    floor: 'water',
+    pet: { kind: 'duck', label: '오리', emoji: '🦆', deny: '오리가 막아섰다 — 연못은 건물 밖이야' },
+  },
   furniture: [
     { kind: 'haystack', label: '건초더미', emoji: '🌾', size: 4, standable: true, rooms: ['외양간', '헛간', '돼지우리', '창고'] },
     { kind: 'trough', label: '여물통', emoji: '🥣', size: 3, standable: false, rooms: ['외양간', '돼지우리', '목초지'] },
@@ -192,7 +216,19 @@ const OFFICE: Theme = {
     { name: '엘리베이터', floor: 'acrylic' },
     { name: '회의실', floor: 'acrylic' },
   ],
-  courtyard: { label: '아트리움', emoji: '🪴', floor: 'grass' },
+  courtyard: {
+    label: '아트리움',
+    emoji: '🪴',
+    floor: 'grass',
+    /* 짐승이 사는 층이 아니라 화분 사이를 도는 청소로봇을 뒀다. 몸으로 칸을
+       막아 "여기는 못 선다"를 먼저 말하는 몫은 고양이·오리와 같다 */
+    pet: {
+      kind: 'robovac',
+      label: '청소로봇',
+      emoji: '🤖',
+      deny: '청소로봇이 막아섰다 — 아트리움은 사무실 밖이야',
+    },
+  },
   furniture: [
     { kind: 'desk', label: '책상', emoji: '🗄️', size: 2, standable: false, rooms: ['A존', 'B존', '회의실'] },
     { kind: 'sofa', label: '소파', emoji: '🛋️', size: 3, standable: true, rooms: ['라운지'] },
