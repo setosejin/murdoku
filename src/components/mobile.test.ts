@@ -88,6 +88,12 @@ describe('모바일 셸 렌더링', () => {
     expect(html).not.toContain('class="side"');
   });
 
+  // 데스크톱 .topbar 에만 게임 이름이 있어서 모바일에는 h1 자체가 없었다.
+  // 상단바 높이는 옆의 44px 버튼이 정하므로 여기 넣는 건 세로 비용이 0 이다
+  it('게임 이름을 h1 으로 세운다', () => {
+    expect(html).toContain('<h1 class="mbrand">murdoku</h1>');
+  });
+
   it('나머지는 전부 시트로 들어간다', () => {
     expect((html.match(/class="sheet"/g) ?? []).length).toBe(4);
     for (const title of ['범례', '범인 지목', '메뉴'])
