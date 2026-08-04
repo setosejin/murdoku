@@ -123,9 +123,18 @@ describe('모바일 셸 렌더링', () => {
   });
 
   it('나머지는 전부 시트로 들어간다', () => {
-    expect((html.match(/class="sheet"/g) ?? []).length).toBe(4);
-    for (const title of ['범례', '범인 지목', '메뉴'])
+    expect((html.match(/class="sheet"/g) ?? []).length).toBe(3);
+    for (const title of [shellPuzzle.title, '범인 지목', '메뉴'])
       expect(html).toContain(`aria-label="${title}"`);
+  });
+
+  // 범례는 상시 노출하던 시트에서 브리핑 안으로 들어갔다. 사건을 읽는 자리에서
+  // 가구 규칙을 같이 보는 게 맞고, 하단바도 버튼 하나만큼 가벼워진다
+  it('범례가 브리핑 시트 안에 있다', () => {
+    const brief = html.slice(html.indexOf(`aria-label="${shellPuzzle.title}"`));
+    const legend = brief.indexOf('class="panel legend"');
+    expect(legend).toBeGreaterThan(-1);
+    expect(legend).toBeLessThan(brief.indexOf('</dialog>'));
   });
 
   it('범례 시트가 이번 사건의 가구를 빠짐없이 설명한다', () => {
