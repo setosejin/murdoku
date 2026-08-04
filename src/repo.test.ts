@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import sprite from './assets/sprite.svg?raw';
 import html from '../index.html?raw';
 import { THEMES } from './data/content';
+import { FLOOR_KINDS } from './game/types';
 
 const MAX_LINES = 500;
 
@@ -42,6 +43,17 @@ describe('저장소 규약', () => {
       .map(([path]) => path);
 
     expect(bad).toEqual([]);
+  });
+
+  // FloorKind 에만 넣고 CSS 를 안 그리면 그 방은 조용히 기본 타일색으로 깔린다.
+  // 눈으로 보기 전까지 아무도 모르므로 값 목록과 스타일을 직접 맞춰 본다
+  it('바닥 재질마다 질감이 있다', () => {
+    // 키가 '/src/styles/board.css' 지만 glob 패턴이 바뀌어도 조용히 undefined 가
+    // 되지 않게 끝자락으로 찾는다
+    const board = Object.entries(sources).find(([p]) => p.endsWith('/styles/board.css'))?.[1];
+    expect(board, 'board.css 를 못 읽었다').toBeTruthy();
+    for (const kind of FLOOR_KINDS)
+      expect(board, `${kind} 바닥에 스타일이 없다`).toContain(`[data-floor='${kind}']`);
   });
 });
 

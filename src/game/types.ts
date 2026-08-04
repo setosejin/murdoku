@@ -2,8 +2,23 @@ import type { Theme } from '../data/content';
 
 export type Cell = { r: number; c: number };
 
-/** 방 바닥 재질. 판정에는 안 쓰이고 그림에만 쓴다 */
-export type FloorKind = 'wood' | 'tile' | 'carpet' | 'grass' | 'soil' | 'straw' | 'water';
+/**
+ * 방 바닥 재질. 판정에는 안 쓰이고 그림에만 쓴다.
+ * 타입이 아니라 값 목록인 이유 — board.css 에 질감이 빠진 재질이 없는지 테스트가 훑는다
+ */
+export const FLOOR_KINDS = [
+  'wood',
+  'tile',
+  'carpet',
+  'grass',
+  'soil',
+  'straw',
+  'water',
+  'coated',
+  'acrylic',
+] as const;
+
+export type FloorKind = (typeof FLOOR_KINDS)[number];
 
 export type Room = {
   id: number;
