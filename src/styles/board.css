@@ -307,68 +307,6 @@ img.art,
   outline-offset: -1px;
 }
 
-/* 창문·문·울타리·대문은 벽(또는 경계)에 박힌 물건이라 칸을 막지 않는다 */
-.wall-item {
-  position: absolute;
-  display: grid;
-  place-items: center;
-  background: var(--paper);
-  border: 2px solid var(--wall);
-  border-radius: 3px;
-  pointer-events: none;
-  z-index: 3;
-  font-size: 10px;
-  font-weight: 700;
-  line-height: 1;
-}
-.wall-item.window {
-  background: #d9ecfa;
-}
-.wall-item.door {
-  background: #efdcc4;
-}
-/* 야외 경계 — 하늘이 뚫린 칸에는 창문 대신 울타리, 문 대신 대문이 선다 */
-.wall-item.fence {
-  background: #dfe9d4;
-}
-.wall-item.gate {
-  background: #e8dcc0;
-}
-.wall-item .art {
-  font-size: clamp(8px, 1.9cqw, 11px);
-}
-.wall-item svg.art {
-  width: clamp(8px, 2cqw, 12px);
-  height: clamp(8px, 2cqw, 12px);
-  stroke-width: 2.4;
-}
-.wall-item.top,
-.wall-item.bottom {
-  left: 50%;
-  translate: -50% 0;
-  width: clamp(18px, 40%, 40px);
-  height: clamp(10px, 2.6cqw, 15px);
-}
-.wall-item.top {
-  top: 1px;
-}
-.wall-item.bottom {
-  bottom: 1px;
-}
-.wall-item.left,
-.wall-item.right {
-  top: 50%;
-  translate: 0 -50%;
-  height: clamp(18px, 40%, 40px);
-  width: clamp(10px, 2.6cqw, 15px);
-}
-.wall-item.left {
-  left: 1px;
-}
-.wall-item.right {
-  right: 1px;
-}
-
 .room-label {
   position: absolute;
   right: 3px;
