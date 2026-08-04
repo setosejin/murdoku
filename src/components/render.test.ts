@@ -8,6 +8,8 @@ import { DifficultySeg } from './GamePanels';
 import FeedbackDialog, { issueUrl } from './FeedbackDialog';
 import ChangelogDialog, { renderMarkdown } from './ChangelogDialog';
 import Leaderboard from './Leaderboard';
+import { TOUR_STEPS } from '../data/tour';
+import Tour from './Tour';
 import { AccusePanel, type AccuseProps } from './GamePanels';
 import { SCORE_BASE, scoreOf, type Play } from '../game/history';
 import changelog from '../../CHANGELOG.md?raw';
@@ -154,6 +156,31 @@ describe('App 렌더링', () => {
     expect(html).toContain('class="panel accuse"');
     // 증언 줄이 곧 브러시 — 목록이 시트가 아니라 증언 패널 안에 있어야 성립한다
     expect(html).toMatch(/class="panel dclues".*class="clue-list".*class="dclues-bar"/s);
+  });
+
+  // 스포트라이트는 셀렉터로 자리를 찾는다. 겨눌 자리를 못 찾아도 에러 없이
+  // 구멍만 사라지므로, 클래스 이름을 바꾸면 온보딩이 조용히 반쯤 죽는다
+  it('온보딩이 겨누는 자리가 전부 실제로 그려진다', () => {
+    for (const s of TOUR_STEPS) {
+      const cls = s.sel.slice(1);
+      expect(html).toMatch(new RegExp(`class="[^"]*\\b${cls}\\b`));
+    }
+  });
+
+  it('온보딩은 증언 아래 ? 로 다시 연다', () => {
+    // 첫 방문 자동 열기는 마운트 뒤 effect 라 서버 렌더에는 안 나온다
+    expect(html).toContain('aria-label="게임 방법 보기"');
+    expect(html).not.toContain('class="tour"');
+  });
+
+  // 자리 재기(document.querySelector·getBoundingClientRect)가 effect 밖으로
+  // 새어 나오면 여기서 먼저 터진다 — 브라우저에서는 한참 뒤에나 보인다
+  it('온보딩은 DOM 없이도 첫 단계를 그린다', () => {
+    const tour = renderToStaticMarkup(createElement(Tour, { onClose: () => {} }));
+    expect(tour).toContain(TOUR_STEPS[0].title);
+    expect(tour).toContain(`1 / ${TOUR_STEPS.length}`);
+    // 첫 단계에서는 되돌아갈 데가 없다
+    expect(tour).toMatch(/aria-label="이전 단계"[^>]*disabled/);
   });
 });
 

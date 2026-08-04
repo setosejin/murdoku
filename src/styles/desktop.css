@@ -126,6 +126,21 @@
   padding: 6px 8px;
   font-size: 13px;
 }
+/* 온보딩 여는 ? 는 게임 동작이 아니라 안내다 — 늘어나지 않는 조용한 원으로 둔다 */
+.dclues-bar .chip.icon {
+  flex: none;
+  width: 40px;
+  padding: 0;
+  font-size: 16px;
+  border-color: var(--tile-line);
+  color: var(--muted);
+}
+@media (hover: hover) and (pointer: fine) {
+  .dclues-bar .chip.icon:hover {
+    border-color: var(--wall);
+    color: var(--ink);
+  }
+}
 
 /* ---- 오른쪽: 지목 · 범례 · 규칙 ---- */
 .side {
