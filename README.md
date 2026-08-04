@@ -261,7 +261,7 @@ npx wrangler deploy
 **Pages 는 자동, 워커는 수동이다.** 라우트가 늘어나는 변경(순위표·관리 화면처럼)을 배포하면서 `wrangler deploy` 를 잊으면, 새 화면은 떴는데 서버에는 그 라우트가 없어 조용히 실패한다. 실제로 순위표가 이렇게 빈 채로 나갔다. 워커를 고쳤으면 배포한 뒤 라우트가 살아 있는지 확인할 것:
 
 ```bash
-curl -s -X POST https://murdoku-history.murdoku.workers.dev/lb/$(printf 'a%.0s' {1..22})
+curl -s -X POST https://murdoku-history.murdoku.workers.dev/lb/aaaaaaaaaaaaaaaaaaaaaa
 # {"top":[...],"rank":null} 이면 정상. "기록 코드가 아니다" 면 옛 워커가 그대로 떠 있는 것이다
 ```
 
