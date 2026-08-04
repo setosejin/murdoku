@@ -380,6 +380,16 @@ describe('순위표 워커', () => {
     expect(e.writes()).toBe(before);
   });
 
+  it('순위표보다 먼저 쌓인 기록도 올라간다', async () => {
+    const e = env();
+    const code = await solve(e, 'sejin', [{ seed: 'a', n: 4, tries: 1 }]);
+    // 순위표만 지운다 — 기록은 그대로다. 순위표 없이 굴러가던 서버를 나중에 올린 상황이고,
+    // 새 사건을 풀어야만 순위가 생긴다면 이미 다 푼 사람은 영영 순위 밖이 된다
+    await e.HISTORY.delete('lb');
+    await post(e, `/h/${code}`, []);
+    expect((await board(e, code)).top).toMatchObject([{ name: 'sejin', cases: 1 }]);
+  });
+
   it('기록 코드가 아니면 400', async () => {
     const e = env();
     for (const path of ['/lb/', '/lb/short', '/lb/../secret']) {

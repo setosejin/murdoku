@@ -97,10 +97,16 @@ async function updateBoard(env: Env, code: string, plays: Play[]) {
   if (score === 0) return;
 
   const raw = await env.HISTORY.get(LB_KEY);
-  const board = parseBoard(raw).filter((e) => e.name !== name);
-  board.push({ name, score, cases, at: Date.now() });
-  board.sort((a, b) => b.score - a.score || a.at - b.at);
-  const next = JSON.stringify(board.slice(0, MAX_BOARD));
+  const board = parseBoard(raw);
+  const old = board.find((e) => e.name === name);
+  // 점수가 그대로면 처음 오른 시각을 지킨다. 동점은 먼저 오른 쪽이 앞이고,
+  // 매번 새로 찍으면 아무것도 안 바뀐 요청마다 KV 쓰기가 나간다
+  const at = old !== undefined && old.score === score && old.cases === cases ? old.at : Date.now();
+  const next = JSON.stringify(
+    [...board.filter((e) => e.name !== name), { name, score, cases, at }]
+      .sort((a, b) => b.score - a.score || a.at - b.at)
+      .slice(0, MAX_BOARD),
+  );
   if (next !== raw) await env.HISTORY.put(LB_KEY, next);
 }
 
@@ -309,10 +315,12 @@ export default {
     // - 불러오기만 하는 요청은 KV 쓰기 한도(1천/일)를 안 먹는다
     // - 처음 방문한 사람이 빈 기록을 올려도 빈 항목이 생기지 않는다.
     //   이게 없으면 신규 방문자 수만큼 쓰기가 나가고, 아무나 랜덤 코드로 한도를 태울 수 있다
-    if (merged.length > 0 && body !== stored) {
-      await env.HISTORY.put(code, body);
-      await updateBoard(env, code, merged);
-    }
+    if (merged.length > 0 && body !== stored) await env.HISTORY.put(code, body);
+
+    // 순위는 기록이 안 바뀌어도 맞춘다. 순위표보다 먼저 쌓인 기록은 여기서만 오를 수 있다 —
+    // 바뀐 요청에만 맡기면 이미 다 푼 사람은 새 사건을 풀기 전까지 영영 순위 밖이다.
+    // 제 쓰기는 updateBoard 가 알아서 막는다(순위가 그대로면 안 쓴다)
+    if (merged.length > 0) await updateBoard(env, code, merged);
 
     return new Response(body, {
       status: 200,
