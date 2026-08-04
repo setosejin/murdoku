@@ -11,7 +11,9 @@ import { fetchBoard, SCORE_BASE, summarize, TOP_N, type Board, type Play } from 
  * 순위에는 계정만 오른다 — 줄을 세우려면 이름이 있어야 하고, 그 이름은 가입 때 서버가 못박은 것이다.
  */
 export default function Leaderboard({ plays, code }: { plays: Play[]; code: string }) {
-  const [board, setBoard] = useState<Board | null>(null);
+  // undefined = 아직 받는 중, null = 못 받았다, Board = 받았다.
+  // 셋을 뭉개면 서버가 죽은 걸 "아직 아무도 없다"고 말하게 된다
+  const [board, setBoard] = useState<Board | null | undefined>(undefined);
   const me = summarize(plays);
   const user = getUser();
 
@@ -41,7 +43,7 @@ export default function Leaderboard({ plays, code }: { plays: Play[]; code: stri
         </small>
       </p>
 
-      {board !== null && board.top.length > 0 && (
+      {board !== null && board !== undefined && board.top.length > 0 && (
         <ol className="ranks" aria-label={`상위 ${TOP_N}명`}>
           {board.top.map((e, i) => (
             <li key={e.name} className={e.name === user ? 'mine' : undefined}>
@@ -56,7 +58,9 @@ export default function Leaderboard({ plays, code }: { plays: Play[]; code: stri
 
       {!syncEnabled() ? (
         <p className="hint">이 빌드에는 순위 서버가 없어. 점수는 이 기기에서만 센다.</p>
-      ) : board === null || board.top.length === 0 ? (
+      ) : board === null ? (
+        <p className="hint">순위를 못 받아왔어. 서버가 답을 안 준다 — 잠시 뒤에 다시 열어봐.</p>
+      ) : board !== undefined && board.top.length === 0 ? (
         <p className="hint">아직 순위가 없어. 첫 줄을 채워봐.</p>
       ) : null}
 

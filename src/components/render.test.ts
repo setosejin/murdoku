@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { createElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { DIFFICULTIES, generatePuzzle } from '../game/generate';
@@ -218,6 +218,18 @@ describe('점수판', () => {
     const html = render([]);
     expect(html).not.toContain('<ol');
     expect(html).toContain('순위 서버가 없어');
+  });
+
+  it('아직 못 받아온 순위를 없다고 말하지 않는다', () => {
+    // 서버가 죽었을 때 "아직 아무도 없다"고 하면 1등인 사람이 자기가 순위 밖인 줄 안다
+    vi.stubEnv('VITE_SYNC_URL', 'https://w.dev');
+    try {
+      const html = render([play()]);
+      expect(html).not.toContain('아직 순위가 없어');
+      expect(html).not.toContain('순위 서버가 없어');
+    } finally {
+      vi.unstubAllEnvs();
+    }
   });
 });
 
