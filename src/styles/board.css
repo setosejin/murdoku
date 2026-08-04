@@ -388,6 +388,16 @@ img.art,
     transform: scale(0.92);
   }
 }
+/* 피해자 토큰. 뱃지와 같은 그림을 쓴다 (base.css 의 --dead-x 가 유일한 출처).
+   .token 은 이미 position: relative + z-index: 2 라 스태킹 컨텍스트가 있다 —
+   음수 z-index 가 토큰 배경 위·글자 아래에 그려진다 */
+.token.dead::before {
+  content: '';
+  position: absolute;
+  inset: 12%;
+  z-index: -1;
+  background: var(--dead-x);
+}
 /* 범인만 한 박자 늦게, 살짝 넘어갔다 제자리로 온다. 무고한 사람들과 같은 등장을
    쓰면 정답이 "누구인지"가 보드 안에서 안 보인다 — 답을 옆 문구로 읽고 보드에서
    글자를 눈으로 찾아야 했다. 이어서 방 테두리(.cell.crime)가 규칙을 마무리한다 */

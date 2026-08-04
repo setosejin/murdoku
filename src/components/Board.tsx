@@ -260,9 +260,15 @@ export default function Board({ puzzle, marks, onCell, revealed, petMenu }: Prop
               {room.name}
             </span>
           )}
+          {/* 빨간 X 는 공개 화면에만 얹는다. 메모 화면에는 .mark-x(`✕ 빈칸` = "아무도 없다")가
+              있어서, 거기 피해자 X 를 더하면 같은 글리프가 정반대 뜻을 같이 갖는다.
+              공개하면 marks 가 통째로 가려지므로(위의 mark 계산) 두 뜻이 만날 일이 없다.
+              공개 화면이 더 말하는 것은 이미 이 보드의 방식이다 — .token.solved.culprit 참고 */}
           {person ? (
             <span
-              className={`token solved${person.id === puzzle.culpritId ? ' culprit' : ''}`}
+              className={`token solved${person.isVictim ? ' dead' : ''}${
+                person.id === puzzle.culpritId ? ' culprit' : ''
+              }`}
               style={{
                 background: person.color,
                 // calc(var(--i) * …) 로 넘기면 WebKit 이 값을 캐싱한다 (webkit#202259).

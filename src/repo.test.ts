@@ -101,6 +101,20 @@ describe('저장소 규약', () => {
     expect(bad).toEqual([]);
   });
 
+  // 빨간 X 는 `피해자` 하나만 뜻한다. 값이 두 벌이면 언젠가 갈라져서
+  // 같은 뜻인데 다르게 생긴 표시가 두 개 생긴다
+  it('피해자 X 는 base.css 한 곳에서만 정의된다', () => {
+    const defs = Object.entries(sources)
+      .filter(([, text]) => text.includes('--dead-x:'))
+      .map(([path]) => path);
+    expect(defs).toEqual([expect.stringMatching(/\/styles\/base\.css$/)]);
+
+    for (const name of ['clues.css', 'board.css']) {
+      const text = Object.entries(sources).find(([p]) => p.endsWith(`/styles/${name}`))?.[1];
+      expect(text).toContain('var(--dead-x)');
+    }
+  });
+
   // FloorKind 에만 넣고 CSS 를 안 그리면 그 방은 조용히 기본 타일색으로 깔린다.
   // 눈으로 보기 전까지 아무도 모르므로 값 목록과 스타일을 직접 맞춰 본다
   it('바닥 재질마다 질감이 있다', () => {
