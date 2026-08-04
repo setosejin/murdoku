@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import Board, { SpriteDefs } from './components/Board';
 import CaseCards from './components/CaseCards';
 import ChangelogDialog from './components/ChangelogDialog';
@@ -8,6 +8,7 @@ import HistoryPanel from './components/HistoryPanel';
 import Leaderboard from './components/Leaderboard';
 import MobileShell from './components/MobileShell';
 import Sheet from './components/Sheet';
+import Tour from './components/Tour';
 import {
   AccusePanel,
   BrushBar,
@@ -16,6 +17,7 @@ import {
   RulesPanel,
   SeedPanel,
 } from './components/GamePanels';
+import { markTourSeen, seenTour } from './game/history';
 import useGame from './hooks/useGame';
 import useMediaQuery, { MOBILE_QUERY } from './hooks/useMediaQuery';
 
@@ -35,8 +37,20 @@ export default function App() {
   const game = useGame();
   const mobile = useMediaQuery(MOBILE_QUERY);
   const [dialog, setDialog] = useState<DialogId | null>(null);
+  const [tour, setTour] = useState(false);
   const close = () => setDialog(null);
   const { puzzle } = game;
+
+  // 첫 방문에만 저절로 연다. 상태를 useState 초기값으로 읽으면 서버 렌더에서도
+  // 켜진 채로 나가므로 마운트 뒤에 켠다
+  useEffect(() => {
+    if (!seenTour()) setTour(true);
+  }, []);
+
+  const closeTour = () => {
+    setTour(false);
+    markTourSeen();
+  };
 
   if (mobile)
     return (
@@ -90,7 +104,12 @@ export default function App() {
           <b>증언</b>
           {/* 증언을 읽는 자리가 곧 브러시를 고르는 자리다 */}
           <ClueList puzzle={puzzle} brush={game.brush} setBrush={game.setBrush} />
-          <BrushBar brush={game.brush} setBrush={game.setBrush} clearMarks={game.clearMarks} />
+          <BrushBar
+            brush={game.brush}
+            setBrush={game.setBrush}
+            clearMarks={game.clearMarks}
+            onHelp={() => setTour(true)}
+          />
         </div>
 
         <div className="pboard">
@@ -163,6 +182,10 @@ export default function App() {
         />
         <FeedbackDialog seed={game.seed} n={game.n} />
       </Sheet>
+
+      {/* 모달을 연 채로 스포트라이트를 겨누면 두 top-layer 가 겹친다 —
+          브리핑·더보기가 열려 있으면 온보딩은 기다린다 */}
+      {tour && dialog === null && <Tour onClose={closeTour} />}
     </div>
   );
 }

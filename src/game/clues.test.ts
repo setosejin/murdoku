@@ -52,6 +52,34 @@ describe('matchingCells', () => {
     expect(matchingCells('IN_ROOM', '0', idx)).toHaveLength(7); // 8칸 - 탁자 1칸
   });
 
+  it('FROM_ROOM: 그 방과 벽을 맞댄, 그 방이 아닌 칸', () => {
+    const from = matchingCells('FROM_ROOM', '0', idx); // 거실(0행~1행)에서 나왔다
+    expect(has(from, 2, 0)).toBe(true); // 침실 첫 행 = 거실 바로 밖
+    expect(has(from, 0, 0)).toBe(false); // 거실 안은 "나온" 게 아니다
+    expect(has(from, 1, 0)).toBe(false);
+    expect(has(from, 3, 0)).toBe(false); // 한 칸 더 들어가면 벽을 안 맞댄다
+    expect(has(from, 2, 1)).toBe(true); // 침대는 standable 이라 후보
+  });
+
+  it('FROM_ROOM: 실루엣 밖은 건너뛰지 못한다', () => {
+    // 거실 오른쪽 두 칸을 도려내 ㄱ자로 만든다 (0,3)·(1,3) 이 빈 칸
+    const holed = indexScene({
+      n: 4,
+      rooms: [
+        { ...rooms[0], cells: rooms[0].cells.filter((c) => c.c < 3) },
+        rooms[1],
+      ],
+      furniture,
+      wallItems: [],
+    });
+    const from = matchingCells('FROM_ROOM', '0', holed);
+    expect(has(from, 0, 3)).toBe(false); // 빈 칸에는 설 수 없다
+    expect(has(from, 1, 3)).toBe(false);
+    // 도려낸 칸 아래는 거실과 벽을 맞대지 않는다 — 실루엣이 증언의 정보량을 바꾼다
+    expect(has(from, 2, 3)).toBe(false);
+    expect(has(from, 2, 2)).toBe(true); // 아직 거실과 맞닿은 쪽은 그대로 후보
+  });
+
   describe('solve 방 제약', () => {
     const suspect = (id: string) => ({ id, name: id, role: '집사', color: '#000', isVictim: false });
     const victim = { id: 'V', name: 'V', role: '집사', color: '#000', isVictim: true };

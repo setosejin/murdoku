@@ -1,6 +1,7 @@
 import type { Cell, Clue, ClueType, Furniture, Person, Puzzle, Room, WallItem } from './types';
 import { pick, rng, shuffled } from './types';
 import { clueText, indexScene, matchingCells, type Scene, type SceneIndex } from './clues';
+import { buildFloorplan } from './floorplan';
 import { solve } from './solve';
 import {
   OUTDOOR_FLOORS,
@@ -12,117 +13,6 @@ import {
   VICTIM_COLOR,
   VICTIM_NAMES,
 } from '../data/content';
-
-const MAX_ROOM_AREA = 6;
-/** 지터로 방이 이보다 작아지지는 않는다 (가구 1개 + 설 자리 1칸은 남아야 한다) */
-const MIN_ROOM_AREA = 3;
-/** 지터로 방이 이보다 커지지도 않는다 */
-const MAX_JITTER_AREA = 9;
-
-const DIRS = [
-  [-1, 0],
-  [1, 0],
-  [0, -1],
-  [0, 1],
-] as const;
-
-type Rect = { r0: number; c0: number; r1: number; c1: number };
-
-/** BSP 재귀 이분할. 항상 연결된 직사각형 방이 나온다. */
-function splitRect(rect: Rect, rand: () => number, out: Rect[]): void {
-  const h = rect.r1 - rect.r0 + 1;
-  const w = rect.c1 - rect.c0 + 1;
-  const canV = w >= 4;
-  const canH = h >= 4;
-  // 8칸짜리는 가끔 안 쪼갠다 — 방 개수가 다양해야 "한 방에 한 명" 배치가 되는 평면도가 나온다
-  // (4×4를 늘 사분면으로 자르면 인원이 2,2로만 갈려서 범인 방을 만들 수 없다)
-  if (h * w <= MAX_ROOM_AREA || (!canV && !canH) || (h * w <= 8 && rand() < 0.5)) {
-    out.push(rect);
-    return;
-  }
-  const vertical = canV && (!canH || (w > h ? true : w < h ? false : rand() < 0.5));
-  if (vertical) {
-    const cut = rect.c0 + 2 + Math.floor(rand() * (w - 3));
-    splitRect({ ...rect, c1: cut - 1 }, rand, out);
-    splitRect({ ...rect, c0: cut }, rand, out);
-  } else {
-    const cut = rect.r0 + 2 + Math.floor(rand() * (h - 3));
-    splitRect({ ...rect, r1: cut - 1 }, rand, out);
-    splitRect({ ...rect, r0: cut }, rand, out);
-  }
-}
-
-function buildRooms(n: number, rand: () => number, theme: Theme): Room[] {
-  const rects: Rect[] = [];
-  splitRect({ r0: 0, c0: 0, r1: n - 1, c1: n - 1 }, rand, rects);
-  const specs = shuffled(rand, theme.rooms);
-  const rooms = rects.map((rect, i) => {
-    const cells: Cell[] = [];
-    for (let r = rect.r0; r <= rect.r1; r++)
-      for (let c = rect.c0; c <= rect.c1; c++) cells.push({ r, c });
-    const spec = specs[i % specs.length];
-    const name = i < specs.length ? spec.name : `${spec.name} ${Math.floor(i / specs.length) + 1}`;
-    return { id: i, name, floor: spec.floor, cells };
-  });
-  jitterRooms(rooms, n, rand);
-  return rooms;
-}
-
-/** 칸 목록이 상하좌우로 하나로 이어져 있는가 */
-function connected(cells: Cell[]): boolean {
-  const want = new Set(cells.map((c) => `${c.r},${c.c}`));
-  const seen = new Set([`${cells[0].r},${cells[0].c}`]);
-  const stack = [cells[0]];
-  while (stack.length) {
-    const cur = stack.pop()!;
-    for (const [dr, dc] of DIRS) {
-      const next = { r: cur.r + dr, c: cur.c + dc };
-      const k = `${next.r},${next.c}`;
-      if (want.has(k) && !seen.has(k)) {
-        seen.add(k);
-        stack.push(next);
-      }
-    }
-  }
-  return seen.size === cells.length;
-}
-
-/**
- * BSP 가 만든 직사각형 방의 경계 칸을 이웃 방에 넘겨 L자 방을 만든다.
- * 연결이 끊기거나 방이 너무 작아지는 이동은 그냥 건너뛴다 — 방 개수는 항상 그대로다.
- * (방 개수가 줄면 "한 방에 용의자 한 명" 배치가 불가능해져 생성이 조용히 실패한다)
- */
-function jitterRooms(rooms: Room[], n: number, rand: () => number): void {
-  const roomAt = Array.from({ length: n }, () => new Array<number>(n).fill(-1));
-  for (const room of rooms) for (const c of room.cells) roomAt[c.r][c.c] = room.id;
-  const byId = new Map(rooms.map((r) => [r.id, r]));
-
-  // 무작위 칸을 찍으면 대부분 방 안쪽이라 헛돈다. 경계 칸만 모아서 섞는다
-  const edges: { r: number; c: number; nr: number; nc: number }[] = [];
-  for (let r = 0; r < n; r++)
-    for (let c = 0; c < n; c++)
-      for (const [dr, dc] of DIRS) {
-        const nr = r + dr;
-        const nc = c + dc;
-        if (nr < 0 || nc < 0 || nr >= n || nc >= n) continue;
-        if (roomAt[nr][nc] !== roomAt[r][c]) edges.push({ r, c, nr, nc });
-      }
-
-  for (const { r, c, nr, nc } of shuffled(rand, edges).slice(0, rooms.length)) {
-    const from = byId.get(roomAt[r][c])!;
-    const to = byId.get(roomAt[nr][nc])!;
-    if (from.id === to.id) continue; // 앞선 이동으로 같은 방이 됐다
-    if (from.cells.length <= MIN_ROOM_AREA || to.cells.length >= MAX_JITTER_AREA) continue;
-
-    const rest = from.cells.filter((x) => x.r !== r || x.c !== c);
-    if (!connected(rest)) continue;
-
-    from.cells = rest;
-    // 받는 쪽은 붙어 있는 칸을 더하는 거라 연결은 저절로 유지된다
-    to.cells = [...to.cells, { r, c }].sort((a, b) => a.r - b.r || a.c - b.c);
-    roomAt[r][c] = to.id;
-  }
-}
 
 /**
  * 가구가 차지하는 모양. 2·3 칸은 가로/세로 일자, 4 칸은 2×2.
@@ -223,19 +113,27 @@ function placeWallItems(
     if (OUTDOOR_FLOORS.has(room.floor))
       for (const c of room.cells) outdoor.add(`${c.r},${c.c}`);
 
+  // 벽은 실루엣을 따라간다 — 격자 테두리가 아니라 "건물 밖과 맞닿은 칸"이 외벽이다.
+  // 안뜰에 면한 칸도 여기 들어와서 안뜰을 향한 창문이 생긴다
+  const inside = new Set<string>();
+  for (const room of rooms) for (const c of room.cells) inside.add(`${c.r},${c.c}`);
+  const out = (r: number, c: number) =>
+    r < 0 || c < 0 || r >= n || c >= n || !inside.has(`${r},${c}`);
+
   const border: Cell[] = [];
   for (let r = 0; r < n; r++)
-    for (let c = 0; c < n; c++)
-      if ((r === 0 || c === 0 || r === n - 1 || c === n - 1) && !blocked.has(`${r},${c}`))
-        border.push({ r, c });
+    for (let c = 0; c < n; c++) {
+      if (!inside.has(`${r},${c}`) || blocked.has(`${r},${c}`)) continue;
+      if (out(r - 1, c) || out(r + 1, c) || out(r, c - 1) || out(r, c + 1)) border.push({ r, c });
+    }
 
   const chosen = shuffled(rand, border).slice(0, theme.wallItems.length);
   return chosen.map((cell, i) => {
     const sides: WallItem['side'][] = [];
-    if (cell.r === 0) sides.push('top');
-    if (cell.r === n - 1) sides.push('bottom');
-    if (cell.c === 0) sides.push('left');
-    if (cell.c === n - 1) sides.push('right');
+    if (out(cell.r - 1, cell.c)) sides.push('top');
+    if (out(cell.r + 1, cell.c)) sides.push('bottom');
+    if (out(cell.r, cell.c - 1)) sides.push('left');
+    if (out(cell.r, cell.c + 1)) sides.push('right');
     // 자리 순서가 같아서 두 목록 중 무엇을 골라도 라벨은 서로 다르다
     const list =
       (outdoor.has(`${cell.r},${cell.c}`) && theme.outdoorItems) || theme.wallItems;
@@ -295,7 +193,10 @@ function trueStatements(cell: Cell, scene: Scene, idx: SceneIndex): Statement[] 
   }
   // 벽 부착물은 "~앞에 있었다"만 쓴다 (옆/앞 혼동 방지)
   for (const w of scene.wallItems) add('ON', w.id);
-  for (const room of scene.rooms) add('IN_ROOM', String(room.id));
+  for (const room of scene.rooms) {
+    add('IN_ROOM', String(room.id));
+    add('FROM_ROOM', String(room.id));
+  }
   return out;
 }
 
@@ -314,7 +215,9 @@ export function generatePuzzle(n: number, seed = String(Date.now())): Puzzle {
   const theme = pick(rand, THEMES);
 
   for (let sceneTry = 0; sceneTry < 300; sceneTry++) {
-    const rooms = buildRooms(n, rand, theme);
+    const plan = buildFloorplan(n, rand, theme);
+    if (!plan) continue; // 실루엣이 방을 감당 못 했다 — 다시
+    const rooms = plan.rooms;
     const furniture = placeFurniture(rooms, rand, theme);
     if (!furniture) continue; // 가구를 못 받은 방이 있다 — 평면도부터 다시
     const wallItems = placeWallItems(n, rooms, furniture, rand, theme);

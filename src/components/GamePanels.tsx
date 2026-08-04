@@ -65,7 +65,9 @@ export function RulesPanel() {
         <li>한 칸에는 한 사람만 있을 수 있다</li>
         <li>한 방에 용의자는 한 명까지</li>
         <li>'옆'은 같은 방에서 인접해 있다는 뜻</li>
+        <li>'~에서 나왔다'는 그 방과 벽을 맞댄, 그 방이 아닌 칸</li>
         <li>가구 위에는 설 수 없다 (예외는 범례에)</li>
+        <li>건물 밖과 안뜰에는 아무도 서 있지 않다</li>
         <li>피해자와 같은 방에 있던 사람이 범인</li>
       </ol>
     </div>
@@ -99,10 +101,13 @@ export function BrushBar({
   brush,
   setBrush,
   clearMarks,
+  onHelp,
 }: {
   brush: string;
   setBrush: (id: string) => void;
   clearMarks: () => void;
+  /** 온보딩 열기. 데스크톱 셸만 넘긴다 */
+  onHelp?: () => void;
 }) {
   return (
     <div className="dclues-bar">
@@ -117,6 +122,18 @@ export function BrushBar({
       <button type="button" className="chip" onClick={clearMarks}>
         메모 지우기
       </button>
+      {onHelp && (
+        <button
+          type="button"
+          className="chip icon"
+          aria-label="게임 방법 보기"
+          aria-haspopup="dialog"
+          title="게임 방법"
+          onClick={onHelp}
+        >
+          ?
+        </button>
+      )}
     </div>
   );
 }

@@ -1,0 +1,136 @@
+/* ---- 스포트라이트 온보딩 ---- */
+
+/* 화면 전체를 덮는 투명한 판. showModal 이라 top-layer 에 뜨고 포커스가 갇힌다.
+   기본 dialog 모양(가운데 흰 상자)을 전부 지운다 */
+.tour {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  max-width: none;
+  max-height: none;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  overflow: visible;
+}
+/* 어둡게 덮는 일은 구멍의 box-shadow 가 한다 — 여기까지 칠하면 구멍도 같이 어두워진다 */
+.tour::backdrop {
+  background: rgb(35 32 28 / 0);
+}
+
+/* 스포트라이트. 9999px 짜리 그림자가 바깥을 통째로 덮고 이 사각형만 남긴다 —
+   clip-path 다각형을 계산할 필요가 없다.
+   ponytail: width/height 를 트랜지션한다. 레이아웃 속성이지만 이 판은 fixed 라
+   흐름 밖이고 자식도 형제도 없어서 리플로가 번지지 않는다. 온보딩 한 판에
+   다섯 번 움직이는 게 전부다 */
+.tour-hole {
+  position: fixed;
+  top: 0;
+  left: 0;
+  border: 3px solid var(--paper);
+  /* 안쪽 패널 18 + 여백 8 = 동심 반경 26 */
+  border-radius: 26px;
+  box-shadow: 0 0 0 9999px rgb(35 32 28 / 0.62);
+  pointer-events: none;
+  opacity: 1;
+  transition:
+    translate 420ms var(--ease-out),
+    width 420ms var(--ease-out),
+    height 420ms var(--ease-out),
+    opacity 240ms var(--ease-out);
+}
+@starting-style {
+  .tour-hole {
+    opacity: 0;
+  }
+}
+
+/* 설명 카드. 스포트라이트가 미끄러지는 동안 글은 새 자리에서 떠오른다 */
+.tour-card {
+  position: fixed;
+  bottom: 20px;
+  left: calc(50% - 160px);
+  width: 320px;
+  padding: 14px 16px 12px;
+  border: 3px solid var(--wall);
+  border-radius: 20px;
+  background: #fffdf7;
+  box-shadow: 4px 4px 0 var(--wall);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  translate: 0 0;
+  opacity: 1;
+  transition:
+    translate 260ms var(--ease-out),
+    opacity 200ms var(--ease-out);
+}
+@starting-style {
+  .tour-card {
+    translate: 0 8px;
+    opacity: 0;
+  }
+}
+.tour-card:focus-visible {
+  outline: none;
+}
+.tour-card b {
+  font-size: 16px;
+}
+.tour-card p {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.55;
+  color: #3c372f;
+}
+
+.tour-foot {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 4px;
+}
+.tour-foot .link {
+  min-height: 34px;
+  margin-left: auto;
+}
+.tour-foot .chip {
+  min-height: 34px;
+  padding: 4px 14px;
+  font-size: 13px;
+}
+/* 되돌아가기는 앞으로 가기보다 조용해야 한다 — 원 하나에 테두리만 */
+.tour-foot .chip.icon {
+  width: 30px;
+  min-height: 30px;
+  padding: 0;
+  font-size: 14px;
+  border-color: var(--tile-line);
+  color: var(--muted);
+}
+.tour-foot .chip.icon:disabled {
+  opacity: 0.35;
+}
+
+/* 몇 걸음 남았는지. 숫자만 있으면 셈을 해야 하고, 점만 있으면 세어야 한다 */
+.tour-dots {
+  display: inline-flex;
+  gap: 5px;
+}
+.tour-dots i {
+  width: 6px;
+  height: 6px;
+  border-radius: 999px;
+  background: var(--tile-line);
+  transition: background 200ms var(--ease-out);
+}
+.tour-dots i.on {
+  background: var(--accent);
+}
+.tour-num {
+  font-size: 12px;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}

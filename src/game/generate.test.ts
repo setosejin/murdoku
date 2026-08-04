@@ -28,6 +28,20 @@ describe('generatePuzzle', () => {
         // 사람이 설 수 있는 칸에만 있다
         for (const c of cells) expect(idx.free[c.r][c.c]).toBe(true);
 
+        // 실루엣 밖에는 아무것도 없다 — 사람도, 가구도, 벽 부착물도
+        for (let r = 0; r < n; r++)
+          for (let c = 0; c < n; c++)
+            if (idx.roomAt[r][c] < 0) {
+              expect(idx.free[r][c], `${r},${c} 가 빈 칸인데 설 수 있다`).toBe(false);
+              expect(idx.voidKind[r][c]).not.toBeNull();
+            } else {
+              expect(idx.voidKind[r][c]).toBeNull();
+            }
+        for (const f of p.furniture)
+          for (const c of f.cells) expect(idx.roomAt[c.r][c.c]).toBeGreaterThanOrEqual(0);
+        for (const w of p.wallItems)
+          expect(idx.roomAt[w.cell.r][w.cell.c]).toBeGreaterThanOrEqual(0);
+
         // 증언 정합
         for (const clue of p.clues) expect(satisfies(clue, p.solution[clue.personId], idx)).toBe(true);
 
@@ -114,15 +128,32 @@ describe('generatePuzzle', () => {
   // generatePuzzle 은 실패해도 조용히 300×20×60 회 되던지다 맨 끝에서야 throw 한다.
   // 제약을 하나 잘못 넣으면 특정 난이도가 에러 없이 영구 실패하므로 넓게 훑어 잡는다.
   // ponytail: 재시도 횟수를 따로 세지 않는다 — 폭증하면 이 테스트가 타임아웃으로 먼저 터진다.
-  // (기준선: 난이도당 60시드에 27·32·102·290ms)
+  // (기준선: 난이도당 60시드에 30·42·25·60ms)
   it('모든 난이도 × 60시드에서 빠짐없이 생성된다', () => {
     const seen = new Set<string>();
+    // 실루엣이 한 종류로 굳으면(마스크가 조용히 다 걸러지면) 여기서 잡힌다
+    const shapes = new Set<string>();
     for (const n of DIFFICULTIES.map((d) => d.n))
       for (let i = 0; i < 60; i++) {
         expect(() => generatePuzzle(n, `sweep-${n}-${i}`), `n=${n} seed=${i}`).not.toThrow();
-        seen.add(generatePuzzle(n, `sweep-${n}-${i}`).theme.id);
+        const p = generatePuzzle(n, `sweep-${n}-${i}`);
+        seen.add(p.theme.id);
+        const kinds = indexScene(p).voidKind.flat();
+        shapes.add(
+          kinds.includes('inner') ? 'inner' : kinds.includes('outer') ? 'outer' : 'square',
+        );
       }
     // 테마 하나가 조용히 생성 불가가 되면 여기서 잡힌다
     expect([...seen].sort()).toEqual(THEMES.map((t) => t.id).sort());
+    expect([...shapes].sort()).toEqual(['inner', 'outer', 'square']);
+  });
+
+  // 증언 종류가 하나라도 조용히 사라지면(후보가 늘 너무 넓어 안 뽑히면) 잡는다
+  it('네 가지 증언이 모두 실제로 쓰인다', () => {
+    const types = new Set<string>();
+    for (const n of DIFFICULTIES.map((d) => d.n))
+      for (let i = 0; i < 30; i++)
+        for (const c of generatePuzzle(n, `types-${n}-${i}`).clues) types.add(c.type);
+    expect([...types].sort()).toEqual(['FROM_ROOM', 'IN_ROOM', 'NEXT_TO', 'ON']);
   });
 });

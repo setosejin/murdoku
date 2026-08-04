@@ -59,4 +59,10 @@
   .seg-pill {
     transition: none;
   }
+  /* 스포트라이트도 미끄러지지 않고 바로 옮겨 붙는다. 등장 페이드는 남긴다 —
+     화면이 통째로 어두워지는 순간이라 아무 신호도 없으면 더 놀란다 */
+  .tour-hole,
+  .tour-card {
+    transition-property: opacity;
+  }
 }

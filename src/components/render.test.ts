@@ -1,13 +1,16 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { createElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { DIFFICULTIES, generatePuzzle } from '../game/generate';
+import { indexScene } from '../game/clues';
 import App from '../App';
 import Board from './Board';
 import { DifficultySeg } from './GamePanels';
 import FeedbackDialog, { issueUrl } from './FeedbackDialog';
 import ChangelogDialog, { renderMarkdown } from './ChangelogDialog';
 import Leaderboard from './Leaderboard';
+import { TOUR_STEPS } from '../data/tour';
+import Tour from './Tour';
 import { AccusePanel, type AccuseProps } from './GamePanels';
 import { SCORE_BASE, scoreOf, type Play } from '../game/history';
 import changelog from '../../CHANGELOG.md?raw';
@@ -87,7 +90,9 @@ describe('Board 렌더링', () => {
     const { p, html } = render(false);
     const floors = new Set(p.rooms.map((r) => r.floor));
     for (const f of floors) expect(html).toContain(`data-floor="${f}"`);
-    expect((html.match(/data-floor="/g) ?? []).length).toBe(25);
+    // 건물 바깥 칸만 바닥이 없다 (안뜰은 테마 바닥을 쓴다)
+    const outer = indexScene(p).voidKind.flat().filter((k) => k === 'outer').length;
+    expect((html.match(/data-floor="/g) ?? []).length).toBe(25 - outer);
   });
 
   it('메모는 공개 전에만 보인다', () => {
@@ -109,6 +114,54 @@ describe('Board 렌더링', () => {
       );
       expect(html).toContain(`grid-template-columns:repeat(${n}, minmax(0, 1fr))`);
       expect(html).not.toContain('--n');
+    }
+  });
+});
+
+/* 건물 외곽선이 격자를 다 채우지 않는다. 방이 아닌 칸은 누를 수도 포커스할 수도
+   없어야 하고, 갇힌 칸(안뜰)만 테마 그림을 받는다 */
+describe('실루엣 렌더링', () => {
+  // 실루엣이 나오는 시드를 직접 찾는다 — 마스크 팔레트가 바뀌어도 테스트가 따라간다
+  const withVoid = (want: 'outer' | 'inner') => {
+    for (let i = 0; i < 60; i++) {
+      const p = generatePuzzle(6, `void-${i}`);
+      const kinds = indexScene(p).voidKind.flat();
+      if (!kinds.includes(want)) continue;
+      if (want === 'inner' && kinds.includes('outer')) continue;
+      const html = renderToStaticMarkup(
+        createElement(Board, { puzzle: p, marks: {}, onCell: () => {}, revealed: false }),
+      );
+      return { p, html, voids: kinds.filter(Boolean).length };
+    }
+    throw new Error(`${want} 실루엣이 나오는 시드를 못 찾았다`);
+  };
+
+  it('건물 밖 칸은 버튼이 아니다 (누를 수도 포커스할 수도 없다)', () => {
+    const { html, voids } = withVoid('outer');
+    expect(voids).toBeGreaterThan(0);
+    expect((html.match(/<div class="cell void /g) ?? []).length).toBe(voids);
+    expect((html.match(/<button/g) ?? []).length).toBe(36 - voids);
+    // 빈 칸끼리는 칸선을 긋지 않는다 — 건물 외곽선만 3px 벽으로 남는다
+    expect(html).toContain('class="cell void outer" style="border-top-width:0');
+  });
+
+  it('안뜰은 테마 바닥·그림·이름표로 그려진다', () => {
+    const { p, html } = withVoid('inner');
+    const yard = p.theme.courtyard;
+    expect(html).toContain(`class="cell void inner" data-floor="${yard.floor}"`);
+    expect(html).toContain(`aria-label="${yard.label}"`);
+    // 이름표는 방처럼 딱 한 번만. 방 이름과 헷갈리지 않게 `yard` 로 갈라 그린다
+    expect((html.match(new RegExp(`room-label yard">${yard.label}`, 'g')) ?? []).length).toBe(1);
+    expect(html).not.toContain(`room-label">${yard.label}`);
+  });
+
+  it('실루엣 밖에는 가구도 벽 부착물도 서지 않는다', () => {
+    for (const want of ['outer', 'inner'] as const) {
+      const { p } = withVoid(want);
+      const idx = indexScene(p);
+      for (const f of p.furniture)
+        for (const c of f.cells) expect(idx.voidKind[c.r][c.c]).toBeNull();
+      for (const w of p.wallItems) expect(idx.voidKind[w.cell.r][w.cell.c]).toBeNull();
     }
   });
 });
@@ -154,6 +207,31 @@ describe('App 렌더링', () => {
     expect(html).toContain('class="panel accuse"');
     // 증언 줄이 곧 브러시 — 목록이 시트가 아니라 증언 패널 안에 있어야 성립한다
     expect(html).toMatch(/class="panel dclues".*class="clue-list".*class="dclues-bar"/s);
+  });
+
+  // 스포트라이트는 셀렉터로 자리를 찾는다. 겨눌 자리를 못 찾아도 에러 없이
+  // 구멍만 사라지므로, 클래스 이름을 바꾸면 온보딩이 조용히 반쯤 죽는다
+  it('온보딩이 겨누는 자리가 전부 실제로 그려진다', () => {
+    for (const s of TOUR_STEPS) {
+      const cls = s.sel.slice(1);
+      expect(html).toMatch(new RegExp(`class="[^"]*\\b${cls}\\b`));
+    }
+  });
+
+  it('온보딩은 증언 아래 ? 로 다시 연다', () => {
+    // 첫 방문 자동 열기는 마운트 뒤 effect 라 서버 렌더에는 안 나온다
+    expect(html).toContain('aria-label="게임 방법 보기"');
+    expect(html).not.toContain('class="tour"');
+  });
+
+  // 자리 재기(document.querySelector·getBoundingClientRect)가 effect 밖으로
+  // 새어 나오면 여기서 먼저 터진다 — 브라우저에서는 한참 뒤에나 보인다
+  it('온보딩은 DOM 없이도 첫 단계를 그린다', () => {
+    const tour = renderToStaticMarkup(createElement(Tour, { onClose: () => {} }));
+    expect(tour).toContain(TOUR_STEPS[0].title);
+    expect(tour).toContain(`1 / ${TOUR_STEPS.length}`);
+    // 첫 단계에서는 되돌아갈 데가 없다
+    expect(tour).toMatch(/aria-label="이전 단계"[^>]*disabled/);
   });
 });
 
@@ -218,6 +296,18 @@ describe('점수판', () => {
     const html = render([]);
     expect(html).not.toContain('<ol');
     expect(html).toContain('순위 서버가 없어');
+  });
+
+  it('아직 못 받아온 순위를 없다고 말하지 않는다', () => {
+    // 서버가 죽었을 때 "아직 아무도 없다"고 하면 1등인 사람이 자기가 순위 밖인 줄 안다
+    vi.stubEnv('VITE_SYNC_URL', 'https://w.dev');
+    try {
+      const html = render([play()]);
+      expect(html).not.toContain('아직 순위가 없어');
+      expect(html).not.toContain('순위 서버가 없어');
+    } finally {
+      vi.unstubAllEnvs();
+    }
   });
 });
 
