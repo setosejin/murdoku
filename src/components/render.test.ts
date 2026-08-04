@@ -15,6 +15,7 @@ import { AccusePanel, type AccuseProps } from './GamePanels';
 import { SCORE_BASE, scoreOf, type Play } from '../game/history';
 import changelog from '../../CHANGELOG.md?raw';
 import desktopCss from '../styles/desktop.css?raw';
+import boardCss from '../styles/board.css?raw';
 
 describe('Board 렌더링', () => {
   const render = (revealed: boolean, marks: Record<string, string> = {}) => {
@@ -141,8 +142,53 @@ describe('실루엣 렌더링', () => {
     expect(voids).toBeGreaterThan(0);
     expect((html.match(/<div class="cell void /g) ?? []).length).toBe(voids);
     expect((html.match(/<button/g) ?? []).length).toBe(36 - voids);
-    // 빈 칸끼리는 칸선을 긋지 않는다 — 건물 외곽선만 3px 벽으로 남는다
-    expect(html).toContain('class="cell void outer" style="border-top-width:0');
+    // 건물 바깥에는 격자가 없다 — 빈 칸은 선을 한 줄도 안 긋는다
+    expect(html).toContain('class="cell void outer" style="border-width:0"');
+  });
+
+  /* 맨 바깥 선이 정사각형이면 실루엣이 액자 안의 여백처럼 읽힌다. 외벽(5px)은
+     `.board` 가 아니라 칸이 그려야 건물 모양을 따라간다 */
+  it('가장 굵은 선이 건물 실루엣을 따라간다', () => {
+    const { p, html } = withVoid('outer');
+    const n = p.n;
+    const idx = indexScene(p);
+    const isRoom = (r: number, c: number) =>
+      r >= 0 && c >= 0 && r < n && c < n && idx.roomAt[r][c] >= 0;
+    // 칸마다 정확히 한 번 나온다 (가구·그림 style 에는 border-width 가 없다)
+    const widths = [...html.matchAll(/border-width:([^;"]*)/g)].map((m) =>
+      m[1].split(' ').map((x) => parseInt(x, 10)),
+    );
+    expect(widths).toHaveLength(n * n);
+
+    let wall = 0;
+    for (let r = 0; r < n; r++)
+      for (let c = 0; c < n; c++) {
+        const w = widths[r * n + c];
+        if (!isRoom(r, c)) {
+          expect(w, `${r},${c} 빈 칸이 선을 그렸다`).toEqual([0]);
+          continue;
+        }
+        const [top, right, bottom, left] = w;
+        // 외벽은 건물과 건물 아닌 곳(빈 칸·격자 밖) 사이에만, 그리고 거기엔 반드시
+        expect(top === 5, `${r},${c} 위`).toBe(!isRoom(r - 1, c));
+        expect(right === 5, `${r},${c} 오른쪽`).toBe(!isRoom(r, c + 1));
+        expect(bottom === 5, `${r},${c} 아래`).toBe(!isRoom(r + 1, c));
+        expect(left === 5, `${r},${c} 왼쪽`).toBe(!isRoom(r, c - 1));
+        wall += w.filter((x) => x === 5).length;
+      }
+    // 정사각 격자라면 외벽이 4n 이다. 실루엣이 파였으니 그보다 길어야 한다
+    expect(wall).toBeGreaterThan(4 * n);
+  });
+
+  // `.board` 에 테두리가 남아 있으면 칸이 뭘 그리든 맨 바깥은 정사각형이다
+  it('보드에는 사각 테두리도 바탕도 없다', () => {
+    const rule = boardCss.replace(/\/\*[\s\S]*?\*\//g, '').match(/\.board\s*\{([^}]*)\}/)?.[1];
+    expect(rule).toBeTruthy();
+    expect(rule).not.toMatch(/\bborder(-[a-z]+)*\s*:/);
+    expect(rule).not.toMatch(/\bbackground(-[a-z]+)*\s*:/);
+    // 건물 바깥은 종이가 비쳐야 실루엣이 도형으로 읽힌다
+    const outer = boardCss.match(/\.cell\.void\.outer\s*\{([^}]*)\}/)?.[1];
+    expect(outer).toContain('--floor-tint: transparent');
   });
 
   it('안뜰은 테마 바닥·그림·이름표로 그려진다', () => {
