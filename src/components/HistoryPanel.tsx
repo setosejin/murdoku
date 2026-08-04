@@ -152,7 +152,7 @@ export default function HistoryPanel({
 
       {syncEnabled() &&
         (user ? (
-          <div className="account">
+          <div className="account" id="jump-account">
             <p>
               {/* 이름을 정했으면 그 이름으로 부른다. 아이디는 로그인 수단이라 여기 안 쓴다 */}
               {detectiveName(saved) ? (
@@ -194,7 +194,7 @@ export default function HistoryPanel({
             </p>
           </div>
         ) : (
-          <details className="sync account">
+          <details className="sync account" id="jump-account">
             <summary>로그인하고 기록 잇기</summary>
             <p className="hint">
               아이디와 비밀번호만 있으면 어느 기기에서든 기록이 따라와. 이메일을 안 받아서

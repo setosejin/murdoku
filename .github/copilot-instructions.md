@@ -109,6 +109,11 @@ git -c credential.https://github.com.helper= \
 | `src/components/Art.tsx` | 스프라이트 `<defs>` + `<Art>` (이모지/이미지/아이콘 하나로) |
 | `src/components/YardPet.tsx` | 안뜰(갇힌 빈 칸)을 돌아다니는 짐승 — 그림 + 투명한 판 |
 | `src/components/yardWalk.ts` | 안뜰 짐승의 걸음 규칙 (순수 함수) |
+| `src/components/useWander.ts` | 걸음 상태·타이머 훅 (안뜰 짐승·바깥 손님 공용) |
+| `src/components/OuterPet.tsx` | 건물 밖 빈 땅을 어슬렁대는 손님 — 걸음 + 대사 + 메뉴 열기 |
+| `src/components/outerBlobs.ts` | 바깥 빈 칸 → 4-연결 덩어리 (순수 함수) |
+| `src/components/PetMenu.tsx` | 손님을 우클릭·길게 누르면 열리는 컨텍스트 `<dialog>` |
+| `src/components/petMenuItems.ts` | 그 메뉴의 항목 목록 (두 셸 공용) |
 | `src/components/CaseCards.tsx` | 용의자·피해자 카드 그리드 (두 셸 공용) |
 | `src/components/GamePanels.tsx` | 규칙·범례·브러시바·지목·시드 패널 (두 셸 공용). 규칙·범례는 사건 브리핑 안에만 있다 |
 | `src/components/ChangelogDialog.tsx` | `CHANGELOG.md` 를 읽어 모달로 그린다 (마크다운 부분집합 렌더러) |
@@ -188,11 +193,27 @@ buildFloorplan(마스크 → BSP → void 빼기 → 조각 흡수 → 지터)
 쉽게 깨지는 것들.
 
 - **판이 안뜰 밖으로 새면 진짜 칸의 클릭을 먹는다.** bounding box 에 섞인 비-안뜰 칸은 `.yard-gap`(`pointer-events: none`)으로 덮는다. `yard.test.ts` 가 ㄱ자 안뜰로 검사한다.
-- **좌표·트랙 수는 전부 JS 에서 문자열을 완성해 인라인으로 넘긴다.** `calc(var())` 는 Safari 가 캐싱한다(webkit#202259). `.yard-pet` 이 정확히 한 칸 크기라 `translate: ${c*100}% ${r*100}%` 가 칸에 정확히 떨어진다.
+- **좌표·트랙 수는 전부 JS 에서 문자열을 완성해 인라인으로 넘긴다.** `calc(var())` 는 Safari 가 캐싱한다(webkit#202259). `.yard-pet` 이 정확히 한 칸 크기라 `translate: ${c*100}% ${r*100}%` 로 칸을 짚는다 — WebKit 이 상자를 정수 px 로 스냅해 1~2px 밀리지만 안뜰은 격자 테두리에 닿지 않으므로 잘릴 일이 없다. **테두리에 닿는 것**(바깥 손님)은 `left`/`top` 퍼센트를 써야 한다.
 - **상태는 `YardPet` 안에 둔다.** `Board` 로 올리면 걸음마다(1~3초) 보드 전체가 다시 그려진다. `cells` 는 렌더마다 새 배열이라 `useEffect` deps 에 그대로 넣으면 메모를 찍을 때마다 산책이 멈춘다 — 좌표를 이어붙인 `yardKey` 를 쓴다.
 - 산책은 `rng(\`${seed}-pet\`)` 을 탄다. **같은 사건 = 같은 산책.** `prefers-reduced-motion` 이면 타이머를 아예 안 건다.
 - 테마를 늘리면 `courtyard.pet` 과 `sprite.svg` 의 `i-<kind>` · `i-<kind>-sit` 을 같이 넣어야 한다. `yard.test.ts` 가 강제한다.
 - 안뜰은 **4×4 에서 안 나온다**(`donut.minN = 5`). 안뜰이 격자당 한 덩어리·직사각형이라는 전제는 `donut` 마스크가 유일한 출처다 — 갇힌 덩어리를 둘 이상 만드는 마스크를 넣으면 `Board.tsx` 의 이름표와 이 판이 같이 깨진다.
+
+### 바깥 실루엣의 손님
+
+건물 밖으로 트인 빈 땅(`voidKind === 'outer'` — `ell`·`you`·`diagonal` 이 파낸 자리)에는 손님이 온다. 저택은 부엉이·말, 농장은 지렁이·개구리, 사무실은 자동차·셔틀버스. **테마 데이터(`Theme.visitors`)가 유일한 출처**이고 테마마다 **둘**이 필수라, 테마를 늘리면 거기 두 줄과 `sprite.svg` 의 `i-<kind>` 만 채우면 붙는다.
+
+안뜰 짐승과 결정적으로 다른 점: **판이 없다.** 안뜰 짐승은 칸을 *막는 게* 목적이라 안뜰 전체를 투명한 판으로 덮어야 했다. 바깥 손님은 막을 게 없다 — 손님 자신이 한 칸짜리 `<button.outer-pet>` 이고 걸음을 따라 움직인다. 그래서 진짜 칸 위로 올라갈 경로가 아예 없고, 덩어리가 직사각형이 아니어도 되고, 포커스·`aria-label` 이 그냥 딸려온다.
+
+- `outerBlobs()` 가 `outer` 칸을 4-연결 덩어리로 쪼갠다. 큰 것부터 **최대 두 덩어리**에 서로 다른 손님을 하나씩 세운다(`diagonal` 이면 마주보는 두 모서리).
+- **자리는 보드 기준 `left`/`top` 퍼센트다. `translate` 퍼센트를 쓰면 안 된다.** `translate` 의 퍼센트는 제 상자 기준인데 WebKit 이 그 상자를 정수 px 로 스냅해서 계산한다 — 6×6 에서 61.66px 칸이 62px 로 잡혀 열마다 0.34px 씩 밀리고, **마지막 행·열의 손님이 보드를 1.7px 삐져나가 `overflow: hidden` 에 잘렸다**(WebKit 실측, Chromium 은 멀쩡). `outer.test.ts` 가 마크업에 `translate:` 가 없는지 본다.
+- **포인터가 올라오거나 포커스가 잡히면 걸음을 멈춘다**(`.perked`). 1~3초마다 움직이는 버튼은 누르려는 순간 도망간다.
+- **말풍선을 보드 안에 그리지 않는다.** `.board { overflow: hidden }` 이 모서리 칸의 풍선을 자른다. 기존 `.notice` 토스트를 `.notice.say` 로 뒤집어 쓴다 (`role="status"` 가 딸려온다).
+- **첫 마디는 늘 안내다.** 우클릭 메뉴는 눌러보기 전엔 있는 줄도 모른다. `(pointer: coarse)` 로 "오른쪽 버튼" / "꾹 누르면" 을 가른다. 두 번째부터 시드로 섞은 대사를 돈다 — **같은 사건 = 같은 순서.**
+- 폰에는 우클릭이 없어 **500ms 길게 누르기**로 같은 메뉴를 연다(`HOLD_MS`). 10px 미끄러지면 스크롤로 보고 취소한다. `-webkit-touch-callout: none` 이 없으면 iOS 가 제 확대·복사 메뉴를 먼저 띄운다.
+- 메뉴는 네이티브 `<dialog>` 라 top layer 로 올라가 보드의 `overflow` 와 무관하다. 자리는 포인터 좌표에 두되 뷰포트 안으로 접는다 — **`PetMenu.tsx` 의 `MENU_W` 는 `outer.css` 의 `width` 와 같아야 한다**(`outer.test.ts` 가 대조한다). 열 때 포커스는 첫 항목이 아니라 **메뉴 자신**에게 준다(`Sheet` 와 같은 이유 — 빨간 링).
+- 메뉴 항목은 `petMenuItems.ts` 한 곳에서 만들고 두 셸이 나눠 쓴다. **도움말이 셸마다 다르다** — 데스크톱은 투어(`<Tour>` 는 데스크톱 셸에만 있고 데스크톱 선택자를 겨눈다), 모바일은 규칙·범례가 든 사건 브리핑 시트다.
+- "순위 보기"·"닉네임 변경"은 같은 시트 안의 다른 자리를 연다. `Sheet` 의 `jumpTo` 가 열린 뒤 한 프레임 기다렸다 `scrollIntoView` 한다.
 
 ### 바텀시트
 
@@ -206,6 +227,8 @@ buildFloorplan(마스크 → BSP → void 빼기 → 조각 흡수 → 지터)
 **Chromium 에서 멀쩡한 레이아웃 버그는 대부분 Safari 전용이다. Chromium 으로 "재현 안 됨"을 확인했다고 없는 문제로 넘기지 말 것.**
 
 실제로 겪은 것 — `repeat(var(--n), 1fr)`: WebKit 은 `repeat()` 안의 `var()` 를 computed-value 시점에 한 번 펼쳐 캐싱한다([webkit#202259](https://bugs.webkit.org/show_bug.cgi?id=202259)). 난이도를 바꿨다 되돌아오면 트랙 *개수*만 갱신되고 *폭*은 옛 값이라 6×6 이 4열 폭으로 깔리고 `.board { overflow: hidden }` 이 넘친 열을 잘라 4×6 처럼 보였다. 첫 진입에는 멀쩡하고 왕복해야 터져서 "종종" 나는 것처럼 보인다. 값이 바뀌는 곳에 `var()` 를 `repeat()`·`calc()` 안쪽으로 넣지 말고 인라인 스타일로 계산해서 넘길 것.
+
+또 하나 — **`translate` 의 퍼센트는 격자 자리를 잡는 데 쓰면 안 된다.** 기준이 제 상자인데 WebKit 이 그 상자를 정수 px 로 스냅해서 계산한다. 6×6 에서 61.66px 칸이 62px 로 잡혀 칸마다 0.34px 씩 밀렸고, 마지막 열의 손님이 보드를 1.7px 삐져나가 잘렸다(Chromium 은 정확히 떨어진다). 자리는 **컨테이너 기준 `left`/`top` 퍼센트**로 준다.
 
 Safari 를 실측하는 법 — **환경마다 되는 경로가 다르다. 아래를 위에서부터 시도할 것.**
 
@@ -250,6 +273,7 @@ Safari 를 실측하는 법 — **환경마다 되는 경로가 다르다. 아�
 | `src/components/board.test.ts` | 보드 렌더링 — 칸·가구·이름표 자리·실루엣·벽 부착물 + `board.css`/`wall.css` 불변식 |
 | `src/components/render.test.ts` | 앱(데스크톱 셸)·모달·온보딩·점수판 렌더링 |
 | `src/components/yard.test.ts` | 안뜰 짐승 — 걸음 규칙·판 범위·테마별 그림 + `yard.css` 불변식 |
+| `src/components/outer.test.ts` | 바깥 손님 — 덩어리 쪼개기·자리·대사·컨텍스트 메뉴 + `outer.css` 불변식 |
 | `src/components/mobile.test.ts` | 모바일 셸·증언 목록·시트 + `mobile.css` 불변식 |
 | `src/repo.test.ts` | 500줄 규약 · CSS 전역 금지 패턴(`repeat(var(`) · 바닥 재질 질감 · 테마 안 이름 겹침 |
 
@@ -261,7 +285,7 @@ Safari 를 실측하는 법 — **환경마다 되는 경로가 다르다. 아�
 
 ### 스타일
 
-`src/index.css` 는 `@import` 목록이고 규칙은 `src/styles/<컴포넌트>.css` 에 있다. Vite 가 빌드 때 그 순서대로 인라인하므로 **import 순서 = 캐스케이드 순서**다. 컴포넌트를 추가하면 파일을 만들고 진입점에 한 줄 넣는다. `mobile.css` 는 데스크톱 규칙을 덮어야 하므로 늦게, `motion.css`(`prefers-reduced-motion`)는 전부를 덮어야 하므로 **맨 마지막**이다. 보드는 셋으로 갈려 있다 — `board.css`(칸·방·가구) → `wall.css`(창문·문) → `yard.css`(안뜰의 주인). 뒤의 둘은 `.cell`·`.board` 안에 얹히므로 이 순서를 지켜야 한다.
+`src/index.css` 는 `@import` 목록이고 규칙은 `src/styles/<컴포넌트>.css` 에 있다. Vite 가 빌드 때 그 순서대로 인라인하므로 **import 순서 = 캐스케이드 순서**다. 컴포넌트를 추가하면 파일을 만들고 진입점에 한 줄 넣는다. `mobile.css` 는 데스크톱 규칙을 덮어야 하므로 늦게, `motion.css`(`prefers-reduced-motion`)는 전부를 덮어야 하므로 **맨 마지막**이다. 보드는 셋으로 갈려 있다 — `board.css`(칸·방·가구) → `wall.css`(창문·문) → `yard.css`(안뜰의 주인) → `outer.css`(바깥의 손님). 뒤의 셋은 `.cell`·`.board` 안에 얹히므로 이 순서를 지켜야 한다.
 
 지켜온 것들: 동심 반경(바깥 = 안쪽 + 패딩), 컨트롤 최소 40px 히트영역, `focus-visible` 링, `prefers-reduced-motion` 대응, 한국어 `word-break: keep-all`, `transition` 은 속성을 명시(`all` 금지). 두꺼운 잉크 테두리 + `4px 4px 0` 하드 섀도가 이 UI의 디자인 언어다.
 
