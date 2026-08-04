@@ -127,6 +127,8 @@ git -c credential.https://github.com.helper= \
 
 모바일은 **스크롤이 없다.** 붙박이는 상단바·보드·증언 목록(= 메모 브러시)·하단 액션바 넷뿐이고 나머지는 전부 시트로 들어간다. 새 UI 를 모바일 메인 화면에 붙이려면 그만큼 보드가 작아진다는 뜻이다 — 시트를 먼저 고려할 것.
 
+모바일에는 스포트라이트 온보딩이 없다(겨누는 `.dclues`·`.legend` 가 메인 화면에 없다). 대신 **첫 방문에 사건 시트가 저절로 열린다** — 인물·범례·규칙이 이미 그 안에 있다. 표시는 `murdoku.brief` 로 데스크톱 온보딩의 `murdoku.tour` 와 **나눠 둔다**. 합치면 모바일로 먼저 본 사람이 데스크톱 온보딩을 영영 못 보는데 화면으로는 안 보인다 — `history.test.ts` 가 검사한다.
+
 데스크톱도 **한 화면**이다. `.app { height: 100dvh }` 이고 `.play` 가 `증언(=브러시) | 보드 | 지목` 세 열이다. 넘치는 몫은 페이지가 아니라 열(`.dclues` / `.side`) 안에서 스크롤한다. 여기서 쉽게 깨지는 것 셋:
 
 - `.play { grid-template-rows: minmax(0, 1fr) }` 를 빼면 auto 행이 내용만큼 커져서 열이 푸터를 뚫고 나간다.
@@ -184,6 +186,8 @@ buildFloorplan(마스크 → BSP → void 빼기 → 조각 흡수 → 지터)
 - **격자 열 수는 CSS 변수로 넘기지 않는다.** `Board.tsx` 가 인라인 `grid-template-columns: repeat(n, minmax(0, 1fr))` 로 직접 박는다. `repeat(var(--n), 1fr)` 로 되돌리면 Safari 에서 보드가 잘린다(아래 참조). `repo.test.ts` 가 CSS 전체에서 `repeat(var(` 를 금지한다.
 - **보드 안의 글자·아이콘 크기는 `vw` 가 아니라 `cqw` 로 잰다.** `.board { container-type: inline-size }` 가 기준이다. 모바일에서 보드는 **높이**에 맞춰 줄어드는데, `vw` 기준이면 글리프만 안 줄어 칸을 넘친다.
 - 모바일에서 보드는 `min(100cqw, 100cqh)` 로 남는 공간의 짧은 변에 맞춘다. 행은 `grid-auto-rows: minmax(0, 1fr)` — 데스크톱은 그대로 `.cell { aspect-ratio: 1 }` 이 정한다.
+- **빨간 X 는 `피해자` 하나만 뜻한다.** 그림은 `base.css` 의 `--dead-x` 가 유일한 출처고 증언 뱃지(`.clue-badge.dead`)·지목 문장·보드의 정답 토큰(`.token.dead`)이 참조한다(`repo.test.ts` 가 값 복제를 막는다). 굵기가 px 이 아니라 퍼센트인 건 24px 뱃지와 보드 토큰에서 같은 비율로 보이게 하려는 것이다. X 는 **음수 z-index** 로 깐다 — 글자(`V`) 위에 그리면 글자를 먹는다. `.clue-badge` 는 스태킹 컨텍스트가 없으므로 `isolation: isolate` 가 같이 필요하다.
+  - **보드에서는 정답 공개 화면에만 얹는다.** 메모 화면에는 `.mark-x`(`✕ 빈칸` = "아무도 없다")가 있어서 같은 글리프가 정반대 뜻을 같이 갖게 된다. `Board.tsx` 가 `revealed` 로 메모와 정답 토큰을 배타적으로 나누므로 둘이 만날 일이 없다 — `board.test.ts` 가 그 배타성을 검사한다.
 
 ### 안뜰의 주인
 
