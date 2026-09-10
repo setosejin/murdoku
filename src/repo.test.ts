@@ -57,6 +57,23 @@ describe('저장소 규약', () => {
       expect(css(name), `${name} 이 --nostand 를 참조하지 않는다`).toContain('var(--nostand)');
   });
 
+  /* 사선 빗금은 `설 수 없음` 한 가지 뜻으로 예약돼 있다. 잔디 바닥이 같은 45도
+     빗금이던 시절 플레이어가 못 서는 칸과 잔디를 구별하지 못했다 — 심지어
+     잔디가 더 진했다. board.css 만 보면 새 스타일시트가 생길 때 규약이
+     새어나가므로(outer.css 가 그렇게 생겼다) 스타일 전체를 본다 */
+  it('사선 반복 그라디언트는 --nostand 하나뿐이다', () => {
+    const bad: string[] = [];
+    for (const [path, text] of Object.entries(sources)) {
+      if (!path.endsWith('.css')) continue;
+      for (const line of text.split('\n')) {
+        const m = /repeating-linear-gradient\(\s*(-?\d+)deg/.exec(line);
+        if (m && Number(m[1]) % 90 !== 0 && !line.includes('--nostand:'))
+          bad.push(`${path}: ${line.trim()}`);
+      }
+    }
+    expect(bad).toEqual([]);
+  });
+
   // FloorKind 에만 넣고 CSS 를 안 그리면 그 방은 조용히 기본 타일색으로 깔린다.
   // 눈으로 보기 전까지 아무도 모르므로 값 목록과 스타일을 직접 맞춰 본다
   it('바닥 재질마다 질감이 있다', () => {
