@@ -20,6 +20,39 @@
   color: var(--muted);
   line-height: 1.6;
 }
+/* '옆' 이 상하좌우 넷이라는 걸 말 대신 보여준다. 대각선 칸에 빗금을 쓰지 않는다 —
+   사선은 `설 수 없음` 전용이라 뜻이 섞인다. 3열은 고정값이라
+   repeat() 안에 var() 를 넣을 일이 없다(webkit#202259) */
+.adj {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 2px;
+  width: 66px;
+  margin: 6px 0 2px;
+}
+.adj i {
+  aspect-ratio: 1;
+  display: grid;
+  place-items: center;
+  border: 1px solid var(--tile-line);
+  background: var(--tile);
+  font-size: 11px;
+  font-style: normal;
+  line-height: 1;
+}
+/* 초록은 범례의 `설 수 있음` 알약과 같은 색이다 — 같은 뜻이면 같게 보여야 한다 */
+.adj i.yes {
+  background: #dcefdd;
+  color: #2d6a3f;
+  font-weight: 700;
+}
+.adj i.no {
+  color: var(--muted);
+}
+.adj i.mid {
+  background: var(--wall);
+  border-color: var(--wall);
+}
 /* 이번 사건에 실제로 나온 가구만 — 설 수 있는지 없는지가 핵심 정보다 */
 .legend ul {
   margin: 0;

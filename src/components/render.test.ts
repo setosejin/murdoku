@@ -39,6 +39,18 @@ describe('App 렌더링', () => {
     expect(brief.indexOf('class="panel legend"')).toBeGreaterThan(-1);
   });
 
+  /* `인접`·`붙어 있다` 는 대각선을 배제하지 않는 말이라, 실제로 대각선을 세다가
+     막힌 사람이 있었다. 그림이 상하좌우 넷만 `옆` 이라고 말하는지 칸 수로 본다.
+     엔진(`clues.ts` 의 DIRS)과 어긋나면 플레이어가 푼 답이 갈린다 */
+  it('규칙이 옆 = 상하좌우 넷임을 그림으로 말한다', () => {
+    expect((html.match(/class="adj"/g) ?? []).length).toBe(1);
+    const from = html.slice(html.indexOf('class="adj"'));
+    const grid = from.slice(0, from.indexOf('</span>'));
+    expect((grid.match(/class="yes"/g) ?? []).length).toBe(4);
+    expect((grid.match(/class="no"/g) ?? []).length).toBe(4);
+    expect((grid.match(/class="mid"/g) ?? []).length).toBe(1);
+  });
+
   it('아이콘 스프라이트를 한 번만 심는다', () => {
     expect((html.match(/id="i-bed"/g) ?? []).length).toBe(1);
   });
