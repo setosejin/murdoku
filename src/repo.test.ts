@@ -52,8 +52,7 @@ describe('저장소 규약', () => {
       Object.entries(sources).find(([p]) => p.endsWith(`/styles/${name}`))?.[1] ?? '';
 
     expect(css('base.css'), 'base.css 에 --nostand 정의가 없다').toMatch(/--nostand:/);
-    // panels.css 는 Task 4(범례 스와치)에서 이 목록에 들어온다
-    for (const name of ['board.css'])
+    for (const name of ['board.css', 'panels.css'])
       expect(css(name), `${name} 이 --nostand 를 참조하지 않는다`).toContain('var(--nostand)');
   });
 

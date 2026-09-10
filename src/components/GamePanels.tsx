@@ -112,7 +112,11 @@ export function LegendPanel({ furniture }: { furniture: Furniture[] }) {
       <ul>
         {furniture.map((f) => (
           <li key={f.id} className={f.standable ? 'ok' : 'no'}>
-            <Art emoji={f.emoji} image={f.image} icon={f.kind} label={f.label} span={spanOf(f)} />
+            {/* 보드 칸의 축소판이다 — 못 서는 가구는 보드에서와 똑같은 빗금 위에
+                앉는다. 글자로만 말하면 보드의 무늬와 이어지지 않는다 */}
+            <span className="legend-tile">
+              <Art emoji={f.emoji} image={f.image} icon={f.kind} label={f.label} span={spanOf(f)} />
+            </span>
             <span>{f.label}</span>
             <em>{f.standable ? '설 수 있음' : '설 수 없음'}</em>
           </li>

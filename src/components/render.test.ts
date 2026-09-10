@@ -51,6 +51,16 @@ describe('App 렌더링', () => {
     expect((grid.match(/class="mid"/g) ?? []).length).toBe(1);
   });
 
+  /* 보드는 빗금으로, 범례는 글자로 말하면 둘이 안 이어진다. 범례 줄이 보드 칸의
+     축소판이 되도록 가구 그림마다 칸 껍데기를 씌운다 (빗금은 panels.css 가 깐다) */
+  it('범례의 가구가 저마다 칸 껍데기 위에 앉는다', () => {
+    const from = html.slice(html.indexOf('class="panel legend"'));
+    const block = from.slice(0, from.indexOf('</ul>'));
+    const rows = (block.match(/<li class="(ok|no)">/g) ?? []).length;
+    expect(rows).toBeGreaterThan(0);
+    expect((block.match(/class="legend-tile"/g) ?? []).length).toBe(rows);
+  });
+
   it('아이콘 스프라이트를 한 번만 심는다', () => {
     expect((html.match(/id="i-bed"/g) ?? []).length).toBe(1);
   });
