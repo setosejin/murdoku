@@ -11,7 +11,9 @@ const INLINE = /(`[^`]+`|\*\*[^*]+\*\*|\[[^\]]+\]\([^)]+\))/g;
 function inline(text: string): ReactNode[] {
   return text.split(INLINE).map((part, i) => {
     if (part.startsWith('`')) return <code key={i}>{part.slice(1, -1)}</code>;
-    if (part.startsWith('**')) return <b key={i}>{part.slice(2, -2)}</b>;
+    // 굵게 안에는 코드·링크가 들어온다 — `**`옆`이 넷이다**` 처럼. 평면으로 두면
+    // 백틱이 글자로 샜다. 안쪽엔 `*` 가 없으므로(INLINE 이 [^*]+) 재귀는 한 겹에서 멈춘다
+    if (part.startsWith('**')) return <b key={i}>{inline(part.slice(2, -2))}</b>;
     const link = /^\[([^\]]+)\]\(([^)]+)\)$/.exec(part);
     if (link)
       return (

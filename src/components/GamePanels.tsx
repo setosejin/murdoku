@@ -56,6 +56,34 @@ export function DifficultySeg({
   );
 }
 
+const ADJ = [-1, 0, 1];
+
+/**
+ * '옆' 이 상하좌우 넷이라는 걸 문장 대신 그림으로 말한다. `인접`·`붙어 있다` 는
+ * 대각선을 배제하지 않는 말이라 실제로 대각선을 세다 막힌 사람이 있었다.
+ *
+ * 칸의 뜻은 맨해튼 거리로 정한다 — `clues.ts` 의 `DIRS` 와 같은 규칙에서 나온
+ * 그림이라 손으로 찍은 표가 아니다. 여기 ✕ 는 보드 메모 브러시(`.mark-x`)와 같은
+ * `아니다` 라서 뜻이 겹치는 게 아니라 이어진다.
+ * 장식이라 aria-hidden 이고, 옆의 규칙 문장이 혼자서도 뜻이 통한다.
+ */
+function AdjacencyDiagram() {
+  return (
+    <span className="adj" aria-hidden="true">
+      {ADJ.flatMap((dr) =>
+        ADJ.map((dc) => {
+          const d = Math.abs(dr) + Math.abs(dc);
+          return (
+            <i key={`${dr},${dc}`} className={d === 0 ? 'mid' : d === 1 ? 'yes' : 'no'}>
+              {d === 1 ? '✓' : d === 2 ? '✕' : ''}
+            </i>
+          );
+        }),
+      )}
+    </span>
+  );
+}
+
 export function RulesPanel() {
   return (
     <div className="panel rules">
@@ -64,8 +92,11 @@ export function RulesPanel() {
         <li>모든 인물은 서로 다른 행과 열에 있다</li>
         <li>한 칸에는 한 사람만 있을 수 있다</li>
         <li>한 방에 용의자는 한 명까지</li>
-        <li>'옆'은 같은 방에서 인접해 있다는 뜻</li>
-        <li>'~에서 나왔다'는 그 방과 벽을 맞댄, 그 방이 아닌 칸</li>
+        <li>
+          '옆'은 같은 방 안에서 상하좌우로 붙은 칸 — 대각선은 아니다
+          <AdjacencyDiagram />
+        </li>
+        <li>'~에서 나왔다'는 그 방과 상하좌우로 벽을 맞댄, 그 방이 아닌 칸</li>
         <li>가구 위에는 설 수 없다 (예외는 범례에)</li>
         <li>건물 밖과 안뜰에는 아무도 서 있지 않다</li>
         <li>피해자와 같은 방에 있던 사람이 범인</li>
@@ -81,7 +112,11 @@ export function LegendPanel({ furniture }: { furniture: Furniture[] }) {
       <ul>
         {furniture.map((f) => (
           <li key={f.id} className={f.standable ? 'ok' : 'no'}>
-            <Art emoji={f.emoji} image={f.image} icon={f.kind} label={f.label} span={spanOf(f)} />
+            {/* 보드 칸의 축소판이다 — 못 서는 가구는 보드에서와 똑같은 빗금 위에
+                앉는다. 글자로만 말하면 보드의 무늬와 이어지지 않는다 */}
+            <span className="legend-tile">
+              <Art emoji={f.emoji} image={f.image} icon={f.kind} label={f.label} span={spanOf(f)} />
+            </span>
             <span>{f.label}</span>
             <em>{f.standable ? '설 수 있음' : '설 수 없음'}</em>
           </li>
