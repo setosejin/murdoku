@@ -229,6 +229,15 @@ describe('버전 기록', () => {
     expect(html.match(/<ul>/g)).toHaveLength(1); // 연속한 항목은 한 목록으로 묶인다
   });
 
+  it('굵게 안의 코드·링크도 그린다', () => {
+    const src = '- **`옆`이 넷이다** 와 **[문서](https://example.dev/d) 참고**';
+    const html = renderToStaticMarkup(createElement('div', null, ...renderMarkdown(src)));
+
+    expect(html).toContain('<b><code>옆</code>이 넷이다</b>');
+    expect(html).toContain('href="https://example.dev/d"');
+    expect(html).not.toContain('`'); // 백틱이 글자로 새면 안 된다
+  });
+
   it('버튼과 dialog 를 그린다', () => {
     const html = renderToStaticMarkup(createElement(ChangelogDialog));
     expect(html).toContain('<dialog');
