@@ -23,6 +23,24 @@ describe('증언 목록 = 메모 브러시', () => {
     for (const p of puzzle.people) expect(html('X')).toContain(`>${p.name}</b>`);
   });
 
+  // V 뱃지가 죽은 사람이라는 걸 몰라 헤맸다는 피드백에서 나왔다. 튜토리얼을 안 봤어도
+  // 증언 목록은 늘 보인다 — 그림(빨간 X)·글자(꼬리표)·낭독(aria-label) 셋이 같은 말을 한다
+  it('피해자 줄만 죽음 표시를 갖는다', () => {
+    const out = html('X');
+    expect((out.match(/class="clue-badge dead"/g) ?? []).length).toBe(1);
+    expect((out.match(/class="dead-tag"/g) ?? []).length).toBe(1);
+    expect(out).toContain('(피해자) 로 표시하기');
+    // 용의자 줄은 그대로다
+    expect((out.match(/class="clue-badge"/g) ?? []).length).toBe(puzzle.people.length - 1);
+  });
+
+  // 피해자가 어디 있었는지도 추리해서 표시해야 한다. 비활성처럼 보이면 안 된다
+  it('피해자 줄도 여전히 눌리는 브러시다', () => {
+    const out = html(puzzle.people.find((p) => p.isVictim)!.id);
+    expect((out.match(/class="clue-row on"/g) ?? []).length).toBe(1);
+    expect(out).not.toContain('disabled');
+  });
+
   it('증언 문구는 puzzle.clues 를 그대로 쓴다 (문자열을 여기서 조립하지 않는다)', () => {
     const out = html('X');
     for (const c of puzzle.clues) expect(out).toContain(c.text);
@@ -138,6 +156,21 @@ describe('모바일 셸 렌더링', () => {
     const legend = brief.indexOf('class="panel legend"');
     expect(legend).toBeGreaterThan(-1);
     expect(legend).toBeLessThan(brief.indexOf('</dialog>'));
+  });
+
+  // 데스크톱 Tour 가 모바일에 없으니 첫 방문에는 이 시트가 저절로 열린다(마운트 effect라
+  // 서버 렌더에는 안 나온다). 저절로 열린 시트는 어디서 왔는지를 안 알려주므로,
+  // 닫은 뒤 규칙에 다시 닿는 길을 그때만 말해준다
+  it('브리핑 시트가 규칙까지 품고, 안내 줄은 첫 방문에만 나온다', () => {
+    const brief = html.slice(html.indexOf(`aria-label="${shellPuzzle.title}"`));
+    const end = brief.indexOf('</dialog>');
+    for (const cls of ['class="panel rules"', 'class="cards"']) {
+      const at = brief.indexOf(cls);
+      expect(at).toBeGreaterThan(-1);
+      expect(at).toBeLessThan(end);
+    }
+    // 서버 렌더 = 첫 방문 effect 가 안 돈 상태 = 안내 줄 없음
+    expect(html).not.toContain('brief-again');
   });
 
   it('범례 시트가 이번 사건의 가구를 빠짐없이 설명한다', () => {

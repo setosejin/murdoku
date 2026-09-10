@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import Board from './Board';
 import CaseCards from './CaseCards';
 import ChangelogDialog from './ChangelogDialog';
@@ -10,6 +10,7 @@ import RankToast from './RankToast';
 import Sheet from './Sheet';
 import { AccusePanel, DifficultySeg, LegendPanel, RulesPanel, SeedPanel } from './GamePanels';
 import { petMenuItems } from './petMenuItems';
+import { markBriefSeen, seenBrief } from '../game/history';
 import type { Game } from '../hooks/useGame';
 
 type SheetId = 'case' | 'accuse' | 'menu';
@@ -25,9 +26,25 @@ export default function MobileShell({ game }: { game: Game }) {
   const [sheet, setSheet] = useState<SheetId | null>(null);
   /** 메뉴 시트를 열면서 어느 패널로 내려갈지. 손님 메뉴가 쓴다 */
   const [jump, setJump] = useState<string | undefined>(undefined);
-  const close = () => setSheet(null);
+  /** 첫 방문으로 저절로 열렸나. 그때만 다시 여는 길을 알려준다 */
+  const [firstBrief, setFirstBrief] = useState(false);
+  const close = () => {
+    setSheet(null);
+    setFirstBrief(false);
+  };
   const { puzzle } = game;
   const alerted = game.rankAlert !== null;
+
+  // 데스크톱 Tour 는 모바일에 없다 — 겨누는 자리(.dclues·.legend)가 메인 화면에 없어서다.
+  // 대신 첫 방문에 사건 브리핑을 연다. 인물·범례·규칙이 이미 그 안에 다 있다.
+  // useState 초기값으로 읽으면 서버 렌더에서도 열린 채 나가므로 마운트 뒤에 켠다
+  // (App.tsx 의 온보딩과 같은 이유)
+  useEffect(() => {
+    if (seenBrief()) return;
+    setSheet('case');
+    setFirstBrief(true);
+    markBriefSeen();
+  }, []);
 
   // 메뉴를 열면 알림은 제 할 일을 다 했다 — 점수판이 바로 이 안에 있다
   const openMenu = (to?: string) => {
@@ -117,6 +134,14 @@ export default function MobileShell({ game }: { game: Game }) {
       </nav>
 
       <Sheet open={sheet === 'case'} onClose={close} title={puzzle.title}>
+        {/* 저절로 열린 시트는 어디서 왔는지를 안 알려준다. 닫고 나면 규칙에 다시
+            닿는 길을 모르므로 첫 방문에만 말해준다. 맨 아래에 두면 끝까지 내리지
+            않는 사람은 못 본다 */}
+        {firstBrief && (
+          <p className="brief-again">
+            위쪽 <b>사건 제목</b>을 누르면 이 브리핑을 언제든 다시 볼 수 있어.
+          </p>
+        )}
         <p className="brief">{puzzle.brief}</p>
         <CaseCards puzzle={puzzle} />
         {/* 범례는 사건마다 다른 기준(어느 가구를 밟을 수 있나)이라 사건 브리핑에
@@ -129,6 +154,7 @@ export default function MobileShell({ game }: { game: Game }) {
       <Sheet open={sheet === 'accuse'} onClose={close} title="범인 지목">
         <AccusePanel
           suspects={game.suspects}
+          victim={game.victim}
           accused={game.accused}
           setAccused={game.setAccused}
           accuse={game.accuse}

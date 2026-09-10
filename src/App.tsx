@@ -157,6 +157,7 @@ export default function App() {
         <div className="side">
           <AccusePanel
             suspects={game.suspects}
+            victim={game.victim}
             accused={game.accused}
             setAccused={game.setAccused}
             accuse={game.accuse}

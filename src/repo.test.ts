@@ -101,6 +101,38 @@ describe('저장소 규약', () => {
     expect(bad).toEqual([]);
   });
 
+  // 빨간 X 는 `피해자` 하나만 뜻한다. 값이 두 벌이면 언젠가 갈라져서
+  // 같은 뜻인데 다르게 생긴 표시가 두 개 생긴다
+  it('피해자 X 는 base.css 한 곳에서만 정의된다', () => {
+    const defs = Object.entries(sources)
+      .filter(([, text]) => text.includes('--dead-x:'))
+      .map(([path]) => path);
+    expect(defs).toEqual([expect.stringMatching(/\/styles\/base\.css$/)]);
+
+    for (const name of ['clues.css', 'board.css']) {
+      const text = Object.entries(sources).find(([p]) => p.endsWith(`/styles/${name}`))?.[1];
+      expect(text).toContain('var(--dead-x)');
+    }
+  });
+
+  /* 범례의 알약 색은 `칸` 이야기에 묶여 있다 — 분홍은 `설 수 없음`, 초록은
+     `설 수 있음`. `피해자` 는 사람 이야기라 거기 끼면 같은 분홍이 두 뜻을 진다.
+     실제로 그렇게 태어났고(둘 다 #f2dcd8) 리뷰에서 잡혔다. 피해자에게는
+     자기 색이 이미 있다 — 같은 줄 뱃지에 얹힌 --accent 빨간 X */
+  it('피해자 알약이 범례의 설 수 있음·없음 색을 쓰지 않는다', () => {
+    const css = (name: string) =>
+      Object.entries(sources).find(([p]) => p.endsWith(`/styles/${name}`))?.[1] ?? '';
+
+    const legend = /\.legend \.(?:ok|no) em \{[^}]*background:\s*(#[0-9a-f]{6})/gi;
+    const bound = [...css('panels.css').matchAll(legend)].map((m) => m[1].toLowerCase());
+    expect(bound, '범례 알약의 색쌍을 못 찾았다').toHaveLength(2);
+
+    const tag = /\.dead-tag\s*\{([^}]*)\}/.exec(css('clues.css'))?.[1] ?? '';
+    expect(tag, '.dead-tag 규칙을 못 찾았다').not.toBe('');
+    for (const c of bound) expect(tag.toLowerCase(), `${c} 는 범례 전용 색이다`).not.toContain(c);
+    expect(tag, '피해자 알약이 제 X 와 같은 빨강을 안 쓴다').toContain('var(--accent)');
+  });
+
   // FloorKind 에만 넣고 CSS 를 안 그리면 그 방은 조용히 기본 타일색으로 깔린다.
   // 눈으로 보기 전까지 아무도 모르므로 값 목록과 스타일을 직접 맞춰 본다
   it('바닥 재질마다 질감이 있다', () => {

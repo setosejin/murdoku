@@ -99,6 +99,36 @@
   font-size: 12px;
   font-weight: 700;
 }
+/* 피해자 뱃지. X 를 글자 위에 그리면 V 를 먹으므로 음수 z-index 로 깐다 —
+   음수 z-index 자식은 부모의 배경 위·인라인 내용 아래에 그려진다.
+   isolation 이 없으면 스태킹 컨텍스트가 없어 X 가 .clue-row 배경 뒤로 빠져 아예 안 보인다 */
+.clue-badge.dead {
+  position: relative;
+  isolation: isolate;
+}
+.clue-badge.dead::before {
+  content: '';
+  position: absolute;
+  inset: 15%;
+  z-index: -1;
+  background: var(--dead-x);
+}
+/* 그림만으로는 "죽었다" 가 안 읽힐 수 있다. 모양은 범례 알약과 같되 색은 다르다 —
+   범례의 분홍·초록은 `설 수 없음`·`설 수 있음` 이라는 칸 이야기에 묶여 있어서,
+   사람 이야기인 피해자가 그 분홍을 쓰면 같은 색이 두 뜻을 진다.
+   같은 줄 뱃지에 얹힌 빨간 X 와 같은 --accent 로 묶는다 (.chip.danger 와 같은 언어) */
+.dead-tag {
+  flex: none;
+  font-style: normal;
+  font-size: 11px;
+  font-weight: 700;
+  border: 2px solid var(--accent);
+  border-radius: 999px;
+  padding: 0 6px;
+  background: #fff;
+  color: var(--accent);
+  white-space: nowrap;
+}
 .clue-row b {
   flex: none;
   font-size: 13px;

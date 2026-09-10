@@ -1,9 +1,11 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { DIFFICULTIES } from './generate';
 import { fakeEnv } from './kvFake';
 import worker from '../../worker/index';
 import {
   isCode,
+  markBriefSeen,
+  markTourSeen,
   MAX_NICK_LEN,
   MAX_PLAYS,
   mergePlays,
@@ -12,6 +14,8 @@ import {
   sanitizePlays,
   SCORE_BASE,
   scoreOf,
+  seenBrief,
+  seenTour,
   summarize,
   type Play,
 } from './history';
@@ -295,6 +299,34 @@ describe('기록 동기화 워커', () => {
         e,
       );
       expect(await res.json()).toEqual([play(1)]);
+    }
+  });
+});
+
+/* 모바일 첫 브리핑과 데스크톱 온보딩은 다른 물건이다 — 앞은 사건과 규칙을,
+   뒤는 화면 구조를 가르친다. 키를 합치면 모바일로 먼저 본 사람이 데스크톱에서
+   스포트라이트 온보딩을 영영 못 보는데, 화면으로는 안 보이는 고장이다.
+   테스트 환경에 jsdom 이 없지만 readLS/writeLS 가 try/catch 라 가짜를 끼우면 그대로 돈다 */
+describe('첫 방문 안내', () => {
+  it('모바일 브리핑과 데스크톱 온보딩을 따로 기억한다', () => {
+    const store = new Map<string, string>();
+    vi.stubGlobal('localStorage', {
+      getItem: (k: string) => store.get(k) ?? null,
+      setItem: (k: string, v: string) => void store.set(k, v),
+    });
+    try {
+      expect(seenBrief()).toBe(false);
+      expect(seenTour()).toBe(false);
+
+      markBriefSeen();
+      expect(seenBrief()).toBe(true);
+      expect(seenTour()).toBe(false);
+
+      markTourSeen();
+      expect(seenTour()).toBe(true);
+      expect(store.size).toBe(2);
+    } finally {
+      vi.unstubAllGlobals();
     }
   });
 });

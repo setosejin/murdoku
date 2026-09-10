@@ -225,6 +225,21 @@ export function markTourSeen() {
   writeLS(TOUR_KEY, '1');
 }
 
+/* 모바일에는 스포트라이트 온보딩이 없다(겨눌 자리가 메인 화면에 없다). 대신 첫 방문에
+   사건 브리핑 시트를 연다 — 그 안에 인물·범례·규칙이 이미 다 있다.
+   키를 TOUR_KEY 와 나눈 이유: 합치면 모바일로 먼저 본 사람이 데스크톱에서 온보딩을
+   영영 못 본다. 반대로 창을 좁혀 브리핑이 한 번 열리는 건 그 화면을 처음 보는 것이라 맞다 */
+const BRIEF_KEY = 'murdoku.brief';
+
+/** 모바일 사건 브리핑을 한 번이라도 봤나 */
+export function seenBrief(): boolean {
+  return readLS(BRIEF_KEY) !== null;
+}
+
+export function markBriefSeen() {
+  writeLS(BRIEF_KEY, '1');
+}
+
 export function loadPlays(): Play[] {
   const raw = readLS(PLAYS_KEY);
   if (raw === null) return [];

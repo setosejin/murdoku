@@ -15,6 +15,14 @@
   --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
   --dur-press: 160ms;
   --dur-fast: 180ms;
+  /* 피해자 표시. 브리핑 카드의 초상 X(.card.victim)가 쓰던 기호를 증언 뱃지와
+     보드의 정답 토큰까지 넓힌 것 — 값이 두 벌이면 언젠가 갈라지므로 여기 한 번만 둔다.
+     굵기가 px 이 아니라 퍼센트인 이유: 24px 뱃지와 보드 토큰(20~40px)에서 같은 비율로
+     보여야 한다. 두 자리 다 정사각이라 축마다 왜곡되지 않는다.
+     calc() 안에 var() 가 없다 — 값이 바뀌는 자리에서 WebKit 이 캐싱한다 (webkit#202259) */
+  --dead-x:
+    linear-gradient(to bottom right, #0000 calc(50% - 4%), var(--accent) calc(50% - 4%) calc(50% + 4%), #0000 calc(50% + 4%)),
+    linear-gradient(to bottom left, #0000 calc(50% - 4%), var(--accent) calc(50% - 4%) calc(50% + 4%), #0000 calc(50% + 4%));
   color-scheme: light;
 }
 
