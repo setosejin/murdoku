@@ -45,6 +45,18 @@ describe('저장소 규약', () => {
     expect(bad).toEqual([]);
   });
 
+  /* 빗금은 "여기 못 선다" 는 뜻을 가진 기호다. 보드와 범례가 같은 무늬를 보여야
+     플레이어가 둘을 잇는다. 값을 양쪽에 복사해 두면 한쪽만 고쳐지는 날이 온다 */
+  it('설 수 없음 빗금은 --nostand 한 곳에서만 정한다', () => {
+    const css = (name: string) =>
+      Object.entries(sources).find(([p]) => p.endsWith(`/styles/${name}`))?.[1] ?? '';
+
+    expect(css('base.css'), 'base.css 에 --nostand 정의가 없다').toMatch(/--nostand:/);
+    // panels.css 는 Task 4(범례 스와치)에서 이 목록에 들어온다
+    for (const name of ['board.css'])
+      expect(css(name), `${name} 이 --nostand 를 참조하지 않는다`).toContain('var(--nostand)');
+  });
+
   // FloorKind 에만 넣고 CSS 를 안 그리면 그 방은 조용히 기본 타일색으로 깔린다.
   // 눈으로 보기 전까지 아무도 모르므로 값 목록과 스타일을 직접 맞춰 본다
   it('바닥 재질마다 질감이 있다', () => {

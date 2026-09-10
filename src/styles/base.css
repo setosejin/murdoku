@@ -5,6 +5,12 @@
   --tile: #fdfaf2;
   --tile-line: #cec2a8;
   --accent: #c0392b;
+  /* 설 수 없는 칸의 사선 빗금. 뜻을 가진 기호라 여기 한 곳에서만 정하고
+     보드(`.cell.blocked`)와 범례(`.legend .no`)가 같이 쓴다 — 값이 두 벌이면
+     언젠가 갈라진다. 바닥 재질은 이 무늬를 흉내 내면 안 된다.
+     예전 값(#23201c12)은 잔디 바닥(12%)보다 옅어서, 뜻을 가진 기호가
+     배경 무늬에 묻혔다 */
+  --nostand: repeating-linear-gradient(45deg, #0000 0 5px, #23201c26 5px 7px);
   --muted: #7d7466;
   --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
   --dur-press: 160ms;
