@@ -23,6 +23,12 @@
   --dead-x:
     linear-gradient(to bottom right, #0000 calc(50% - 4%), var(--accent) calc(50% - 4%) calc(50% + 4%), #0000 calc(50% + 4%)),
     linear-gradient(to bottom left, #0000 calc(50% - 4%), var(--accent) calc(50% - 4%) calc(50% + 4%), #0000 calc(50% + 4%));
+  /* `맞다`/`아니다` 에 묶인 색쌍. 범례 알약(`설 수 있음`/`설 수 없음`)이 원래 자리고
+     옆 다이어그램(`.adj i.yes`)이 같은 초록을 빌리는 것도 뜻이 같아서다.
+     여기 한 번만 두는 이유: `피해자` 알약이 분홍을 그대로 써서 `설 수 없음` 과
+     픽셀 단위로 같아진 적이 있다. 뜻이 다르면 이 쌍에서 빼내 제 색을 줘야 한다 */
+  --yes-tint: #dcefdd;
+  --no-tint: #f2dcd8;
   color-scheme: light;
 }
 
