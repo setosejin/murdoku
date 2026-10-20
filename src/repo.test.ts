@@ -118,19 +118,51 @@ describe('저장소 규약', () => {
   /* 범례의 알약 색은 `칸` 이야기에 묶여 있다 — 분홍은 `설 수 없음`, 초록은
      `설 수 있음`. `피해자` 는 사람 이야기라 거기 끼면 같은 분홍이 두 뜻을 진다.
      실제로 그렇게 태어났고(둘 다 #f2dcd8) 리뷰에서 잡혔다. 피해자에게는
-     자기 색이 이미 있다 — 같은 줄 뱃지에 얹힌 --accent 빨간 X */
+     자기 색이 이미 있다 — 같은 줄 뱃지에 얹힌 --accent 빨간 X.
+
+     색쌍이 토큰으로 빠진 뒤로는 토큰과 그 뒤의 값을 둘 다 본다. 한쪽만 보면
+     var() 를 피해 hex 를 직접 적는 길이 열린다 */
   it('피해자 알약이 범례의 설 수 있음·없음 색을 쓰지 않는다', () => {
     const css = (name: string) =>
       Object.entries(sources).find(([p]) => p.endsWith(`/styles/${name}`))?.[1] ?? '';
 
-    const legend = /\.legend \.(?:ok|no) em \{[^}]*background:\s*(#[0-9a-f]{6})/gi;
-    const bound = [...css('panels.css').matchAll(legend)].map((m) => m[1].toLowerCase());
+    const legend = /\.legend \.(?:ok|no) em \{[^}]*background:\s*var\((--[\w-]+)\)/gi;
+    const bound = [...css('panels.css').matchAll(legend)].map((m) => m[1]);
     expect(bound, '범례 알약의 색쌍을 못 찾았다').toHaveLength(2);
+
+    const hex = bound.map(
+      (t) => new RegExp(`${t}:\\s*(#[0-9a-f]{3,8})`, 'i').exec(css('base.css'))?.[1] ?? '',
+    );
+    expect(hex, '색쌍의 값을 base.css 에서 못 찾았다').not.toContain('');
 
     const tag = /\.dead-tag\s*\{([^}]*)\}/.exec(css('clues.css'))?.[1] ?? '';
     expect(tag, '.dead-tag 규칙을 못 찾았다').not.toBe('');
-    for (const c of bound) expect(tag.toLowerCase(), `${c} 는 범례 전용 색이다`).not.toContain(c);
+    for (const c of [...bound, ...hex])
+      expect(tag.toLowerCase(), `${c} 는 범례 전용 색이다`).not.toContain(c.toLowerCase());
     expect(tag, '피해자 알약이 제 X 와 같은 빨강을 안 쓴다').toContain('var(--accent)');
+  });
+
+  /* 그 색쌍이 `맞다`/`아니다` 를 뜻하는 건 범례 밖에서도 통한다 — 옆 다이어그램의
+     `옆이다` 칸이 같은 초록을 빌려 쓰는 게 그래서다. 값을 복사해 두면 한쪽만
+     고쳐져 같은 뜻인데 다르게 보이는 날이 온다 (--nostand·--dead-x 와 같은 이유) */
+  it('맞다·아니다 색쌍은 base.css 한 곳에서만 정한다', () => {
+    const entries = Object.entries(sources).filter(([p]) => p.endsWith('.css'));
+    const base = /\/styles\/base\.css$/;
+
+    for (const token of ['--yes-tint', '--no-tint']) {
+      const defs = entries.filter(([, t]) => t.includes(`${token}:`)).map(([p]) => p);
+      expect(defs, `${token} 정의가 base.css 한 곳이 아니다`).toEqual([expect.stringMatching(base)]);
+    }
+
+    const raw = entries
+      .filter(([p]) => !base.test(p))
+      .filter(([, t]) => /#dcefdd|#f2dcd8/i.test(t))
+      .map(([p]) => p);
+    expect(raw, '색쌍 값을 base.css 밖에서 직접 썼다').toEqual([]);
+
+    const panels = entries.find(([p]) => p.endsWith('/styles/panels.css'))?.[1] ?? '';
+    const adj = /\.adj i\.yes\s*\{([^}]*)\}/.exec(panels)?.[1] ?? '';
+    expect(adj, '옆 다이어그램이 색쌍의 초록을 안 빌린다').toContain('var(--yes-tint)');
   });
 
   // FloorKind 에만 넣고 CSS 를 안 그리면 그 방은 조용히 기본 타일색으로 깔린다.
