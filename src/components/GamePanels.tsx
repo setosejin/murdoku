@@ -130,13 +130,10 @@ export function BrushBar({
   brush,
   setBrush,
   clearMarks,
-  onHelp,
 }: {
   brush: string;
   setBrush: (id: string) => void;
   clearMarks: () => void;
-  /** 온보딩 열기. 데스크톱 셸만 넘긴다 */
-  onHelp?: () => void;
 }) {
   return (
     <div className="dclues-bar">
@@ -151,18 +148,6 @@ export function BrushBar({
       <button type="button" className="chip" onClick={clearMarks}>
         메모 지우기
       </button>
-      {onHelp && (
-        <button
-          type="button"
-          className="chip icon"
-          aria-label="게임 방법 보기"
-          aria-haspopup="dialog"
-          title="게임 방법"
-          onClick={onHelp}
-        >
-          ?
-        </button>
-      )}
     </div>
   );
 }
@@ -215,7 +200,7 @@ export function AccusePanel({
   return (
     <div className={bare ? 'accuse bare' : 'panel accuse'}>
       {!bare && <b>범인은?</b>}
-      {/* 규칙 전문은 브리핑 모달 안에만 있어서, 모달을 안 연 사람에게는 없는 것과 같다.
+      {/* 규칙 전문은 도움말 안에 있어서, 모달을 안 연 사람에게는 없는 것과 같다.
           지목하는 순간이 규칙이 필요한 순간이라 여기 상시로 둔다.
           조사(와/과)를 피하려고 이름 뒤에서 문장을 끊는다 — 받침에 상관없이 늘 맞는다.
           앞의 뱃지는 증언 목록의 그것과 같은 모양이다: 문장 속 기호가 화면의

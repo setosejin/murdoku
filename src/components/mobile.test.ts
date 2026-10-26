@@ -145,33 +145,24 @@ describe('모바일 셸 렌더링', () => {
   });
 
   it('나머지는 전부 시트로 들어간다', () => {
-    expect((html.match(/class="sheet"/g) ?? []).length).toBe(3);
-    for (const title of [shellPuzzle.title, '범인 지목', '메뉴'])
+    expect((html.match(/class="sheet"/g) ?? []).length).toBe(4);
+    for (const title of [shellPuzzle.title, '범인 지목', '메뉴', '게임 방법'])
       expect(html).toContain(`aria-label="${title}"`);
   });
 
-  // 범례는 상시 노출하던 시트에서 브리핑 안으로 들어갔다. 사건을 읽는 자리에서
-  // 가구 규칙을 같이 보는 게 맞고, 하단바도 버튼 하나만큼 가벼워진다
-  it('범례가 브리핑 시트 안에 있다', () => {
-    const brief = html.slice(html.indexOf(`aria-label="${shellPuzzle.title}"`));
-    const legend = brief.indexOf('class="panel legend"');
-    expect(legend).toBeGreaterThan(-1);
-    expect(legend).toBeLessThan(brief.indexOf('</dialog>'));
+  it('게임 방법 시트에서 조작법·규칙·이번 사건의 범례를 함께 본다', () => {
+    const help = html.match(/<dialog[^>]*aria-label="게임 방법"[^>]*>(.*?)<\/dialog>/s)?.[1] ?? '';
+    for (const cls of ['help-steps', 'panel rules', 'panel legend'])
+      expect(help).toContain(`class="${cls}"`);
+    expect(html).toMatch(/class="mtop".*aria-label="게임 방법".*<\/header>/s);
   });
 
-  // 데스크톱 Tour 가 모바일에 없으니 첫 방문에는 이 시트가 저절로 열린다(마운트 effect라
-  // 서버 렌더에는 안 나온다). 저절로 열린 시트는 어디서 왔는지를 안 알려주므로,
-  // 닫은 뒤 규칙에 다시 닿는 길을 그때만 말해준다
-  it('브리핑 시트가 규칙까지 품고, 안내 줄은 첫 방문에만 나온다', () => {
+  it('사건 브리핑은 인물과 이야기에 집중한다', () => {
     const brief = html.slice(html.indexOf(`aria-label="${shellPuzzle.title}"`));
-    const end = brief.indexOf('</dialog>');
-    for (const cls of ['class="panel rules"', 'class="cards"']) {
-      const at = brief.indexOf(cls);
-      expect(at).toBeGreaterThan(-1);
-      expect(at).toBeLessThan(end);
-    }
-    // 서버 렌더 = 첫 방문 effect 가 안 돈 상태 = 안내 줄 없음
-    expect(html).not.toContain('brief-again');
+    const body = brief.slice(0, brief.indexOf('</dialog>'));
+    expect(body).toContain('class="cards"');
+    expect(body).not.toContain('class="panel rules"');
+    expect(body).not.toContain('class="panel legend"');
   });
 
   it('범례 시트가 이번 사건의 가구를 빠짐없이 설명한다', () => {

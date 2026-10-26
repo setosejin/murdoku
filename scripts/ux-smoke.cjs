@@ -15,8 +15,10 @@ async function newPage(browser, width = 1280, height = 800, fresh = false) {
   await context.route('**/*', (route) =>
     new URL(route.request().url()).origin === new URL(url).origin ? route.continue() : route.abort());
   if (!fresh) await context.addInitScript(() => {
+    if (sessionStorage.getItem('ux-initialized')) return;
     localStorage.setItem('murdoku.tour', '1');
     localStorage.setItem('murdoku.brief', '1');
+    sessionStorage.setItem('ux-initialized', '1');
   });
   const page = await context.newPage();
   page.setDefaultTimeout(8000);
@@ -98,6 +100,41 @@ async function measure(page) {
 }
 
 const scenarios = {
+  async help({ page, mobile }) {
+    const trigger = page.getByRole('button', { name: '게임 방법', exact: true });
+    assert.equal(await trigger.count(), 1);
+    const before = await snapshot(page);
+    await trigger.click();
+    const help = page.getByRole('dialog', { name: '게임 방법', exact: true });
+    await help.waitFor({ state: 'visible' });
+    assert.equal(await help.locator('.rules').count(), 1);
+    assert.equal(await help.locator('.legend').count(), 1);
+    const visible = await help.evaluate((d) => {
+      const steps = d.querySelector('.help-steps').getBoundingClientRect();
+      const body = d.querySelector('.sheet-body').getBoundingClientRect();
+      return steps.top >= body.top && steps.bottom <= body.bottom;
+    });
+    assert.equal(visible, true, '첫 화면에 조작 안내가 보여야 한다');
+    if (mobile) {
+      await help.getByRole('button', { name: '닫기', exact: true }).click();
+      await closed(page);
+      assert.deepEqual(await snapshot(page), before);
+      await page.evaluate(() => localStorage.removeItem('murdoku.brief'));
+      await page.reload({ waitUntil: 'networkidle' });
+      await help.waitFor({ state: 'visible' });
+      await help.getByRole('button', { name: '닫기', exact: true }).click();
+      await closed(page);
+      await page.reload({ waitUntil: 'networkidle' });
+      assert.equal(await page.locator('.sheet[open]').count(), 0);
+    } else {
+      await help.getByRole('button', { name: '화면 안내 다시 보기' }).click();
+      await page.locator('.tour[open]').waitFor();
+      assert.equal(await page.locator('.tour-card > b').textContent(), '평면도');
+      assert.equal(await page.locator('.sheet[open]').count(), 0);
+      await page.getByRole('button', { name: '그만 보기' }).click();
+      assert.deepEqual(await snapshot(page), before);
+    }
+  },
   async transitions({ page, mobile }) {
     await page.evaluate(() => localStorage.setItem('murdoku.history', JSON.stringify([
       { seed: 'ux-past', n: 4, at: 1, ok: true, tries: 1, title: '다시 열 사건' },

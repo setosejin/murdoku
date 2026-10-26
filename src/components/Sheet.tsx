@@ -12,6 +12,7 @@ export default function Sheet({
   title,
   modal,
   jumpTo,
+  onAfterClose,
   children,
 }: {
   open: boolean;
@@ -24,10 +25,14 @@ export default function Sheet({
    * "닉네임 변경" 이 같은 시트의 다른 자리를 가리킬 때 쓴다.
    */
   jumpTo?: string;
+  /** 퇴장이 끝난 뒤 다른 모달을 열 때 쓴다. */
+  onAfterClose?: () => void;
   children?: ReactNode;
 }) {
   const ref = useRef<HTMLDialogElement>(null);
   const body = useRef<HTMLDivElement>(null);
+  const afterClose = useRef(onAfterClose);
+  useEffect(() => { afterClose.current = onAfterClose; }, [onAfterClose]);
 
   useEffect(() => {
     const d = ref.current;
@@ -56,6 +61,7 @@ export default function Sheet({
       done = true;
       delete d.dataset.closing;
       d.close();
+      afterClose.current?.();
     };
     const onEnd = (e: TransitionEvent) => {
       if (

@@ -6,6 +6,7 @@ import ChangelogDialog from './components/ChangelogDialog';
 import ClueList from './components/ClueList';
 import FeedbackDialog from './components/FeedbackDialog';
 import HistoryPanel from './components/HistoryPanel';
+import HelpSheet from './components/HelpSheet';
 import Leaderboard from './components/Leaderboard';
 import MobileShell from './components/MobileShell';
 import RankToast from './components/RankToast';
@@ -16,15 +17,13 @@ import {
   AccusePanel,
   BrushBar,
   DifficultySeg,
-  LegendPanel,
-  RulesPanel,
   SeedPanel,
 } from './components/GamePanels';
 import { markTourSeen, seenTour } from './game/history';
 import useGame from './hooks/useGame';
 import useMediaQuery, { MOBILE_QUERY } from './hooks/useMediaQuery';
 
-type DialogId = 'case' | 'menu';
+type DialogId = 'case' | 'menu' | 'help';
 
 /**
  * 데스크톱 셸 — 한 화면 안에 세 열로 편다: 증언(= 메모 브러시) · 보드 · 지목/참고.
@@ -41,6 +40,7 @@ export default function App() {
   const mobile = useMediaQuery(MOBILE_QUERY);
   const [dialog, setDialog] = useState<DialogId | null>(null);
   const [tour, setTour] = useState(false);
+  const [tourPending, setTourPending] = useState(false);
   /** 더보기 모달을 열면서 어느 패널로 내려갈지. 손님 메뉴가 쓴다 */
   const [jump, setJump] = useState<string | undefined>(undefined);
   const close = () => setDialog(null);
@@ -54,13 +54,9 @@ export default function App() {
     game.dismissRank();
   };
 
-  /* 바깥 손님을 우클릭하면 나오는 항목. 목록은 두 셸이 공유하고, 무엇을 여는지만
-     여기서 정한다 — 데스크톱의 도움말은 온보딩 투어다 */
+  /* 바깥 손님도 같은 게임 방법을 연다. */
   const petMenu = petMenuItems({
-    onHelp: () => {
-      close();
-      setTour(true);
-    },
+    onHelp: () => setDialog('help'),
     onRank: () => openMenu('jump-scores'),
     onName: () => openMenu('jump-account'),
     onNew: () => game.reset(),
@@ -128,16 +124,16 @@ export default function App() {
       </header>
 
       <section className="play">
-        <div className="panel dclues">
-          <b>증언</b>
-          {/* 증언을 읽는 자리가 곧 브러시를 고르는 자리다 */}
-          <ClueList puzzle={puzzle} brush={game.brush} setBrush={game.setBrush} />
-          <BrushBar
-            brush={game.brush}
-            setBrush={game.setBrush}
-            clearMarks={game.clearMarks}
-            onHelp={() => setTour(true)}
-          />
+        <div className="dcol">
+          <div className="panel dclues">
+            <b>증언</b>
+            <ClueList puzzle={puzzle} brush={game.brush} setBrush={game.setBrush} />
+            <BrushBar brush={game.brush} setBrush={game.setBrush} clearMarks={game.clearMarks} />
+          </div>
+          <button type="button" className="chip dhelp" aria-label="게임 방법"
+            aria-haspopup="dialog" title="게임 방법" onClick={() => setDialog('help')}>
+            ?
+          </button>
         </div>
 
         <div className="pboard">
@@ -196,14 +192,15 @@ export default function App() {
       <Sheet modal open={dialog === 'case'} onClose={close} title={puzzle.title}>
         <p className="brief">{puzzle.brief}</p>
         <CaseCards puzzle={puzzle} />
-        {/* 규칙도 범례도 처음 한 번 읽고 마는 것이라 사이드 열을 계속 차지할 이유가
-            없다. 열 폭은 clamp 로 고정이라 보드가 넓어지지는 않지만, 늘 보이던
-            가구 목록이 빠져서 기본 화면에 남는 건 보드와 증언뿐이다.
-            범례 기준은 사건마다 다르므로 브리핑에서 사건과 같이 읽는 게 맞다
-            (모바일 `사건` 시트도 같은 자리) */}
-        <LegendPanel furniture={puzzle.furniture} />
-        <RulesPanel />
       </Sheet>
+
+      <HelpSheet modal open={dialog === 'help'} onClose={close} furniture={puzzle.furniture}
+        onTour={() => { setTourPending(true); close(); }}
+        onAfterClose={() => {
+          if (!tourPending) return;
+          setTourPending(false);
+          setTour(true);
+        }} />
 
       <Sheet modal open={dialog === 'menu'} onClose={close} title="더보기" jumpTo={jump}>
         <SeedPanel seed={game.seed} onOpen={(s) => {
