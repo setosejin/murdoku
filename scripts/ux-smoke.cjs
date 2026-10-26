@@ -41,7 +41,6 @@ async function openCase(page, mobile, n, seed) {
   if (!mobile) await menu(page, false);
   await page.getByRole('textbox', { name: '시드 입력' }).fill(seed);
   await page.locator('.sheet[open] .seedbox button').click();
-  await page.locator('.sheet[open] .sheet-x').click();
   await closed(page);
 }
 
@@ -99,6 +98,47 @@ async function measure(page) {
 }
 
 const scenarios = {
+  async transitions({ page, mobile }) {
+    await page.evaluate(() => localStorage.setItem('murdoku.history', JSON.stringify([
+      { seed: 'ux-past', n: 4, at: 1, ok: true, tries: 1, title: '다시 열 사건' },
+    ])));
+    await page.reload({ waitUntil: 'networkidle' });
+    await openCase(page, mobile, 4, 'ux-transitions');
+    await markTwo(page, mobile);
+    const before = await snapshot(page);
+    if (mobile) await menu(page, true);
+    await page.getByRole('button', { name: '쉬움 (4×4)', exact: true }).click();
+    assert.deepEqual(await snapshot(page), before);
+    const reject = async (action) => {
+      let asked = false;
+      page.once('dialog', async (d) => { asked = true; await d.dismiss(); });
+      await action();
+      assert.equal(asked, true, '진행을 버리기 전에 확인해야 한다');
+      assert.deepEqual(await snapshot(page), before);
+    };
+    await reject(() => page.getByRole('button', { name: '새 사건', exact: true }).click());
+    await reject(() => page.getByRole('button', { name: '보통 (5×5)', exact: true }).click());
+    await reject(() => page.getByRole('button', { name: '메모 지우기', exact: true }).click());
+    if (!mobile) await menu(page, false);
+    await page.getByRole('textbox', { name: '시드 입력' }).fill('ux-cancelled');
+    await reject(() => page.locator('.sheet[open] .seedbox button').click());
+    assert.equal(await page.getByRole('textbox', { name: '시드 입력' }).inputValue(), 'ux-cancelled');
+    await reject(() => page.locator('.sheet[open] .history li button').first().click());
+    assert.equal(await page.locator('.sheet[open]').count(), 1);
+    page.once('dialog', (d) => d.accept());
+    await page.locator('.sheet[open] .seedbox button').click();
+    await closed(page);
+    assert.equal((await snapshot(page)).seed, 'ux-cancelled');
+    assert.equal((await snapshot(page)).marks.length, 0);
+    // 빈 새 판에서는 별도 확인 없이 다른 사건으로 넘어간다.
+    let asked = false;
+    page.once('dialog', async (d) => { asked = true; await d.dismiss(); });
+    if (mobile) await menu(page, true);
+    await page.getByRole('button', { name: '새 사건', exact: true }).click();
+    if (mobile) await closed(page);
+    assert.equal(asked, false);
+    assert.notEqual((await snapshot(page)).seed, 'ux-cancelled');
+  },
   async lifecycle({ page, mobile }) {
     await openCase(page, mobile, 4, 'ux-finish-check');
     const { correct, wrong } = await people(page);

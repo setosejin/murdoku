@@ -85,6 +85,8 @@ export default function useGame() {
   const replaying = plays.some((p) => p.ok && p.n === n && p.seed === seed);
 
   const reset = (nextN = n, nextSeed = newSeed()) => {
+    if (!finished && (Object.keys(marks).length > 0 || attempt > 0) &&
+      !window.confirm('풀던 사건의 진행을 버리고 다른 사건을 열까?')) return false;
     setN(nextN);
     setSeed(nextSeed);
     setMarks({});
@@ -98,6 +100,7 @@ export default function useGame() {
     setEarned(0);
     // 지목 횟수는 사건마다 새로 센다. 안 그러면 기록의 tries 에 이전 사건 지목까지 딸려온다
     setAttempt(0);
+    return true;
   };
 
   const onCell = (key: string) => {
@@ -160,7 +163,11 @@ export default function useGame() {
     setNick: setNickState,
     // 메뉴를 열면 알림은 제 할 일을 다 한 것이다
     dismissRank: () => setRankAlert(null),
-    clearMarks: () => setMarks({}),
+    clearMarks: () => {
+      if (Object.keys(marks).length > 0 && !window.confirm('메모를 모두 지울까?')) return false;
+      setMarks({});
+      return true;
+    },
     onCell,
     accuse,
     reset,

@@ -159,8 +159,7 @@ export default function MobileShell({ game }: { game: Game }) {
           setAccused={game.setAccused}
           accuse={game.accuse}
           onNext={() => {
-            game.reset();
-            close();
+            if (game.reset()) close();
           }}
           replaying={game.replaying}
           result={game.result}
@@ -188,16 +187,14 @@ export default function MobileShell({ game }: { game: Game }) {
             difficulties={game.difficulties}
             n={game.n}
             onPick={(n) => {
-              game.reset(n);
-              close();
+              if (game.reset(n)) close();
             }}
           />
           <button
             type="button"
             className="chip primary"
             onClick={() => {
-              game.reset();
-              close();
+              if (game.reset()) close();
             }}
           >
             새 사건
@@ -206,15 +203,18 @@ export default function MobileShell({ game }: { game: Game }) {
             type="button"
             className="chip"
             onClick={() => {
-              game.clearMarks();
-              close();
+              if (game.clearMarks()) close();
             }}
           >
             메모 지우기
           </button>
         </div>
 
-        <SeedPanel seed={game.seed} onOpen={(s) => game.reset(game.n, s)} />
+        <SeedPanel seed={game.seed} onOpen={(s) => {
+          const opened = game.reset(game.n, s);
+          if (opened) close();
+          return opened;
+        }} />
 
         <Leaderboard plays={game.plays} board={game.board} nick={game.nick} />
 
@@ -226,8 +226,7 @@ export default function MobileShell({ game }: { game: Game }) {
           setCode={game.setCode}
           setNick={game.setNick}
           onOpen={(pn, ps) => {
-            game.reset(pn, ps);
-            close();
+            if (game.reset(pn, ps)) close();
           }}
         />
 

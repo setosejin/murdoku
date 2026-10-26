@@ -206,7 +206,11 @@ export default function App() {
       </Sheet>
 
       <Sheet modal open={dialog === 'menu'} onClose={close} title="더보기" jumpTo={jump}>
-        <SeedPanel seed={game.seed} onOpen={(s) => game.reset(game.n, s)} />
+        <SeedPanel seed={game.seed} onOpen={(s) => {
+          const opened = game.reset(game.n, s);
+          if (opened) close();
+          return opened;
+        }} />
         <Leaderboard plays={game.plays} board={game.board} nick={game.nick} />
         <HistoryPanel
           plays={game.plays}
@@ -216,8 +220,7 @@ export default function App() {
           setCode={game.setCode}
           setNick={game.setNick}
           onOpen={(pn, ps) => {
-            game.reset(pn, ps);
-            close();
+            if (game.reset(pn, ps)) close();
           }}
         />
         <FeedbackDialog seed={game.seed} n={game.n} />

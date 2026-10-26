@@ -125,10 +125,10 @@ describe('모바일 셸 렌더링', () => {
     setCode: () => {},
     setNick: () => {},
     dismissRank: () => {},
-    clearMarks: () => {},
+    clearMarks: () => true,
     onCell: () => {},
     accuse: () => {},
-    reset: () => {},
+    reset: () => true,
   };
   const html = renderToStaticMarkup(createElement(MobileShell, { game }));
 

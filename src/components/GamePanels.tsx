@@ -47,7 +47,7 @@ export function DifficultySeg({
           aria-pressed={d.n === n}
           aria-label={`${d.label} (${d.n}×${d.n})`}
           title={`${d.label} (${d.n}×${d.n})`}
-          onClick={() => onPick(d.n)}
+          onClick={() => { if (d.n !== n) onPick(d.n); }}
         >
           {d.n}×{d.n}
         </button>
@@ -296,7 +296,7 @@ export function AccusePanel({
   );
 }
 
-export function SeedPanel({ seed, onOpen }: { seed: string; onOpen: (seed: string) => void }) {
+export function SeedPanel({ seed, onOpen }: { seed: string; onOpen: (seed: string) => boolean }) {
   const [input, setInput] = useState('');
 
   return (
@@ -306,8 +306,7 @@ export function SeedPanel({ seed, onOpen }: { seed: string; onOpen: (seed: strin
       <form
         onSubmit={(e) => {
           e.preventDefault();
-          if (input.trim()) onOpen(input.trim());
-          setInput('');
+          if (input.trim() && onOpen(input.trim())) setInput('');
         }}
       >
         <input
