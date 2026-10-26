@@ -26,7 +26,7 @@ export default function PrivacyScreen({ open, onContinue }: {
   const ref = useRef<HTMLDialogElement>(null);
   const opener = useRef<HTMLElement | null>(null);
 
-  // 클릭한 프레임부터 가린다. 앱의 filter가 아니라 top-layer 위의 backdrop을 쓴다.
+  // 클릭한 프레임부터 입력을 가둔다. 원본과 열린 모달의 블러는 CSS가 맡는다.
   useLayoutEffect(() => {
     const dialog = ref.current;
     if (!dialog) return;

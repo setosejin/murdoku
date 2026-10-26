@@ -23,10 +23,14 @@
 .privacy-screen::backdrop {
   background: var(--paper);
 }
-@supports (backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px)) {
+@supports (filter: blur(1px)) {
+  /* WebKit은 dialog::backdrop의 blur를 계산하고도 그리지 않는다.
+     원본과 top-layer의 열린 dialog를 각각 흐려야 둘 다 가려진다. */
+  .privacy-hidden,
+  .privacy-hidden dialog[open] {
+    filter: blur(24px);
+  }
   .privacy-screen::backdrop {
     background: color-mix(in srgb, var(--paper) 35%, transparent);
-    -webkit-backdrop-filter: blur(24px);
-    backdrop-filter: blur(24px);
   }
 }

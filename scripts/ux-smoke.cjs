@@ -3,7 +3,7 @@ const fs = require('node:fs');
 const { webkit, chromium } = require('playwright');
 
 const url = process.env.UX_URL || 'http://127.0.0.1:5173';
-const baselinePath = process.env.UX_BASELINE || '/tmp/murdoku-ux-baseline.json';
+const baselinePath = process.env.UX_BASELINE || `${__dirname}/ux-layout-baseline.json`;
 const selected = process.argv[2] || 'all';
 const screens = [[360, 560], [375, 667], [393, 852], [844, 390], [900, 700], [1280, 800]];
 
@@ -99,6 +99,35 @@ async function measure(page) {
   });
 }
 
+// computedStyle만으로는 WebKit이 실제로 블러를 그렸는지 알 수 없다.
+async function edgeEnergy(page) {
+  const image = await page.screenshot({
+    animations: 'disabled',
+    clip: { x: 0, y: 0, width: page.viewportSize().width, height: 130 },
+  });
+  return page.evaluate(async (base64) => {
+    const image = new Image();
+    image.src = `data:image/png;base64,${base64}`;
+    await image.decode();
+    const canvas = document.createElement('canvas');
+    canvas.width = image.width;
+    canvas.height = image.height;
+    const ctx = canvas.getContext('2d');
+    ctx.drawImage(image, 0, 0);
+    const { data, width, height } = ctx.getImageData(0, 0, canvas.width, canvas.height);
+    let edges = 0;
+    for (let y = 0; y < height - 1; y++) {
+      for (let x = 0; x < width - 1; x++) {
+        const i = (y * width + x) * 4;
+        for (let c = 0; c < 3; c++)
+          edges += Math.abs(data[i + c] - data[i + 4 + c]) +
+            Math.abs(data[i + c] - data[i + width * 4 + c]);
+      }
+    }
+    return edges / (width * height);
+  }, image.toString('base64'));
+}
+
 const scenarios = {
   async accessibility({ page, mobile }) {
     await openCase(page, mobile, 4, 'ux-accessibility');
@@ -132,13 +161,14 @@ const scenarios = {
     const cover = page.getByRole('dialog', { name: '화면 가림', exact: true });
     const check = async (trigger) => {
       const before = await snapshot(page);
+      const sharpness = await edgeEnergy(page);
       const opener = await trigger.elementHandle();
       await trigger.click();
       await cover.waitFor({ state: 'visible' });
+      assert.ok(await edgeEnergy(page) < sharpness * 0.35, '글자와 격자가 실제로 흐려져야 한다');
       assert.equal(await cover.getByRole('button').count(), 1);
       assert.equal(await cover.evaluate((el) => el.contains(document.activeElement)), true);
-      assert.match(await cover.evaluate((el) => getComputedStyle(el, '::backdrop').backdropFilter ||
-        getComputedStyle(el, '::backdrop').webkitBackdropFilter), /blur/);
+      assert.match(await page.locator('.app, .mshell').evaluate((el) => getComputedStyle(el).filter), /blur/);
       await page.mouse.click(2, 2);
       await page.keyboard.press('ArrowRight');
       await page.keyboard.press('Tab');
@@ -222,7 +252,7 @@ const scenarios = {
       for (const sheet of document.styleSheets) {
         for (let i = sheet.cssRules.length - 1; i >= 0; i--) {
           const rule = sheet.cssRules[i];
-          if (rule.conditionText?.includes('backdrop-filter')) { sheet.deleteRule(i); count++; }
+          if (rule.conditionText?.includes('filter:')) { sheet.deleteRule(i); count++; }
         }
       }
       return count;
@@ -386,7 +416,7 @@ const scenarios = {
 
 async function layout(browser, engine, baseline) {
   const rows = [];
-  for (const [width, height] of screens) {
+  for (const [width, height] of [...screens, [320, 568]]) {
     const { page, context, mobile, errors } = await newPage(browser, width, height);
     try {
       for (const n of [4, 6, 7, 4]) {
@@ -396,7 +426,22 @@ async function layout(browser, engine, baseline) {
         rows.push({ key, ...value });
         assert.ok(value.overflow.every((v) => v <= 1), `${key}: 화면 넘침`);
         assert.ok(value.board.left >= value.host.left - 1 && value.board.right <= value.host.right + 1, key);
-        if (baseline) {
+        if (mobile) {
+          const header = await page.locator('.mtop').evaluate((bar) => ({
+            height: bar.getBoundingClientRect().height,
+            right: bar.getBoundingClientRect().right,
+            items: [...bar.children].map((el) => ({
+              ...el.getBoundingClientRect().toJSON(), button: el.tagName === 'BUTTON',
+            })),
+          }));
+          assert.ok(header.height <= 44.5, `${key}: 상단바가 늘어남`);
+          for (const [i, item] of header.items.entries()) {
+            assert.ok(item.right <= header.right + 1, `${key}: 상단 버튼 잘림`);
+            if (i > 0) assert.ok(item.left >= header.items[i - 1].right, `${key}: 상단 버튼 겹침`);
+            if (item.button) assert.ok(item.width >= 40 && item.height >= 44, `${key}: 터치 영역 부족`);
+          }
+        }
+        if (baseline && width !== 320) {
           const before = baseline.find((row) => row.key === key);
           assert.ok(before, `${key}: 기준 측정 없음`);
           assert.ok(value.board.width >= before.board.width - 1, `${key}: 보드 폭 감소`);

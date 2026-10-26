@@ -61,7 +61,7 @@ export default function MobileShell({ game, onHide, privacyHidden }: {
   });
 
   return (
-    <div className="mshell">
+    <div className={privacyHidden ? 'mshell privacy-hidden' : 'mshell'}>
       <header className="mtop">
         {/* 데스크톱 .topbar 의 h1 에 대응한다. 이 자리는 세로 비용이 0 이다 —
             상단바 높이는 옆의 44px 버튼들이 정하고 워드마크는 그 안에 든다.

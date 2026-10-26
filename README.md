@@ -63,6 +63,9 @@ npm run build   # 정적 빌드 (dist/)
 | `src/components/PetMenu.tsx` | 그 손님이 여는 메뉴 `<dialog>` (항목은 `petMenuItems.ts`)    |
 | `src/components/CaseCards.tsx` | 용의자·피해자 카드 그리드 (두 셸 공용)                      |
 | `src/components/GamePanels.tsx` | 규칙·범례·브러시바·지목·시드 패널 (두 셸 공용)             |
+| `src/components/HelpSheet.tsx` | 게임 방법 — 조작 안내·규칙·이번 사건의 범례               |
+| `src/components/PrivacyScreen.tsx` | 화면 가리기·복귀와 공용 버튼                         |
+| `src/game/currentGame.ts` | 현재 사건 하나의 검증·기기 내 저장·복원                       |
 | `src/components/HistoryPanel.tsx` | 기록 목록 + 계정 + 복구 키 패널                        |
 | `src/components/Leaderboard.tsx` | 점수판 — TOP 10 + 내 점수·순위 (두 셸 공용)             |
 | `src/components/RankToast.tsx` | 순위를 뺏겼다는 토스트 (두 셸 공용)                        |
@@ -324,6 +327,32 @@ curl -s -X POST https://murdoku-history.murdoku.workers.dev/lb/aaaaaaaaaaaaaaaaa
 curl -s -X POST https://murdoku-history.murdoku.workers.dev/zzz
 # "없는 주소다" 면 정상. "기록 코드가 아니다" 면 역시 옛 워커다
 ```
+
+## 브라우저 UX 회귀 검사
+
+렌더링 검사와 별도로 실제 WebKit·Chromium에서 저장·복원, 진행 파기 취소, 해결 결과, 도움말,
+화면 가리기, 키보드 조작과 보드 크기를 확인한다. Playwright는 앱 의존성에 넣지 않는다.
+
+```bash
+# 처음 실행할 때만 저장소 밖에 설치
+npm install --prefix /tmp/murdoku-ux-tools --no-audit --no-fund playwright
+/tmp/murdoku-ux-tools/node_modules/.bin/playwright install webkit chromium
+
+# 다른 터미널에서 개발 서버 실행
+npm run dev -- --host 127.0.0.1 --port 5173 --strictPort
+NODE_PATH=/tmp/murdoku-ux-tools/node_modules node scripts/ux-smoke.cjs all
+```
+
+`all` 대신 `lifecycle`, `transitions`, `resume`, `help`, `privacy`, `accessibility`, `layout`으로 좁혀 돌릴 수 있다.
+서버 주소는 `UX_URL`로 바꾼다. 검사 컨텍스트는 개발 서버 외부 요청을 차단하므로 실제 계정·순위에 쓰지 않는다.
+
+`scripts/ux-layout-baseline.json`은 이번 개선 전 `f07c8a3` 화면을 macOS의 WebKit·Chromium에서 잰 기준이다.
+시드는 `ux-audit-20261021`, 난이도는 `4 → 6 → 7 → 4`이며 추가로 320×568의 버튼 겹침도 본다.
+새 기준이 필요한 의도적 변경에서만 `UX_BASELINE=/tmp/new-baseline.json ... node scripts/ux-smoke.cjs baseline`으로
+별도 파일을 만들고 비교한다. 실패를 없애기 위해 기준 파일을 덮어쓰지 않는다.
+
+가리기 검사는 CSS 값이 아니라 실제 캡처에서 글자·격자 윤곽이 흐려졌는지도 본다.
+WebKit 결과를 실물 Safari·VoiceOver·TalkBack 확인으로 대신하지 않는다.
 
 ## 그림 에셋 붙이기
 
