@@ -81,6 +81,8 @@ export default function useGame() {
   const suspects = puzzle.people.filter((p) => !p.isVictim);
   const victim = puzzle.people.find((p) => p.isVictim)!;
   const culpritName = puzzle.people.find((p) => p.id === puzzle.culpritId)!.name;
+  const finished = peeked || result === 'correct';
+  const replaying = plays.some((p) => p.ok && p.n === n && p.seed === seed);
 
   const reset = (nextN = n, nextSeed = newSeed()) => {
     setN(nextN);
@@ -99,6 +101,7 @@ export default function useGame() {
   };
 
   const onCell = (key: string) => {
+    if (revealed) return;
     setMarks((m) => {
       const next = { ...m };
       if (next[key] === brush) delete next[key];
@@ -108,16 +111,14 @@ export default function useGame() {
   };
 
   const accuse = () => {
-    if (!accused || peeked) return;
+    if (!accused || finished) return;
     const ok = accused === puzzle.culpritId;
     const tries = attempt + 1;
     setResult(ok ? 'correct' : 'wrong');
     setAttempt(tries);
     if (!ok) return;
     setRevealed(true);
-    setEarned(scoreOf({ n, tries, ok: true }));
-    // 이미 푼 사건을 다시 지목해도 기록은 한 번만
-    if (result === 'correct') return;
+    setEarned(replaying ? 0 : scoreOf({ n, tries, ok: true }));
     const next = addPlay({ seed, n, at: Date.now(), ok: true, tries, title: puzzle.title });
     setPlays(next);
     sync(code, next).then(setPlays);
@@ -138,6 +139,7 @@ export default function useGame() {
     revealed,
     peeked,
     earned,
+    replaying,
     plays,
     code,
     nick,

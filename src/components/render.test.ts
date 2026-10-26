@@ -150,6 +150,8 @@ describe('정답을 본 사건', () => {
     accused: suspects[0].id,
     setAccused: () => {},
     accuse: () => {},
+    onNext: () => {},
+    replaying: false,
     result: null,
     attempt: 0,
     culpritName: '아무개',
@@ -171,8 +173,22 @@ describe('정답을 본 사건', () => {
   it('한 번 보면 지목이 막히고 이유를 말한다', () => {
     // 감췄다고 안 본 게 되지 않는다 — revealed 가 아니라 peeked 로 잠근다
     const html = render({ peeked: true, revealed: false });
-    expect(html).toMatch(/<button[^>]*disabled[^>]*>지목하기<\/button>/);
+    expect(html).not.toMatch(/>지목하기<\/button>/);
+    expect(html).toMatch(/>다음 사건<\/button>/);
     expect(html).toContain('이 사건은 여기까지야');
+  });
+
+  it('해결한 사건은 후보를 잠그고 다음 사건으로 안내한다', () => {
+    const html = render({ result: 'correct', earned: 150, revealed: true });
+    expect((html.match(/aria-pressed="[^"]*"[^>]*disabled/g) ?? []).length).toBe(suspects.length);
+    expect(html).not.toMatch(/>지목하기<\/button>/);
+    expect(html).toMatch(/>다음 사건<\/button>/);
+  });
+
+  it('재플레이 완료는 실제로 늘지 않은 점수를 획득했다고 말하지 않는다', () => {
+    const html = render({ result: 'correct', earned: 0, replaying: true });
+    expect(html).toContain('<em class="earned">추가 점수 없음</em>');
+    expect(html).not.toContain('+0점');
   });
 
   it('맞힌 뒤에는 정답을 봐도 지목 버튼 문구가 겁주지 않는다', () => {

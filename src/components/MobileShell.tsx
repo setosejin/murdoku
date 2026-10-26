@@ -158,6 +158,11 @@ export default function MobileShell({ game }: { game: Game }) {
           accused={game.accused}
           setAccused={game.setAccused}
           accuse={game.accuse}
+          onNext={() => {
+            game.reset();
+            close();
+          }}
+          replaying={game.replaying}
           result={game.result}
           attempt={game.attempt}
           culpritName={game.culpritName}

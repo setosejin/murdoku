@@ -161,6 +161,8 @@ export default function App() {
             accused={game.accused}
             setAccused={game.setAccused}
             accuse={game.accuse}
+            onNext={() => game.reset()}
+            replaying={game.replaying}
             result={game.result}
             attempt={game.attempt}
             culpritName={game.culpritName}

@@ -174,6 +174,8 @@ export type AccuseProps = {
   accused: string;
   setAccused: (id: string) => void;
   accuse: () => void;
+  onNext: () => void;
+  replaying: boolean;
   /** 판정 결과. 같은 결과를 다시 지목해도 모션이 재생되도록 attempt 를 key 로 쓴다 */
   result: 'correct' | 'wrong' | null;
   attempt: number;
@@ -196,6 +198,8 @@ export function AccusePanel({
   accused,
   setAccused,
   accuse,
+  onNext,
+  replaying,
   result,
   attempt,
   culpritName,
@@ -207,6 +211,7 @@ export function AccusePanel({
   bare,
 }: AccuseProps) {
   const solved = result === 'correct';
+  const finished = solved || peeked;
   return (
     <div className={bare ? 'accuse bare' : 'panel accuse'}>
       {!bare && <b>범인은?</b>}
@@ -237,6 +242,7 @@ export function AccusePanel({
               type="button"
               className={`clue-row${accused === p.id ? ' on' : ''}`}
               aria-pressed={accused === p.id}
+              disabled={finished}
               onClick={() => setAccused(p.id)}
             >
               <span className="clue-badge" style={{ background: p.color }}>
@@ -248,9 +254,24 @@ export function AccusePanel({
           </li>
         ))}
       </ul>
-      <button type="button" className="chip primary" onClick={accuse} disabled={!accused || peeked}>
-        지목하기
-      </button>
+      {replaying && !finished && <p className="hint">이미 해결한 사건이야. 다시 풀어도 추가 점수는 없어.</p>}
+      {finished ? (
+        <button
+          key="next"
+          type="button"
+          className="chip primary"
+          onClick={(e) => {
+            // 지목의 더블클릭이 새로 나타난 다음 사건까지 누르지 않게 한다.
+            if (e.detail <= 1) onNext();
+          }}
+        >
+          다음 사건
+        </button>
+      ) : (
+        <button key="accuse" type="button" className="chip primary" onClick={accuse} disabled={!accused}>
+          지목하기
+        </button>
+      )}
       {/* 정답을 본 순간 이 사건은 끝난다. 왜 눌리지 않는지 여기서 말해준다 */}
       {peeked && !solved && (
         <p className="hint" role="status">
@@ -260,7 +281,7 @@ export function AccusePanel({
       {solved && (
         <p key={attempt} className="verdict ok" role="status">
           {detective ? `역시 ${detective}. ` : '정답! '}범인은 {culpritName}!{' '}
-          <em className="earned">+{earned}점</em>
+          <em className="earned">{earned > 0 ? `+${earned}점` : '추가 점수 없음'}</em>
         </p>
       )}
       {result === 'wrong' && !peeked && (
