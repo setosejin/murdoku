@@ -127,6 +127,33 @@ describe('Board 렌더링', () => {
     expect((html.match(/token solved/g) ?? []).length).toBe(5);
   });
 
+  it('공개한 인물과 피해자·범인을 칸 이름에서도 구분한다', () => {
+    const { p, html } = render(true);
+    const labels = [...html.matchAll(/<button\b[^>]*aria-label="([^"]+)"/g)].map((m) => m[1]);
+    for (const person of p.people) {
+      const at = p.solution[person.id];
+      const label = labels.find((text) => text.startsWith(`${at.r + 1}행 ${at.c + 1}열,`));
+      expect(label).toContain(person.name);
+      expect(label).not.toContain('빈 칸');
+      if (person.isVictim) expect(label).toContain('(피해자)');
+      if (person.id === p.culpritId) expect(label).toContain('(범인)');
+    }
+  });
+
+  it('공개 전에는 정답을 읽어주지 않고 화면에 남긴 메모만 설명한다', () => {
+    const { p, html } = render(false);
+    const labels = [...html.matchAll(/<button\b[^>]*aria-label="([^"]+)"/g)].map((m) => m[1]);
+    for (const person of p.people) {
+      expect(labels.some((text) => text.includes(person.name))).toBe(false);
+    }
+    const a = p.solution.A;
+    const v = p.solution.V;
+    const marked = render(false, { [`${a.r},${a.c}`]: 'A', [`${v.r},${v.c}`]: 'X' }).html;
+    expect(marked).toMatch(new RegExp(`aria-label="${a.r + 1}행 ${a.c + 1}열,[^"]*${p.people[0].name} 메모"`));
+    expect(marked).toMatch(new RegExp(`aria-label="${v.r + 1}행 ${v.c + 1}열,[^"]*아무도 없다는 메모"`));
+    expect(marked).not.toContain('(범인)');
+  });
+
   /* 정답 공개는 이 게임의 규칙("범인 = 피해자와 같은 방에 있던 용의자")을
      순서로 말한다. 범인 표시나 사건 현장 표시가 빠지면 정답이 보드 밖 문구로만
      남아서, 이름을 읽고 보드에서 글자를 다시 찾아야 한다 */

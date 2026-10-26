@@ -46,6 +46,20 @@ describe('증언 목록 = 메모 브러시', () => {
     for (const c of puzzle.clues) expect(out).toContain(c.text);
   });
 
+  it('증언 버튼이 실제 증언 본문을 설명으로 연결한다', () => {
+    const rows = [...html('X').matchAll(/<button\b[^>]*>(.*?)<\/button>/gs)];
+    expect(rows.length).toBe(puzzle.people.length);
+    for (const [index, row] of rows.entries()) {
+      const id = row[0].match(/aria-describedby="([^"]+)"/)?.[1];
+      expect(id).toBeTruthy();
+      expect(row[1]).toContain(`class="clue-text" id="${id}"`);
+      if (!puzzle.people[index].isVictim) {
+        const clue = puzzle.clues.find((c) => c.personId === puzzle.people[index].id)!;
+        expect(row[1]).toContain(`id="${id}">${clue.text}</span>`);
+      }
+    }
+  });
+
   it('각 줄이 브러시 토글이고, 눌린 줄은 하나뿐이다', () => {
     const out = html(puzzle.people[0].id);
     expect((out.match(/aria-pressed/g) ?? []).length).toBe(puzzle.people.length);

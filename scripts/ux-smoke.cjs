@@ -100,6 +100,32 @@ async function measure(page) {
 }
 
 const scenarios = {
+  async accessibility({ page, mobile }) {
+    await openCase(page, mobile, 4, 'ux-accessibility');
+    const clues = page.locator(mobile ? '.mshell > .clue-list .clue-row' : '.dclues .clue-row');
+    const descriptions = await clues.evaluateAll((rows) => rows.map((row) => ({
+      described: document.getElementById(row.getAttribute('aria-describedby'))?.textContent,
+      shown: row.querySelector('.clue-text').textContent,
+    })));
+    for (const text of descriptions) assert.equal(text.described, text.shown);
+    const first = clues.first();
+    await first.focus();
+    await page.keyboard.press('Enter');
+    assert.equal(await first.getAttribute('aria-pressed'), 'true');
+    const cell = page.locator('.board button.cell:not(.blocked)').first();
+    await cell.focus();
+    await page.keyboard.press('Enter');
+    assert.match(await cell.getAttribute('aria-label'), /메모/);
+    assert.equal(await page.locator('.cell[aria-label*="(범인)"]').count(), 0);
+    assert.equal(await page.locator('.cell[aria-label*="(피해자)"]').count(), 0);
+    if (mobile) await page.locator('.mbar').getByRole('button', { name: '지목하기' }).click();
+    await page.locator('.accuse').getByRole('button', { name: '정답 보기 (이 사건 포기)' }).click();
+    assert.match(await page.locator('.cell:has(.token.culprit)').getAttribute('aria-label'), /\(범인\)/);
+    assert.match(await page.locator('.cell:has(.token.dead)').getAttribute('aria-label'), /\(피해자\)/);
+    await page.locator('.accuse').getByRole('button', { name: '정답 숨기기' }).click();
+    assert.equal(await page.locator('.cell[aria-label*="(범인)"]').count(), 0);
+    assert.match(await cell.getAttribute('aria-label'), /메모/);
+  },
   async privacy({ page, mobile }) {
     await openCase(page, mobile, 4, 'ux-privacy');
     await markTwo(page, mobile);
