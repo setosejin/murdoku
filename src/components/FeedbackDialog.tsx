@@ -1,8 +1,9 @@
 import { useRef, useState, type FormEvent } from 'react';
+import { PrivacyButton } from './PrivacyScreen';
 
 const REPO = 'setosejin/murdoku';
 
-type Props = { seed: string; n: number };
+type Props = { seed: string; n: number; onHide: () => void };
 
 /**
  * 입력값으로 GitHub 이슈 작성 URL 을 만든다.
@@ -21,7 +22,7 @@ export function issueUrl(kind: string, title: string, body: string, seed: string
   return url.toString();
 }
 
-export default function FeedbackDialog({ seed, n }: Props) {
+export default function FeedbackDialog({ seed, n, onHide }: Props) {
   const ref = useRef<HTMLDialogElement>(null);
   const [kind, setKind] = useState('버그');
   const [title, setTitle] = useState('');
@@ -83,6 +84,7 @@ export default function FeedbackDialog({ seed, n }: Props) {
           <p className="fb-note">시드·난이도·버전은 자동으로 붙어.</p>
 
           <div className="fb-actions">
+            <PrivacyButton onHide={onHide} />
             <button type="button" className="chip" onClick={() => ref.current?.close()}>
               취소
             </button>

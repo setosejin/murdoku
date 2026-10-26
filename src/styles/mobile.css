@@ -88,6 +88,10 @@
     line-height: 1;
     cursor: pointer;
   }
+  /* 빠른 도움말·가리기 버튼의 폭은 지키고 사건 제목에 자리를 양보한다. */
+  @media (max-width: 420px) {
+    .mtitle .case-no { display: none; }
+  }
 
   /* ---- 보드: 폭과 높이 중 작은 쪽에 맞춘 정사각 ---- */
   .mplay {

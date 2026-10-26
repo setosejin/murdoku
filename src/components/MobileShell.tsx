@@ -6,6 +6,7 @@ import ClueList from './ClueList';
 import FeedbackDialog from './FeedbackDialog';
 import HistoryPanel from './HistoryPanel';
 import HelpSheet from './HelpSheet';
+import { PrivacyButton } from './PrivacyScreen';
 import Leaderboard from './Leaderboard';
 import RankToast from './RankToast';
 import Sheet from './Sheet';
@@ -23,7 +24,11 @@ type SheetId = 'case' | 'accuse' | 'menu' | 'help';
  * 나머지(사건 설명·규칙·범례·지목·난이도·시드·기록)는 전부 바텀시트로 들어간다.
  * 시트 안에서만 스크롤이 생긴다.
  */
-export default function MobileShell({ game }: { game: Game }) {
+export default function MobileShell({ game, onHide, privacyHidden }: {
+  game: Game;
+  onHide: () => void;
+  privacyHidden: boolean;
+}) {
   const [sheet, setSheet] = useState<SheetId | null>(null);
   /** 메뉴 시트를 열면서 어느 패널로 내려갈지. 손님 메뉴가 쓴다 */
   const [jump, setJump] = useState<string | undefined>(undefined);
@@ -33,10 +38,10 @@ export default function MobileShell({ game }: { game: Game }) {
 
   // 기존 방문 표식을 존중한다. 새 방문자에게는 인물 카드보다 조작법을 먼저 보여준다.
   useEffect(() => {
-    if (seenBrief()) return;
+    if (privacyHidden || seenBrief()) return;
     setSheet('help');
     markBriefSeen();
-  }, []);
+  }, [privacyHidden]);
 
   // 메뉴를 열면 알림은 제 할 일을 다 했다 — 점수판이 바로 이 안에 있다
   const openMenu = (to?: string) => {
@@ -52,6 +57,7 @@ export default function MobileShell({ game }: { game: Game }) {
     onName: () => openMenu('jump-account'),
     onNew: () => game.reset(),
     onClear: game.clearMarks,
+    onHide,
   });
 
   return (
@@ -75,6 +81,7 @@ export default function MobileShell({ game }: { game: Game }) {
         </button>
         <button type="button" className="micon mhelp" aria-label="게임 방법"
           aria-haspopup="dialog" onClick={() => setSheet('help')}>?</button>
+        <PrivacyButton onHide={onHide} />
         <button
           type="button"
           className={alerted ? 'micon alerted' : 'micon'}
@@ -125,14 +132,17 @@ export default function MobileShell({ game }: { game: Game }) {
         </button>
       </nav>
 
-      <Sheet open={sheet === 'case'} onClose={close} title={puzzle.title}>
+      <Sheet open={sheet === 'case'} onClose={close} title={puzzle.title}
+        onHide={onHide} privacyHidden={privacyHidden}>
         <p className="brief">{puzzle.brief}</p>
         <CaseCards puzzle={puzzle} />
       </Sheet>
 
-      <HelpSheet open={sheet === 'help'} onClose={close} furniture={puzzle.furniture} />
+      <HelpSheet open={sheet === 'help'} onClose={close} furniture={puzzle.furniture}
+        onHide={onHide} privacyHidden={privacyHidden} />
 
-      <Sheet open={sheet === 'accuse'} onClose={close} title="범인 지목">
+      <Sheet open={sheet === 'accuse'} onClose={close} title="범인 지목"
+        onHide={onHide} privacyHidden={privacyHidden}>
         <AccusePanel
           suspects={game.suspects}
           victim={game.victim}
@@ -161,7 +171,8 @@ export default function MobileShell({ game }: { game: Game }) {
         )}
       </Sheet>
 
-      <Sheet open={sheet === 'menu'} onClose={close} title="메뉴" jumpTo={jump}>
+      <Sheet open={sheet === 'menu'} onClose={close} title="메뉴" jumpTo={jump}
+        onHide={onHide} privacyHidden={privacyHidden}>
         <div className="panel">
           <b>난이도</b>
           <DifficultySeg
@@ -212,8 +223,8 @@ export default function MobileShell({ game }: { game: Game }) {
         />
 
         <div className="mmenu-foot">
-          <FeedbackDialog seed={game.seed} n={game.n} />
-          <ChangelogDialog />
+          <FeedbackDialog seed={game.seed} n={game.n} onHide={onHide} />
+          <ChangelogDialog onHide={onHide} />
         </div>
         {/* 데스크톱 푸터에만 있던 저작권·저장소 링크가 모바일에서 사라지지 않게 */}
         <p className="mmenu-copy">

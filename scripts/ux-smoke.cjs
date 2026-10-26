@@ -100,6 +100,112 @@ async function measure(page) {
 }
 
 const scenarios = {
+  async privacy({ page, mobile }) {
+    await openCase(page, mobile, 4, 'ux-privacy');
+    await markTwo(page, mobile);
+    const cover = page.getByRole('dialog', { name: '화면 가림', exact: true });
+    const check = async (trigger) => {
+      const before = await snapshot(page);
+      const opener = await trigger.elementHandle();
+      await trigger.click();
+      await cover.waitFor({ state: 'visible' });
+      assert.equal(await cover.getByRole('button').count(), 1);
+      assert.equal(await cover.evaluate((el) => el.contains(document.activeElement)), true);
+      assert.match(await cover.evaluate((el) => getComputedStyle(el, '::backdrop').backdropFilter ||
+        getComputedStyle(el, '::backdrop').webkitBackdropFilter), /blur/);
+      await page.mouse.click(2, 2);
+      await page.keyboard.press('ArrowRight');
+      await page.keyboard.press('Tab');
+      assert.equal(await page.evaluate(() => document.activeElement?.closest('.board, .mtop, .controls') !== null), false);
+      assert.equal(await cover.isVisible(), true);
+      assert.deepEqual(await snapshot(page), before);
+      await cover.getByRole('button', { name: '계속하기' }).click();
+      await page.waitForFunction(() => !document.querySelector('.privacy-screen[open]'));
+      assert.deepEqual(await snapshot(page), before);
+      if (await opener.evaluate((el) => el.isConnected))
+        assert.equal(await opener.evaluate((el) => el === document.activeElement), true);
+    };
+    const rootTrigger = page.locator(mobile ? '.mtop' : '.controls')
+      .getByRole('button', { name: '화면 가리기', exact: true });
+    assert.equal(await rootTrigger.count(), 1);
+    await check(rootTrigger);
+    const buttons = mobile ? ['.mtitle', '.mhelp', '.mtop > button[aria-label^="메뉴"]', '.mbar .primary']
+      : ['.dcase', '.dhelp', '.controls > button[aria-label^="더보기"]'];
+    for (const selector of buttons) {
+      await page.locator(selector).click();
+      const sheet = page.locator('.sheet[open]');
+      await check(sheet.getByRole('button', { name: '화면 가리기', exact: true }));
+      await sheet.getByRole('button', { name: '닫기', exact: true }).click();
+      await closed(page);
+    }
+    await menu(page, mobile);
+    await page.getByRole('button', { name: '피드백', exact: true }).click();
+    const feedback = page.locator('.feedback:not(.changelog)[open]');
+    await feedback.locator('input').fill('가린 뒤에도 남는 입력');
+    await check(feedback.getByRole('button', { name: '화면 가리기', exact: true }));
+    assert.equal(await feedback.locator('input').inputValue(), '가린 뒤에도 남는 입력');
+    await feedback.getByRole('button', { name: '취소', exact: true }).click();
+    await page.locator('.sheet[open] .sheet-x').click();
+    await closed(page);
+    if (mobile) await menu(page, true);
+    await page.locator('button.ver').click();
+    const log = page.locator('.changelog[open]');
+    await check(log.getByRole('button', { name: '화면 가리기', exact: true }));
+    await log.getByRole('button', { name: '닫기', exact: true }).click();
+    if (mobile) { await page.locator('.sheet[open] .sheet-x').click(); await closed(page); }
+    if (!mobile) {
+      await page.locator('.dhelp').click();
+      await page.getByRole('button', { name: '화면 안내 다시 보기' }).click();
+      await page.locator('.tour[open]').waitFor();
+      await check(page.locator('.tour').getByRole('button', { name: '화면 가리기', exact: true }));
+      assert.equal(await page.locator('.tour-card b').textContent(), '평면도');
+      await page.getByRole('button', { name: '그만 보기' }).click();
+    }
+    const guestSeed = await page.evaluate(async () => {
+      const { generatePuzzle } = await import('/src/game/generate.ts');
+      const { indexScene } = await import('/src/game/clues.ts');
+      for (let i = 0; i < 40; i++) {
+        const seed = `ux-guest-${i}`;
+        if (indexScene(generatePuzzle(6, seed)).voidKind.some((row) => row.includes('outer'))) return seed;
+      }
+      throw new Error('바깥 손님이 있는 검사 사건을 찾지 못했다');
+    });
+    page.once('dialog', (d) => d.accept());
+    await openCase(page, mobile, 6, guestSeed);
+    await markTwo(page, mobile);
+    await page.locator('.outer-pet').first().click({ button: 'right' });
+    await check(page.locator('.petmenu[open]').getByRole('button', { name: '화면 가리기', exact: true }));
+    const before = await snapshot(page);
+    await page.evaluate(() => localStorage.removeItem('murdoku.brief'));
+    await rootTrigger.click();
+    await page.setViewportSize(mobile ? { width: 1280, height: 800 } : { width: 375, height: 667 });
+    assert.equal(await cover.isVisible(), true);
+    assert.equal(await page.locator('.sheet[open], .tour[open]').count(), 0);
+    await page.keyboard.press('Escape');
+    await page.waitForFunction(() => !document.querySelector('.privacy-screen[open]'));
+    assert.deepEqual(await snapshot(page), before);
+    if (!mobile) {
+      const help = page.getByRole('dialog', { name: '게임 방법', exact: true });
+      await help.waitFor();
+      await help.getByRole('button', { name: '닫기', exact: true }).click();
+      await closed(page);
+    }
+    // @supports 블록을 무시하는 브라우저도 불투명한 배경으로 내용을 가려야 한다.
+    const removed = await page.evaluate(() => {
+      let count = 0;
+      for (const sheet of document.styleSheets) {
+        for (let i = sheet.cssRules.length - 1; i >= 0; i--) {
+          const rule = sheet.cssRules[i];
+          if (rule.conditionText?.includes('backdrop-filter')) { sheet.deleteRule(i); count++; }
+        }
+      }
+      return count;
+    });
+    assert.ok(removed > 0);
+    await page.locator('.mtop .privacy-toggle, .controls .privacy-toggle').click();
+    assert.match(await cover.evaluate((el) => getComputedStyle(el, '::backdrop').backgroundColor), /^rgb\(/);
+    await cover.getByRole('button', { name: '계속하기' }).click();
+  },
   async resume({ page, mobile }) {
     await openCase(page, mobile, 7, 'ux-resume-check');
     await markTwo(page, mobile);
@@ -172,7 +278,7 @@ const scenarios = {
     } else {
       await help.getByRole('button', { name: '화면 안내 다시 보기' }).click();
       await page.locator('.tour[open]').waitFor();
-      assert.equal(await page.locator('.tour-card > b').textContent(), '평면도');
+      assert.equal(await page.locator('.tour-card b').textContent(), '평면도');
       assert.equal(await page.locator('.sheet[open]').count(), 0);
       await page.getByRole('button', { name: '그만 보기' }).click();
       assert.deepEqual(await snapshot(page), before);

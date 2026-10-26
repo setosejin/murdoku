@@ -79,6 +79,12 @@
 .tour-card b {
   font-size: 16px;
 }
+.tour-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
 .tour-card p {
   margin: 0;
   font-size: 14px;

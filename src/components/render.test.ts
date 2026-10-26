@@ -111,7 +111,7 @@ describe('App 렌더링', () => {
   // 자리 재기(document.querySelector·getBoundingClientRect)가 effect 밖으로
   // 새어 나오면 여기서 먼저 터진다 — 브라우저에서는 한참 뒤에나 보인다
   it('온보딩은 DOM 없이도 첫 단계를 그린다', () => {
-    const tour = renderToStaticMarkup(createElement(Tour, { onClose: () => {} }));
+    const tour = renderToStaticMarkup(createElement(Tour, { onClose: () => {}, onHide: () => {} }));
     expect(tour).toContain(TOUR_STEPS[0].title);
     expect(tour).toContain(`1 / ${TOUR_STEPS.length}`);
     // 첫 단계에서는 되돌아갈 데가 없다
@@ -236,7 +236,7 @@ describe('FeedbackDialog', () => {
   });
 
   it('제목 입력과 취소/제출 버튼을 그린다', () => {
-    const html = renderToStaticMarkup(createElement(FeedbackDialog, { seed: 'abc123', n: 4 }));
+    const html = renderToStaticMarkup(createElement(FeedbackDialog, { seed: 'abc123', n: 4, onHide: () => {} }));
     expect(html).toContain('<dialog');
     expect(html).toContain('피드백');
     expect(html).toContain('required');
@@ -282,7 +282,7 @@ describe('버전 기록', () => {
   });
 
   it('버튼과 dialog 를 그린다', () => {
-    const html = renderToStaticMarkup(createElement(ChangelogDialog));
+    const html = renderToStaticMarkup(createElement(ChangelogDialog, { onHide: () => {} }));
     expect(html).toContain('<dialog');
     expect(html).toContain(`v${import.meta.env.VITE_APP_VERSION}`);
     expect(html).toContain('버전 기록');

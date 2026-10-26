@@ -1,4 +1,5 @@
 import { useEffect, useRef, type ReactNode } from 'react';
+import { PrivacyButton } from './PrivacyScreen';
 
 /**
  * 바텀시트. 네이티브 `<dialog>` 라 포커스 가둠·ESC·backdrop 을 브라우저가 준다.
@@ -13,6 +14,8 @@ export default function Sheet({
   modal,
   jumpTo,
   onAfterClose,
+  onHide,
+  privacyHidden = false,
   children,
 }: {
   open: boolean;
@@ -27,6 +30,8 @@ export default function Sheet({
   jumpTo?: string;
   /** 퇴장이 끝난 뒤 다른 모달을 열 때 쓴다. */
   onAfterClose?: () => void;
+  onHide?: () => void;
+  privacyHidden?: boolean;
   children?: ReactNode;
 }) {
   const ref = useRef<HTMLDialogElement>(null);
@@ -39,7 +44,7 @@ export default function Sheet({
     if (!d) return;
 
     if (open) {
-      if (!d.open) {
+      if (!d.open && !privacyHidden) {
         d.showModal();
         // 그냥 두면 닫기 버튼이 첫 포커스라 열자마자 빨간 링이 뜬다.
         // (React 의 autoFocus 는 마운트 시점에 focus() 를 부르는 거라 여기선 안 먹는다)
@@ -78,7 +83,7 @@ export default function Sheet({
       d.removeEventListener('transitionend', onEnd);
       finish();
     };
-  }, [open]);
+  }, [open, privacyHidden]);
 
   /* 지정한 자리로 스크롤. 여는 효과가 끝나기 전에 재면 높이가 아직 0 이라
      한 프레임 기다린다. `open` 이 deps 에 있어야 같은 자리를 두 번 불러도 다시 간다 */
@@ -96,9 +101,11 @@ export default function Sheet({
       ref={ref}
       className={modal ? 'sheet modal' : 'sheet'}
       aria-label={title}
-      onClose={onClose}
+      // 중첩된 피드백·버전 기록의 close/cancel이 부모 시트까지 닫으면 안 된다.
+      onClose={(e) => { if (e.target === e.currentTarget) onClose(); }}
       // ESC 는 기본 동작이 즉시 닫기라 퇴장이 잘린다. 막고 우리 경로로 돌린다
       onCancel={(e) => {
+        if (e.target !== e.currentTarget) return;
         e.preventDefault();
         onClose();
       }}
@@ -107,6 +114,7 @@ export default function Sheet({
     >
       <div className="sheet-head">
         <h2>{title}</h2>
+        {onHide && <PrivacyButton onHide={onHide} />}
         <button type="button" className="sheet-x" onClick={onClose} aria-label="닫기">
           ✕
         </button>

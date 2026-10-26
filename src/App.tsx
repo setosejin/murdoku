@@ -7,6 +7,7 @@ import ClueList from './components/ClueList';
 import FeedbackDialog from './components/FeedbackDialog';
 import HistoryPanel from './components/HistoryPanel';
 import HelpSheet from './components/HelpSheet';
+import PrivacyScreen, { PrivacyButton } from './components/PrivacyScreen';
 import Leaderboard from './components/Leaderboard';
 import MobileShell from './components/MobileShell';
 import RankToast from './components/RankToast';
@@ -41,6 +42,8 @@ export default function App() {
   const [dialog, setDialog] = useState<DialogId | null>(null);
   const [tour, setTour] = useState(false);
   const [tourPending, setTourPending] = useState(false);
+  const [privacyHidden, setPrivacyHidden] = useState(false);
+  const onHide = () => setPrivacyHidden(true);
   /** 더보기 모달을 열면서 어느 패널로 내려갈지. 손님 메뉴가 쓴다 */
   const [jump, setJump] = useState<string | undefined>(undefined);
   const close = () => setDialog(null);
@@ -62,6 +65,7 @@ export default function App() {
     onName: () => openMenu('jump-account'),
     onNew: () => game.reset(),
     onClear: game.clearMarks,
+    onHide,
   });
 
   // 첫 방문에만 저절로 연다. 상태를 useState 초기값으로 읽으면 서버 렌더에서도
@@ -75,16 +79,12 @@ export default function App() {
     markTourSeen();
   };
 
-  if (mobile)
-    return (
+  const shell = mobile ? (
       <>
         <SpriteDefs />
-        <MobileShell game={game} />
-        {saveNotice}
+        <MobileShell game={game} onHide={onHide} privacyHidden={privacyHidden} />
       </>
-    );
-
-  return (
+    ) : (
     <div className="app">
       <SpriteDefs />
       <header className="topbar">
@@ -111,6 +111,7 @@ export default function App() {
           <button type="button" className="chip primary" onClick={() => game.reset()}>
             새 사건
           </button>
+          <PrivacyButton onHide={onHide} />
           <button
             type="button"
             className={alerted ? 'chip alerted' : 'chip'}
@@ -186,18 +187,19 @@ export default function App() {
             GitHub
           </a>
         </p>
-        <ChangelogDialog />
+        <ChangelogDialog onHide={onHide} />
       </footer>
 
       <RankToast alert={game.rankAlert} detective={game.detective} onClose={game.dismissRank} />
-      {saveNotice}
 
-      <Sheet modal open={dialog === 'case'} onClose={close} title={puzzle.title}>
+      <Sheet modal open={dialog === 'case'} onClose={close} title={puzzle.title}
+        onHide={onHide} privacyHidden={privacyHidden}>
         <p className="brief">{puzzle.brief}</p>
         <CaseCards puzzle={puzzle} />
       </Sheet>
 
       <HelpSheet modal open={dialog === 'help'} onClose={close} furniture={puzzle.furniture}
+        onHide={onHide} privacyHidden={privacyHidden}
         onTour={() => { setTourPending(true); close(); }}
         onAfterClose={() => {
           if (!tourPending) return;
@@ -205,7 +207,8 @@ export default function App() {
           setTour(true);
         }} />
 
-      <Sheet modal open={dialog === 'menu'} onClose={close} title="더보기" jumpTo={jump}>
+      <Sheet modal open={dialog === 'menu'} onClose={close} title="더보기" jumpTo={jump}
+        onHide={onHide} privacyHidden={privacyHidden}>
         <SeedPanel seed={game.seed} onOpen={(s) => {
           const opened = game.reset(game.n, s);
           if (opened) close();
@@ -223,12 +226,19 @@ export default function App() {
             if (game.reset(pn, ps)) close();
           }}
         />
-        <FeedbackDialog seed={game.seed} n={game.n} />
+        <FeedbackDialog seed={game.seed} n={game.n} onHide={onHide} />
       </Sheet>
 
       {/* 모달을 연 채로 스포트라이트를 겨누면 두 top-layer 가 겹친다 —
           브리핑·더보기가 열려 있으면 온보딩은 기다린다 */}
-      {tour && dialog === null && <Tour onClose={closeTour} />}
+      {tour && dialog === null && <Tour onClose={closeTour} onHide={onHide} privacyHidden={privacyHidden} />}
     </div>
+  );
+  return (
+    <>
+      {shell}
+      {saveNotice}
+      <PrivacyScreen open={privacyHidden} onContinue={() => setPrivacyHidden(false)} />
+    </>
   );
 }

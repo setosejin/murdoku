@@ -131,7 +131,8 @@ describe('모바일 셸 렌더링', () => {
     accuse: () => {},
     reset: () => true,
   };
-  const html = renderToStaticMarkup(createElement(MobileShell, { game }));
+  const props = { game, onHide: () => {}, privacyHidden: false };
+  const html = renderToStaticMarkup(createElement(MobileShell, props));
 
   it('붙박이는 상단바·보드·증언 목록·액션바 넷뿐이다', () => {
     for (const cls of ['mtop', 'mplay', 'clue-list', 'mbar']) expect(html).toContain(`"${cls}"`);
@@ -183,7 +184,7 @@ describe('모바일 셸 렌더링', () => {
     expect(html).not.toContain('alert-dot');
 
     const lit = renderToStaticMarkup(
-      createElement(MobileShell, { game: { ...game, rankAlert: { from: 3, to: 5 } } }),
+      createElement(MobileShell, { ...props, game: { ...game, rankAlert: { from: 3, to: 5 } } }),
     );
     expect(lit).toContain('aria-label="메뉴 (순위 알림)"');
     expect(lit).toContain('class="micon alerted"');
