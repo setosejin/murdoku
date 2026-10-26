@@ -3,6 +3,7 @@ import { Art } from './Art';
 import { spanOf } from '../game/types';
 import type { Furniture, Person } from '../game/types';
 import type { Difficulty } from '../game/generate';
+import { MAX_SEED_LEN } from '../game/history';
 
 /**
  * 사이드 패널의 내용물들. 데스크톱은 `.side` 열에 세로로 쌓고,
@@ -299,6 +300,9 @@ export function SeedPanel({ seed, onOpen }: { seed: string; onOpen: (seed: strin
           onChange={(e) => setInput(e.target.value)}
           placeholder="같은 사건 불러오기"
           aria-label="시드 입력"
+          maxLength={MAX_SEED_LEN}
+          required
+          pattern=".*\S.*"
         />
         <button type="submit" className="chip">
           열기

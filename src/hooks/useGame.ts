@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { DIFFICULTIES, generatePuzzle } from '../game/generate';
 import { detectiveName, getNick, getUser } from '../game/auth';
+import { readCurrentGame, saveCurrentGame, type CurrentGame } from '../game/currentGame';
 import {
   addPlay,
   checkRank,
@@ -15,26 +16,32 @@ import {
 } from '../game/history';
 
 const newSeed = () => Math.random().toString(36).slice(2, 8);
+const SAVE_FAILED = '이 환경에서는 진행을 저장할 수 없어. 새로고침하면 사라져.';
 
 /**
  * 게임 상태 전부. 데스크톱 셸과 모바일 셸이 같은 것을 나눠 쓴다 —
  * 상태를 셸마다 따로 두면 창 크기를 바꿀 때 메모가 날아간다.
  */
 export default function useGame() {
-  const [n, setN] = useState(4);
-  const [seed, setSeed] = useState(newSeed);
-  const [marks, setMarks] = useState<Record<string, string>>({});
-  const [brush, setBrush] = useState('X');
-  const [accused, setAccused] = useState('');
-  const [result, setResult] = useState<'correct' | 'wrong' | null>(null);
+  const [initial] = useState(readCurrentGame);
+  const [n, setN] = useState(initial.game?.n ?? 4);
+  const [seed, setSeed] = useState(() => initial.game?.seed ?? newSeed());
+  const [marks, setMarks] = useState<Record<string, string>>(() => initial.game?.marks ?? {});
+  const [brush, setBrush] = useState(initial.game?.brush ?? 'X');
+  const [accused, setAccused] = useState(initial.game?.accused ?? '');
+  const [result, setResult] = useState<CurrentGame['result']>(initial.game?.result ?? null);
   // 같은 결과를 다시 지목해도 등장 모션이 재생되도록 key 를 갈아끼우는 카운터
-  const [attempt, setAttempt] = useState(0);
-  const [revealed, setRevealed] = useState(false);
+  const [attempt, setAttempt] = useState(initial.game?.attempt ?? 0);
+  const [revealed, setRevealed] = useState(initial.game?.revealed ?? false);
   // 정답을 한 번이라도 봤나. 그 순간 이 사건은 끝이다 — 더는 지목할 수 없다.
   // revealed 는 토글이라 다시 감추면 흔적이 사라져서 따로 기억한다
-  const [peeked, setPeeked] = useState(false);
+  const [peeked, setPeeked] = useState(initial.game?.peeked ?? false);
   /** 방금 맞힌 판의 점수. 지목 패널이 바로 보여준다 */
-  const [earned, setEarned] = useState(0);
+  const [earned, setEarned] = useState(initial.game?.earned ?? 0);
+  const [saveNotice, setSaveNotice] = useState<string | null>(
+    initial.error === 'invalid' ? '저장한 진행을 읽지 못했어. 새로운 사건을 열었어.'
+      : initial.error === 'storage' ? SAVE_FAILED : null,
+  );
   const [plays, setPlays] = useState<Play[]>(loadPlays);
   const [code, setCode] = useState(getCode);
   // 순위표에 띄우는 이름. localStorage 가 진짜 저장소인데도 여기 한 번 더 두는 건,
@@ -46,6 +53,13 @@ export default function useGame() {
   const [board, setBoard] = useState<Board | null | undefined>(undefined);
   /** 순위를 뺏겼다. 토스트와 메뉴 버튼의 점이 이걸 본다 */
   const [rankAlert, setRankAlert] = useState<RankDrop | null>(null);
+
+  useEffect(() => {
+    const saved = saveCurrentGame({
+      format: 1, n, seed, marks, brush, accused, result, attempt, revealed, peeked, earned,
+    });
+    setSaveNotice((notice) => saved ? (notice === SAVE_FAILED ? null : notice) : SAVE_FAILED);
+  }, [n, seed, marks, brush, accused, result, attempt, revealed, peeked, earned]);
 
   // 기록 코드가 정해지거나 바뀌면 서버와 합친다. 실패는 sync 안에서 삼켜진다
   useEffect(() => {
@@ -143,6 +157,7 @@ export default function useGame() {
     peeked,
     earned,
     replaying,
+    saveNotice,
     plays,
     code,
     nick,

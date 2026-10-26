@@ -36,7 +36,7 @@ export const N_RANGE = { min: 4, max: 7 } as const;
  */
 export const SCORE_BASE: Record<number, number> = { 4: 150, 5: 250, 6: 350, 7: 450 };
 
-const MAX_SEED_LEN = 64;
+export const MAX_SEED_LEN = 64;
 const MAX_TITLE_LEN = 80;
 /** 계정 아이디 길이 상한(auth.ts 의 ID_RE 와 같다). 순환 import 를 만들지 않으려고 숫자만 둔다 */
 const MAX_NAME_LEN = 20;

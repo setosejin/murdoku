@@ -111,6 +111,7 @@ describe('모바일 셸 렌더링', () => {
     peeked: false,
     earned: 0,
     replaying: false,
+    saveNotice: null,
     plays: [],
     code: 'a'.repeat(22),
     nick: '',

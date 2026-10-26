@@ -100,6 +100,49 @@ async function measure(page) {
 }
 
 const scenarios = {
+  async resume({ page, mobile }) {
+    await openCase(page, mobile, 7, 'ux-resume-check');
+    await markTwo(page, mobile);
+    let before = await snapshot(page);
+    await page.reload({ waitUntil: 'networkidle' });
+    assert.deepEqual(await snapshot(page), before);
+    page.once('dialog', (d) => d.accept());
+    await openCase(page, mobile, 4, 'ux-resume-attempt');
+    const ids = await people(page);
+    if (mobile) await page.locator('.mbar').getByRole('button', { name: '지목하기' }).click();
+    await accuse(page, ids.wrong);
+    before = await snapshot(page);
+    await page.reload({ waitUntil: 'networkidle' });
+    assert.deepEqual(await snapshot(page), before);
+    if (mobile) await page.locator('.mbar').getByRole('button', { name: '지목하기' }).click();
+    await accuse(page, ids.correct);
+    assert.equal((await snapshot(page)).earned, '+120점');
+    before = await snapshot(page);
+    await page.reload({ waitUntil: 'networkidle' });
+    assert.deepEqual(await snapshot(page), before);
+    await openCase(page, mobile, 4, 'ux-resume-peek');
+    if (mobile) await page.locator('.mbar').getByRole('button', { name: '지목하기' }).click();
+    await page.locator('.accuse').getByRole('button', { name: '정답 보기 (이 사건 포기)' }).click();
+    await page.reload({ waitUntil: 'networkidle' });
+    if (mobile) await page.locator('.mbar').getByRole('button', { name: '지목하기' }).click();
+    assert.equal(await page.locator('.accuse').getByRole('button', { name: '지목하기', exact: true }).count(), 0);
+    if (mobile) { await page.locator('.sheet[open] .sheet-x').click(); await closed(page); }
+    await page.evaluate(() => localStorage.setItem('murdoku.current', '{'));
+    await page.reload({ waitUntil: 'networkidle' });
+    assert.equal(await page.locator('.save-notice').count(), 1);
+    assert.match(await page.locator('.save-notice').textContent(), /읽지 못했어/);
+    await page.addInitScript(() => {
+      const original = Storage.prototype.setItem;
+      Storage.prototype.setItem = function(key, value) {
+        if (key === 'murdoku.current') throw new DOMException('저장 불가', 'QuotaExceededError');
+        return original.call(this, key, value);
+      };
+    });
+    await page.reload({ waitUntil: 'networkidle' });
+    assert.match(await page.locator('.save-notice').textContent(), /저장할 수 없어/);
+    await markTwo(page, mobile);
+    assert.equal((await snapshot(page)).marks.length, 2);
+  },
   async help({ page, mobile }) {
     const trigger = page.getByRole('button', { name: '게임 방법', exact: true });
     assert.equal(await trigger.count(), 1);

@@ -46,6 +46,7 @@ export default function App() {
   const close = () => setDialog(null);
   const { puzzle } = game;
   const alerted = game.rankAlert !== null;
+  const saveNotice = game.saveNotice && <p className="notice save-notice" role="status">{game.saveNotice}</p>;
 
   // 메뉴를 열면 알림은 제 할 일을 다 했다 — 점수판이 바로 이 안에 있다
   const openMenu = (to?: string) => {
@@ -79,6 +80,7 @@ export default function App() {
       <>
         <SpriteDefs />
         <MobileShell game={game} />
+        {saveNotice}
       </>
     );
 
@@ -188,6 +190,7 @@ export default function App() {
       </footer>
 
       <RankToast alert={game.rankAlert} detective={game.detective} onClose={game.dismissRank} />
+      {saveNotice}
 
       <Sheet modal open={dialog === 'case'} onClose={close} title={puzzle.title}>
         <p className="brief">{puzzle.brief}</p>
