@@ -1,0 +1,159 @@
+/* ---- 바깥 실루엣의 손님 ----
+   건물 밖으로 트인 빈 땅(`ell`·`you`·`diagonal` 실루엣이 파낸 자리)을 어슬렁댄다.
+
+   안뜰의 주인과 달리 **판이 없다.** 막을 게 없으니 손님 자신이 히트영역이다 —
+   한 칸 크기 <button> 이 걸음을 따라 움직인다. 진짜 칸 위로 올라갈 경로가 없다.
+   좌표·크기는 `OuterPet.tsx` 가 인라인으로 넣는다 (webkit#202259). */
+
+.outer-pet {
+  position: absolute;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border: 0;
+  background: none;
+  cursor: pointer;
+  /* 안뜰 판과 같은 층. 빈 칸은 <div> 라 다툴 상대가 없다 */
+  z-index: 5;
+  /* 걸음. 자리는 `OuterPet.tsx` 가 인라인 left/top 퍼센트로 준다 — 보드 기준이다.
+     `translate` 퍼센트를 쓰면 제 상자 기준이 되는데 WebKit 이 그 상자를 정수 px 로
+     스냅해서 계산한다. 6×6 에서 열마다 0.34px 씩 밀려 마지막 열의 손님이 보드를
+     1.7px 삐져나갔다 (실측). `translate` 는 앉기·움찔에 남겨 둔다 */
+  transition:
+    left 550ms var(--ease-out),
+    top 550ms var(--ease-out);
+  /* iOS 길게 누르기의 확대·복사 메뉴를 끈다 — 우리가 쓰는 제스처다 */
+  touch-action: manipulation;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* 왼쪽으로 걸을 때만 뒤집는다. 스프라이트는 전부 오른쪽을 보게 그려져 있다 */
+.outer-pet.left {
+  scale: -1 1;
+}
+
+.outer-pet .art {
+  /* 안뜰 짐승과 같은 크기. 둘이 한 화면에 같이 나오지는 않지만 눈은 기억한다 */
+  width: 56%;
+  height: 56%;
+  font-size: clamp(11px, 3.6cqw, 22px);
+  filter: drop-shadow(1.5px 2px 0 #23201c2e);
+  animation: pet-breathe 2.6s ease-in-out infinite;
+  transition:
+    scale 200ms var(--ease-out),
+    translate 200ms var(--ease-out);
+}
+
+/* 앉으면 숨쉬기를 늦추고 살짝 내려앉는다. 스프라이트를 하나만 그려도
+   선 자세와 구분된다 (안뜰 짐승은 `-sit` 그림이 따로 있다) */
+.outer-pet.sit .art {
+  animation-duration: 4.2s;
+  translate: 0 6%;
+}
+
+/* 포인터가 올라오거나 포커스가 잡히면 걸음이 멈춘다 (`OuterPet` 이 타이머를 끈다).
+   멈췄다는 걸 몸으로도 말한다 — 안 그러면 그냥 굳은 것처럼 보인다 */
+.outer-pet.perked .art {
+  scale: 1.16;
+  translate: 0 -6%;
+}
+
+.outer-pet:focus-visible {
+  outline: 3px solid var(--accent);
+  outline-offset: -3px;
+  border-radius: 6px;
+}
+
+/* ---- 손님을 우클릭하면 나오는 메뉴 ----
+   top layer 에 뜨는 <dialog> 라 보드의 overflow 와 무관하다.
+   자리는 `PetMenu.tsx` 가 인라인 left/top 으로 준다 */
+.petmenu {
+  position: fixed;
+  /* 브라우저 기본 가운데 정렬을 끈다 — 자리는 우리가 정한다 */
+  margin: 0;
+  width: 208px;
+  max-width: calc(100vw - 16px);
+  padding: 6px;
+  border: 3px solid var(--wall);
+  border-radius: 12px;
+  background: #fffdf7;
+  color: var(--ink);
+  box-shadow: 4px 4px 0 var(--wall);
+  animation: petmenu-in 140ms var(--ease-out);
+}
+
+.petmenu::backdrop {
+  /* 딤은 안 깐다 — 보드를 보면서 고르는 메뉴다. 바깥을 누르면 닫히기만 하면 된다 */
+  background: transparent;
+}
+
+/* 열자마자 메뉴 자신이 포커스를 받는다 (`PetMenu.tsx`). 첫 항목에 빨간 링이
+   뜨는 걸 막으려는 것이라 여기에 링을 다시 그리면 안 된다 — `.sheet-body` 와 같다 */
+.petmenu:focus {
+  outline: none;
+}
+
+.petmenu-who {
+  margin: 0 0 4px;
+  padding: 4px 8px 6px;
+  border-bottom: 1px solid var(--tile-line);
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--muted);
+}
+
+.petmenu-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.petmenu-list button {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  /* 컨트롤 최소 히트영역 40px */
+  min-height: 40px;
+  padding: 0 8px;
+  border: 0;
+  border-radius: 8px;
+  background: none;
+  color: inherit;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  text-align: left;
+  cursor: pointer;
+  transition: background-color 120ms var(--ease-out);
+}
+
+.petmenu-list button:hover {
+  background: #23201c14;
+}
+
+.petmenu-list button:focus-visible {
+  outline: 3px solid var(--accent);
+  outline-offset: -3px;
+}
+
+@keyframes petmenu-in {
+  from {
+    opacity: 0;
+    scale: 0.94;
+  }
+}
+
+/* 손님의 한 마디. 거절 표시(`.notice`)와 같은 자리를 쓰지만 말투가 다르다 —
+   막는 말이 아니라 말을 거는 것이라 종이색으로 뒤집는다.
+   보드 안에 말풍선을 그리지 않는 이유: `.board { overflow: hidden }` 이 모서리 칸의
+   풍선을 자르고, 자리 계산이 Safari 의 `calc(var())` 함정과 맞닿는다 */
+.notice.say {
+  border: 2px solid var(--wall);
+  background: #fffdf7;
+  color: var(--ink);
+  box-shadow: 4px 4px 0 var(--wall);
+}

@@ -45,6 +45,126 @@ describe('저장소 규약', () => {
     expect(bad).toEqual([]);
   });
 
+  /* 빗금은 "여기 못 선다" 는 뜻을 가진 기호다. 보드와 범례가 같은 무늬를 보여야
+     플레이어가 둘을 잇는다. 값을 양쪽에 복사해 두면 한쪽만 고쳐지는 날이 온다 */
+  it('설 수 없음 빗금은 --nostand 한 곳에서만 정한다', () => {
+    const css = (name: string) =>
+      Object.entries(sources).find(([p]) => p.endsWith(`/styles/${name}`))?.[1] ?? '';
+
+    expect(css('base.css'), 'base.css 에 --nostand 정의가 없다').toMatch(/--nostand:/);
+    for (const name of ['board.css', 'panels.css'])
+      expect(css(name), `${name} 이 --nostand 를 참조하지 않는다`).toContain('var(--nostand)');
+  });
+
+  /* 사선 빗금은 `설 수 없음` 한 가지 뜻으로 예약돼 있다. 잔디 바닥이 같은 45도
+     빗금이던 시절 플레이어가 못 서는 칸과 잔디를 구별하지 못했다 — 심지어
+     잔디가 더 진했다. board.css 만 보면 새 스타일시트가 생길 때 규약이
+     새어나가므로(outer.css 가 그렇게 생겼다) 스타일 전체를 본다.
+
+     판정은 allow-list 다. `45deg` 만 훑는 deny-list 로 짰더니 `45.5deg`(소수점)·
+     `to bottom right`·`0.125turn`·`0.785rad`·`50grad` 가 전부 빠져나갔다 —
+     모르는 표기가 통과하는 fail-open 검사였다. 아는 직교 표기만 통과시키면
+     CSS 에 새 각도 단위가 생겨도 자동으로 막힌다 */
+  const ORTHO = /^(?:[+-]?(?:0|90|180|270|360)(?:\.0+)?deg|to\s+(?:top|bottom|left|right))$/;
+  const diagonals = (line: string) => {
+    const out: string[] = [];
+    for (const m of line.matchAll(/repeating-linear-gradient\(([^,]*),/g)) {
+      const head = m[1].trim();
+      // 각도를 생략하면 CSS 기본값이 `to bottom` 이라 안전하다 (첫 인자가 색)
+      if (!/deg|turn|rad|grad|to\s/.test(head)) continue;
+      if (!ORTHO.test(head)) out.push(head);
+    }
+    return out;
+  };
+
+  /* 검사가 정말 실패할 수 있는지부터 못박는다. 늘 통과하는 검사는 없는 것보다
+     나쁘다 — 위 deny-list 가 통째로 그랬다 */
+  it('사선 판정이 각도 표기에 속지 않는다', () => {
+    const g = (head: string) => diagonals(`  --x: repeating-linear-gradient(${head}, #fff, #000);`);
+
+    for (const head of ['45deg', '-45deg', '45.5deg', 'to bottom right', '0.125turn', '0.785rad', '50grad'])
+      expect(g(head), `${head} 를 사선으로 못 봤다`).toEqual([head]);
+
+    for (const head of ['0deg', '90deg', '180deg', '270deg', '-90deg', 'to right', 'to bottom', '#fff 0'])
+      expect(g(head), `${head} 를 사선으로 잘못 봤다`).toEqual([]);
+  });
+
+  it('사선 반복 그라디언트는 --nostand 하나뿐이다', () => {
+    const bad: string[] = [];
+    for (const [path, text] of Object.entries(sources)) {
+      if (!path.endsWith('.css')) continue;
+      for (const line of text.split('\n')) {
+        if (line.includes('--nostand:')) continue;
+        for (const head of diagonals(line)) bad.push(`${path}: ${head} — ${line.trim()}`);
+      }
+    }
+    expect(bad).toEqual([]);
+  });
+
+  // 빨간 X 는 `피해자` 하나만 뜻한다. 값이 두 벌이면 언젠가 갈라져서
+  // 같은 뜻인데 다르게 생긴 표시가 두 개 생긴다
+  it('피해자 X 는 base.css 한 곳에서만 정의된다', () => {
+    const defs = Object.entries(sources)
+      .filter(([, text]) => text.includes('--dead-x:'))
+      .map(([path]) => path);
+    expect(defs).toEqual([expect.stringMatching(/\/styles\/base\.css$/)]);
+
+    for (const name of ['clues.css', 'board.css']) {
+      const text = Object.entries(sources).find(([p]) => p.endsWith(`/styles/${name}`))?.[1];
+      expect(text).toContain('var(--dead-x)');
+    }
+  });
+
+  /* 범례의 알약 색은 `칸` 이야기에 묶여 있다 — 분홍은 `설 수 없음`, 초록은
+     `설 수 있음`. `피해자` 는 사람 이야기라 거기 끼면 같은 분홍이 두 뜻을 진다.
+     실제로 그렇게 태어났고(둘 다 #f2dcd8) 리뷰에서 잡혔다. 피해자에게는
+     자기 색이 이미 있다 — 같은 줄 뱃지에 얹힌 --accent 빨간 X.
+
+     색쌍이 토큰으로 빠진 뒤로는 토큰과 그 뒤의 값을 둘 다 본다. 한쪽만 보면
+     var() 를 피해 hex 를 직접 적는 길이 열린다 */
+  it('피해자 알약이 범례의 설 수 있음·없음 색을 쓰지 않는다', () => {
+    const css = (name: string) =>
+      Object.entries(sources).find(([p]) => p.endsWith(`/styles/${name}`))?.[1] ?? '';
+
+    const legend = /\.legend \.(?:ok|no) em \{[^}]*background:\s*var\((--[\w-]+)\)/gi;
+    const bound = [...css('panels.css').matchAll(legend)].map((m) => m[1]);
+    expect(bound, '범례 알약의 색쌍을 못 찾았다').toHaveLength(2);
+
+    const hex = bound.map(
+      (t) => new RegExp(`${t}:\\s*(#[0-9a-f]{3,8})`, 'i').exec(css('base.css'))?.[1] ?? '',
+    );
+    expect(hex, '색쌍의 값을 base.css 에서 못 찾았다').not.toContain('');
+
+    const tag = /\.dead-tag\s*\{([^}]*)\}/.exec(css('clues.css'))?.[1] ?? '';
+    expect(tag, '.dead-tag 규칙을 못 찾았다').not.toBe('');
+    for (const c of [...bound, ...hex])
+      expect(tag.toLowerCase(), `${c} 는 범례 전용 색이다`).not.toContain(c.toLowerCase());
+    expect(tag, '피해자 알약이 제 X 와 같은 빨강을 안 쓴다').toContain('var(--accent)');
+  });
+
+  /* 그 색쌍이 `맞다`/`아니다` 를 뜻하는 건 범례 밖에서도 통한다 — 옆 다이어그램의
+     `옆이다` 칸이 같은 초록을 빌려 쓰는 게 그래서다. 값을 복사해 두면 한쪽만
+     고쳐져 같은 뜻인데 다르게 보이는 날이 온다 (--nostand·--dead-x 와 같은 이유) */
+  it('맞다·아니다 색쌍은 base.css 한 곳에서만 정한다', () => {
+    const entries = Object.entries(sources).filter(([p]) => p.endsWith('.css'));
+    const base = /\/styles\/base\.css$/;
+
+    for (const token of ['--yes-tint', '--no-tint']) {
+      const defs = entries.filter(([, t]) => t.includes(`${token}:`)).map(([p]) => p);
+      expect(defs, `${token} 정의가 base.css 한 곳이 아니다`).toEqual([expect.stringMatching(base)]);
+    }
+
+    const raw = entries
+      .filter(([p]) => !base.test(p))
+      .filter(([, t]) => /#dcefdd|#f2dcd8/i.test(t))
+      .map(([p]) => p);
+    expect(raw, '색쌍 값을 base.css 밖에서 직접 썼다').toEqual([]);
+
+    const panels = entries.find(([p]) => p.endsWith('/styles/panels.css'))?.[1] ?? '';
+    const adj = /\.adj i\.yes\s*\{([^}]*)\}/.exec(panels)?.[1] ?? '';
+    expect(adj, '옆 다이어그램이 색쌍의 초록을 안 빌린다').toContain('var(--yes-tint)');
+  });
+
   // FloorKind 에만 넣고 CSS 를 안 그리면 그 방은 조용히 기본 타일색으로 깔린다.
   // 눈으로 보기 전까지 아무도 모르므로 값 목록과 스타일을 직접 맞춰 본다
   it('바닥 재질마다 질감이 있다', () => {

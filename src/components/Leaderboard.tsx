@@ -38,7 +38,7 @@ export default function Leaderboard({
   const listed = rank !== null && rank <= top.length;
 
   return (
-    <div className="panel scores">
+    <div className="panel scores" id="jump-scores">
       <b>점수판</b>
 
       <p className="myscore">

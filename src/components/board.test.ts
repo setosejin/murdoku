@@ -27,6 +27,35 @@ describe('Board 렌더링', () => {
     for (const room of p.rooms) expect(html).toContain(room.name);
   });
 
+  /* 보드에는 이미 ✕ 가 있다 — .mark-x, 메모 브러시의 `✕ 빈칸`, 뜻은 "여긴 아무도 없다".
+     피해자 X 는 정반대에 가까운 뜻이라 한 화면에 같이 두면 안 된다.
+     Board 가 revealed 로 둘을 시간으로 가른다: 메모는 공개 前, 정답 토큰은 공개 後.
+     그래서 빨간 X 는 공개 화면에만 산다 */
+  it('정답을 공개하면 피해자 토큰만 죽음 표시를 갖는다', () => {
+    const { p, html } = render(true);
+    expect((html.match(/class="token solved dead"/g) ?? []).length).toBe(1);
+    // 범인은 용의자다 — 피해자와 겹치지 않는다
+    expect(p.people.find((x) => x.id === p.culpritId)!.isVictim).toBe(false);
+    expect((html.match(/class="token solved/g) ?? []).length).toBe(p.people.length);
+  });
+
+  it('메모 화면에는 죽음 표시가 없다 (빈칸 ✕ 와 한 화면에 놓이지 않는다)', () => {
+    const p = generatePuzzle(5, 'render-check');
+    const v = p.solution.V;
+    const a = p.solution.A;
+    const html = renderToStaticMarkup(
+      createElement(Board, {
+        puzzle: p,
+        marks: { [`${v.r},${v.c}`]: 'V', [`${a.r},${a.c}`]: 'X' },
+        onCell: () => {},
+        revealed: false,
+      }),
+    );
+    expect(html).toContain('class="mark-x"');
+    expect(html).toContain('>V</span>');
+    expect(html).not.toContain('dead');
+  });
+
   /* 이름표는 z-index 4 라 같은 칸의 무엇이든 덮는다. 증언이 가구·부착물을 이름으로
      부르니 그 이름이 덮이면 사건이 안 풀린다. 가구 이름은 늘 제 발치(발자국의 아래쪽
      줄)에 깔리므로, 아래가 찬 칸에 붙은 이름표는 위로 올라가 있어야 한다.

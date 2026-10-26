@@ -60,6 +60,23 @@ export type PetSpec = {
 };
 
 /**
+ * 건물 실루엣 **바깥**의 빈 땅을 어슬렁대는 손님. 안뜰 짐승과 반대다 —
+ * 안뜰 짐승은 못 누르는 칸을 몸으로 막지만, 이쪽은 막을 게 없으므로 말을 건다.
+ *
+ * 테마마다 둘이다. 한 사건에 손님이 둘 나올 수 있어서(마주보는 두 모서리가 파인
+ * 실루엣) 겹치지 않을 만큼은 있어야 한다.
+ */
+export type VisitorSpec = {
+  /** 스프라이트 아이콘 이름. `i-<kind>` 하나면 된다 (앉은 자세는 CSS 로 표현한다) */
+  kind: string;
+  label: string;
+  emoji: string;
+  /** 눌렀을 때 뱉는 말. 시드로 섞어 순서대로 돈다 — 같은 사건이면 같은 순서다 */
+  says: readonly string[];
+  image?: string;
+};
+
+/**
  * 사건 테마. 방·가구·벽부착물·제목·직업이 한 묶음이라
  * `욕실`과 `돼지우리`가 같은 사건에 섞이지 않는다.
  */
@@ -81,6 +98,11 @@ export type Theme = {
    * 건물 바깥으로 트인 빈 칸은 그냥 빈 땅이라 그리지 않는다.
    */
   courtyard: { label: string; emoji: string; floor: FloorKind; pet: PetSpec };
+  /**
+   * 건물 바깥으로 트인 빈 칸(`ell`·`you`·`diagonal` 실루엣이 파낸 자리)에 나타나는 손님.
+   * 테마마다 **둘**이다 — 마주보는 두 모서리가 파이면 한 사건에 둘이 같이 나온다.
+   */
+  visitors: readonly VisitorSpec[];
   titles: readonly string[];
   briefs: readonly string[];
   roles: readonly string[];
@@ -106,6 +128,30 @@ const MANSION: Theme = {
     floor: 'grass',
     pet: { kind: 'cat', label: '고양이', emoji: '🐈', deny: '고양이가 막아섰다 — 안뜰은 건물 밖이야' },
   },
+  visitors: [
+    {
+      kind: 'owl',
+      label: '부엉이',
+      emoji: '🦉',
+      says: [
+        '부엉— 밤새 여기 있었는데, 나는 아무것도 못 봤어.',
+        '지붕 위는 조용해. 시끄러운 건 늘 안쪽이지.',
+        '천천히 봐도 돼. 밤은 기니까.',
+        '창문에 불이 켜진 방을 세어봤어. 그건 도움이 안 되더라.',
+      ],
+    },
+    {
+      kind: 'horse',
+      label: '말',
+      emoji: '🐎',
+      says: [
+        '히힝. 마구간은 저쪽이야, 여긴 그냥 뜰이고.',
+        '풀 뜯는 중이었어. 뭐 도와줄까?',
+        '급할 것 없어. 나도 안 급해.',
+        '어젯밤엔 아무도 나를 타고 나가지 않았어. 그건 확실해.',
+      ],
+    },
+  ],
   furniture: [
     { kind: 'bed', label: '침대', emoji: '🛏️', size: 2, standable: true, rooms: ['침실', '손님방'] },
     { kind: 'sofa', label: '소파', emoji: '🛋️', size: 3, standable: true, rooms: ['거실', '서재', '손님방'] },
@@ -162,6 +208,30 @@ const FARM: Theme = {
     floor: 'water',
     pet: { kind: 'duck', label: '오리', emoji: '🦆', deny: '오리가 막아섰다 — 연못은 건물 밖이야' },
   },
+  visitors: [
+    {
+      kind: 'frog',
+      label: '개구리',
+      emoji: '🐸',
+      says: [
+        '개굴. 물가는 이쪽이야, 헛간은 저쪽이고.',
+        '파리를 세고 있었어. 여덟 마리까지 셌는데 놓쳤네.',
+        '한 칸씩 뛰어봐. 나처럼 하면 헷갈리지 않아.',
+        '비 오는 날엔 발자국이 잘 남아. 오늘은 안 왔지만.',
+      ],
+    },
+    {
+      kind: 'worm',
+      label: '지렁이',
+      emoji: '🪱',
+      says: [
+        '흙 속은 시원해. 여긴 사건이랑 상관없는 자리야.',
+        '나는 어디로도 못 가. 증인은 못 되겠지.',
+        '조심히 밟아줘. 아니, 그냥 밟지 말아줘.',
+        '땅이 흔들렸어. 누가 밤에 뛰어다녔거든.',
+      ],
+    },
+  ],
   furniture: [
     { kind: 'haystack', label: '건초더미', emoji: '🌾', size: 4, standable: true, rooms: ['외양간', '헛간', '돼지우리', '창고'] },
     { kind: 'trough', label: '여물통', emoji: '🥣', size: 3, standable: false, rooms: ['외양간', '돼지우리', '목초지'] },
@@ -229,6 +299,30 @@ const OFFICE: Theme = {
       deny: '청소로봇이 막아섰다 — 아트리움은 사무실 밖이야',
     },
   },
+  visitors: [
+    {
+      kind: 'car',
+      label: '자동차',
+      emoji: '🚗',
+      says: [
+        '빵— 주차장은 여기까지야. 건물 안은 걸어서 가야 해.',
+        '어젯밤엔 시동 걸린 차가 한 대도 없었어. 다들 야근이었나 봐.',
+        '천천히 가. 급하게 빠져나가는 쪽이 늘 수상하더라.',
+        '창문으로 보이는 층은 다 세어봤는데, 나는 층수를 못 세.',
+      ],
+    },
+    {
+      kind: 'bus',
+      label: '셔틀버스',
+      emoji: '🚌',
+      says: [
+        '막차는 이미 갔어. 천천히 풀어도 돼.',
+        '오늘 아침에 태운 사람 얼굴은 다 기억나. 이름은 하나도 모르지만.',
+        '정류장은 여기야. 안쪽으로는 못 들어가.',
+        '한 바퀴 돌고 올게. 그동안 답이 나오면 좋겠다.',
+      ],
+    },
+  ],
   furniture: [
     { kind: 'desk', label: '책상', emoji: '🗄️', size: 2, standable: false, rooms: ['A존', 'B존', '회의실'] },
     { kind: 'sofa', label: '소파', emoji: '🛋️', size: 3, standable: true, rooms: ['라운지'] },

@@ -39,6 +39,28 @@ describe('App 렌더링', () => {
     expect(brief.indexOf('class="panel legend"')).toBeGreaterThan(-1);
   });
 
+  /* `인접`·`붙어 있다` 는 대각선을 배제하지 않는 말이라, 실제로 대각선을 세다가
+     막힌 사람이 있었다. 그림이 상하좌우 넷만 `옆` 이라고 말하는지 칸 수로 본다.
+     엔진(`clues.ts` 의 DIRS)과 어긋나면 플레이어가 푼 답이 갈린다 */
+  it('규칙이 옆 = 상하좌우 넷임을 그림으로 말한다', () => {
+    expect((html.match(/class="adj"/g) ?? []).length).toBe(1);
+    const from = html.slice(html.indexOf('class="adj"'));
+    const grid = from.slice(0, from.indexOf('</span>'));
+    expect((grid.match(/class="yes"/g) ?? []).length).toBe(4);
+    expect((grid.match(/class="no"/g) ?? []).length).toBe(4);
+    expect((grid.match(/class="mid"/g) ?? []).length).toBe(1);
+  });
+
+  /* 보드는 빗금으로, 범례는 글자로 말하면 둘이 안 이어진다. 범례 줄이 보드 칸의
+     축소판이 되도록 가구 그림마다 칸 껍데기를 씌운다 (빗금은 panels.css 가 깐다) */
+  it('범례의 가구가 저마다 칸 껍데기 위에 앉는다', () => {
+    const from = html.slice(html.indexOf('class="panel legend"'));
+    const block = from.slice(0, from.indexOf('</ul>'));
+    const rows = (block.match(/<li class="(ok|no)">/g) ?? []).length;
+    expect(rows).toBeGreaterThan(0);
+    expect((block.match(/class="legend-tile"/g) ?? []).length).toBe(rows);
+  });
+
   it('아이콘 스프라이트를 한 번만 심는다', () => {
     expect((html.match(/id="i-bed"/g) ?? []).length).toBe(1);
   });
@@ -119,9 +141,12 @@ describe('desktop.css 불변식', () => {
 });
 
 describe('정답을 본 사건', () => {
-  const suspects = generatePuzzle(4, 'peek-check').people.filter((p) => !p.isVictim);
+  const puzzle = generatePuzzle(4, 'peek-check');
+  const suspects = puzzle.people.filter((p) => !p.isVictim);
+  const victim = puzzle.people.find((p) => p.isVictim)!;
   const props = {
     suspects,
+    victim,
     accused: suspects[0].id,
     setAccused: () => {},
     accuse: () => {},
@@ -155,6 +180,24 @@ describe('정답을 본 사건', () => {
     expect(html).toContain('+150점');
     expect(html).not.toContain('이 사건은 여기까지야');
     expect(html).toContain('정답 숨기기');
+  });
+
+  // 무엇을 맞히는 게임인지 모르고 헤맸다는 피드백에서 나왔다. 규칙 전문은 모달 안에만
+  // 있어서, 모달을 안 연 사람에게는 없는 것과 같다. 지목하는 자리에 늘 둔다
+  it('지목하는 자리에서 승리 조건을 말한다', () => {
+    for (const bare of [false, true]) {
+      const html = render({ bare });
+      expect(html).toContain(victim.name);
+      expect(html).toContain('그와 같은 방에 있던 용의자가 범인이야');
+      // 문장 속 기호가 화면의 기호와 같아야 이어진다
+      expect(html).toContain('class="clue-badge dead"');
+    }
+  });
+
+  // V 가 왜 목록에 없는지도 이 한 줄이 답한다 — 지목 후보는 용의자뿐이다
+  it('피해자는 지목 후보에 없다', () => {
+    const html = render({});
+    expect((html.match(/aria-pressed/g) ?? []).length).toBe(suspects.length);
   });
 });
 
@@ -205,6 +248,15 @@ describe('버전 기록', () => {
     expect(html).toContain('<li>그냥 한 줄</li>');
     expect(html).toContain('<p>남는 문단</p>');
     expect(html.match(/<ul>/g)).toHaveLength(1); // 연속한 항목은 한 목록으로 묶인다
+  });
+
+  it('굵게 안의 코드·링크도 그린다', () => {
+    const src = '- **`옆`이 넷이다** 와 **[문서](https://example.dev/d) 참고**';
+    const html = renderToStaticMarkup(createElement('div', null, ...renderMarkdown(src)));
+
+    expect(html).toContain('<b><code>옆</code>이 넷이다</b>');
+    expect(html).toContain('href="https://example.dev/d"');
+    expect(html).not.toContain('`'); // 백틱이 글자로 새면 안 된다
   });
 
   it('버튼과 dialog 를 그린다', () => {

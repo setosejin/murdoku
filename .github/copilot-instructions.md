@@ -109,6 +109,11 @@ git -c credential.https://github.com.helper= \
 | `src/components/Art.tsx` | 스프라이트 `<defs>` + `<Art>` (이모지/이미지/아이콘 하나로) |
 | `src/components/YardPet.tsx` | 안뜰(갇힌 빈 칸)을 돌아다니는 짐승 — 그림 + 투명한 판 |
 | `src/components/yardWalk.ts` | 안뜰 짐승의 걸음 규칙 (순수 함수) |
+| `src/components/useWander.ts` | 걸음 상태·타이머 훅 (안뜰 짐승·바깥 손님 공용) |
+| `src/components/OuterPet.tsx` | 건물 밖 빈 땅을 어슬렁대는 손님 — 걸음 + 대사 + 메뉴 열기 |
+| `src/components/outerBlobs.ts` | 바깥 빈 칸 → 4-연결 덩어리 (순수 함수) |
+| `src/components/PetMenu.tsx` | 손님을 우클릭·길게 누르면 열리는 컨텍스트 `<dialog>` |
+| `src/components/petMenuItems.ts` | 그 메뉴의 항목 목록 (두 셸 공용) |
 | `src/components/CaseCards.tsx` | 용의자·피해자 카드 그리드 (두 셸 공용) |
 | `src/components/GamePanels.tsx` | 규칙·범례·브러시바·지목·시드 패널 (두 셸 공용). 규칙·범례는 사건 브리핑 안에만 있다 |
 | `src/components/ChangelogDialog.tsx` | `CHANGELOG.md` 를 읽어 모달로 그린다 (마크다운 부분집합 렌더러) |
@@ -121,6 +126,8 @@ git -c credential.https://github.com.helper= \
 `App.tsx` 가 `useMediaQuery(MOBILE_QUERY)` 로 데스크톱 셸과 `MobileShell` 중 하나를 고른다. **상태(`useGame`)와 패널 컴포넌트는 둘이 함께 쓴다** — 마크업을 복제하면 두 화면이 갈라진다. 상태를 셸 안으로 내리면 창 크기를 바꿀 때 메모가 날아간다.
 
 모바일은 **스크롤이 없다.** 붙박이는 상단바·보드·증언 목록(= 메모 브러시)·하단 액션바 넷뿐이고 나머지는 전부 시트로 들어간다. 새 UI 를 모바일 메인 화면에 붙이려면 그만큼 보드가 작아진다는 뜻이다 — 시트를 먼저 고려할 것.
+
+모바일에는 스포트라이트 온보딩이 없다(겨누는 `.dclues`·`.legend` 가 메인 화면에 없다). 대신 **첫 방문에 사건 시트가 저절로 열린다** — 인물·범례·규칙이 이미 그 안에 있다. 표시는 `murdoku.brief` 로 데스크톱 온보딩의 `murdoku.tour` 와 **나눠 둔다**. 합치면 모바일로 먼저 본 사람이 데스크톱 온보딩을 영영 못 보는데 화면으로는 안 보인다 — `history.test.ts` 가 검사한다.
 
 데스크톱도 **한 화면**이다. `.app { height: 100dvh }` 이고 `.play` 가 `증언(=브러시) | 보드 | 지목` 세 열이다. 넘치는 몫은 페이지가 아니라 열(`.dclues` / `.side`) 안에서 스크롤한다. 여기서 쉽게 깨지는 것 셋:
 
@@ -170,6 +177,8 @@ buildFloorplan(마스크 → BSP → void 빼기 → 조각 흡수 → 지터)
   - **외벽만 방 칸이 네 변을 다 그린다.** 반대편이 빈 칸이라 선을 나눠 그릴 상대가 없어서다. 방↔방·같은 방 선은 위·왼쪽만 그리고 나머지 절반은 이웃이 그린다.
   - `.board` 에 사각 테두리를 되돌리면 **ㄱ자 건물에도 정사각형 액자가 남는다** — 실루엣이 도형이 아니라 여백처럼 읽힌다. 같은 이유로 `.cell.void.outer` 는 `--floor-tint: transparent` 라 그 자리에 종이가 비친다. `board.test.ts` 의 `가장 굵은 선이 건물 실루엣을 따라간다` 가 칸마다 "5px ⟺ 이웃이 건물이 아니다"를 검사한다.
 - **실루엣 밖 칸은 `<button>` 이 아니라 `<div class="cell void ...">` 다.** 누를 수도 포커스할 수도 없어야 한다. `roomById.get(roomAt[r][c])!` 앞에서 갈라야 한다 — void 는 `-1` 이라 그대로 두면 `undefined` 에서 터진다. 갇힌 칸(`inner`)만 테마 `courtyard` 의 바닥·그림·이름을 받고, 바깥(`outer`)은 그냥 빈 땅이다.
+- **사선 빗금은 `설 수 없음` 전용이다.** 무늬는 `base.css` 의 `--nostand` 하나가 유일한 출처고 보드(`.cell.blocked`)와 범례(`.legend .no .legend-tile`)가 같이 쓴다. **바닥 재질(`--floor-img`)에는 사선을 쓰지 않는다** — 잔디가 45° 빗금이던 시절 플레이어가 못 서는 칸과 잔디를 구별하지 못했다(각도까지 같았고, 게다가 잔디가 더 진했다). `repo.test.ts` 가 `src/styles/` 전체에서 90의 배수가 아닌 `repeating-linear-gradient` 를 `--nostand` 선언 한 줄로 묶는다. 새 테마의 바닥은 점묘·직교선으로 그릴 것.
+- **`옆`이 상하좌우라는 건 그림이 말한다** (`GamePanels.tsx` 의 `AdjacencyDiagram`, 규칙 4번 아래). 칸의 뜻은 맨해튼 거리로 정해서 `clues.ts` 의 `DIRS` 와 같은 규칙에서 나오게 한다. 거기 쓰는 `✕` 는 보드 메모 브러시(`.mark-x`)와 같은 `아니다` 다 — 이 글리프에 **다른** 뜻을 붙이는 변경은 그 둘과 부딪히는지 먼저 볼 것.
 - 2칸 가구는 `cells[0]` 에서 한 번만 그리고 `width/height: 200%` 로 옆 칸을 덮는다.
 - **창문·문은 외벽을 타고 앉는다.** 절대 위치 부착물이라 칸을 막지 않고(`pointer-events: none`), `~앞` 은 그 칸을 뜻한다. 자리는 `.wall-item.<side>` 의 `-5px` — 절대배치 자식의 `top/left` 는 padding box 기준이라 그 값이 정확히 5px 외벽의 바깥 모서리다. **`Board.tsx` 의 외벽 두께를 바꾸면 `wall.css` 도 같이 바꿔야 한다** (`board.test.ts` 가 둘을 맞춘다). 예전처럼 칸 안쪽에 띄워 붙이면 6×6 부터 안 보인다.
 - **벽 부착물에는 이름표를 단다** (`.wall-label`). 증언이 `창문 앞` 처럼 이름을 부르는데 그림만으로는 문과 창문이 안 갈린다. 모양은 방 이름 알약이 아니라 **가구 이름표와 같다** — 증언이 부르는 지형지물끼리 같게 보이는 게 맞다. 대신 `Board.tsx` 가 방 이름표를 벽 부착물이 없는 칸으로 비켜준다 (안 그러면 넷 중 하나꼴로 같은 모서리에서 겹친다).
@@ -177,6 +186,9 @@ buildFloorplan(마스크 → BSP → void 빼기 → 조각 흡수 → 지터)
 - **격자 열 수는 CSS 변수로 넘기지 않는다.** `Board.tsx` 가 인라인 `grid-template-columns: repeat(n, minmax(0, 1fr))` 로 직접 박는다. `repeat(var(--n), 1fr)` 로 되돌리면 Safari 에서 보드가 잘린다(아래 참조). `repo.test.ts` 가 CSS 전체에서 `repeat(var(` 를 금지한다.
 - **보드 안의 글자·아이콘 크기는 `vw` 가 아니라 `cqw` 로 잰다.** `.board { container-type: inline-size }` 가 기준이다. 모바일에서 보드는 **높이**에 맞춰 줄어드는데, `vw` 기준이면 글리프만 안 줄어 칸을 넘친다.
 - 모바일에서 보드는 `min(100cqw, 100cqh)` 로 남는 공간의 짧은 변에 맞춘다. 행은 `grid-auto-rows: minmax(0, 1fr)` — 데스크톱은 그대로 `.cell { aspect-ratio: 1 }` 이 정한다.
+- **빨간 X 는 `피해자` 하나만 뜻한다.** 그림은 `base.css` 의 `--dead-x` 가 유일한 출처고 증언 뱃지(`.clue-badge.dead`)·지목 문장·보드의 정답 토큰(`.token.dead`)이 참조한다(`repo.test.ts` 가 값 복제를 막는다). 굵기가 px 이 아니라 퍼센트인 건 24px 뱃지와 보드 토큰에서 같은 비율로 보이게 하려는 것이다. X 는 **음수 z-index** 로 깐다 — 글자(`V`) 위에 그리면 글자를 먹는다. `.clue-badge` 는 스태킹 컨텍스트가 없으므로 `isolation: isolate` 가 같이 필요하다.
+  - **보드에서는 정답 공개 화면에만 얹는다.** 메모 화면에는 `.mark-x`(`✕ 빈칸` = "아무도 없다")가 있어서 같은 글리프가 정반대 뜻을 같이 갖게 된다. `Board.tsx` 가 `revealed` 로 메모와 정답 토큰을 배타적으로 나누므로 둘이 만날 일이 없다 — `board.test.ts` 가 그 배타성을 검사한다.
+  - **`피해자` 알약(`.dead-tag`)도 그 빨강을 쓴다.** 범례의 분홍(`설 수 없음`)·초록(`설 수 있음`)은 **칸**의 가부에 묶인 색쌍이라 **사람** 이야기인 피해자가 거기 끼면 안 된다 — 실제로 `#f2dcd8` 을 빌려 썼다가 잡혔다. `repo.test.ts` 가 `.dead-tag` 에서 그 두 색을 금지하고 `var(--accent)` 를 요구한다. 같은 이유로 `panels.css` 의 `옆` 다이어그램은 초록을 **빌려도 된다** — 거기서는 뜻이 같다(`허용`).
 
 ### 안뜰의 주인
 
@@ -188,11 +200,27 @@ buildFloorplan(마스크 → BSP → void 빼기 → 조각 흡수 → 지터)
 쉽게 깨지는 것들.
 
 - **판이 안뜰 밖으로 새면 진짜 칸의 클릭을 먹는다.** bounding box 에 섞인 비-안뜰 칸은 `.yard-gap`(`pointer-events: none`)으로 덮는다. `yard.test.ts` 가 ㄱ자 안뜰로 검사한다.
-- **좌표·트랙 수는 전부 JS 에서 문자열을 완성해 인라인으로 넘긴다.** `calc(var())` 는 Safari 가 캐싱한다(webkit#202259). `.yard-pet` 이 정확히 한 칸 크기라 `translate: ${c*100}% ${r*100}%` 가 칸에 정확히 떨어진다.
+- **좌표·트랙 수는 전부 JS 에서 문자열을 완성해 인라인으로 넘긴다.** `calc(var())` 는 Safari 가 캐싱한다(webkit#202259). `.yard-pet` 이 정확히 한 칸 크기라 `translate: ${c*100}% ${r*100}%` 로 칸을 짚는다 — WebKit 이 상자를 정수 px 로 스냅해 1~2px 밀리지만 안뜰은 격자 테두리에 닿지 않으므로 잘릴 일이 없다. **테두리에 닿는 것**(바깥 손님)은 `left`/`top` 퍼센트를 써야 한다.
 - **상태는 `YardPet` 안에 둔다.** `Board` 로 올리면 걸음마다(1~3초) 보드 전체가 다시 그려진다. `cells` 는 렌더마다 새 배열이라 `useEffect` deps 에 그대로 넣으면 메모를 찍을 때마다 산책이 멈춘다 — 좌표를 이어붙인 `yardKey` 를 쓴다.
 - 산책은 `rng(\`${seed}-pet\`)` 을 탄다. **같은 사건 = 같은 산책.** `prefers-reduced-motion` 이면 타이머를 아예 안 건다.
 - 테마를 늘리면 `courtyard.pet` 과 `sprite.svg` 의 `i-<kind>` · `i-<kind>-sit` 을 같이 넣어야 한다. `yard.test.ts` 가 강제한다.
 - 안뜰은 **4×4 에서 안 나온다**(`donut.minN = 5`). 안뜰이 격자당 한 덩어리·직사각형이라는 전제는 `donut` 마스크가 유일한 출처다 — 갇힌 덩어리를 둘 이상 만드는 마스크를 넣으면 `Board.tsx` 의 이름표와 이 판이 같이 깨진다.
+
+### 바깥 실루엣의 손님
+
+건물 밖으로 트인 빈 땅(`voidKind === 'outer'` — `ell`·`you`·`diagonal` 이 파낸 자리)에는 손님이 온다. 저택은 부엉이·말, 농장은 지렁이·개구리, 사무실은 자동차·셔틀버스. **테마 데이터(`Theme.visitors`)가 유일한 출처**이고 테마마다 **둘**이 필수라, 테마를 늘리면 거기 두 줄과 `sprite.svg` 의 `i-<kind>` 만 채우면 붙는다.
+
+안뜰 짐승과 결정적으로 다른 점: **판이 없다.** 안뜰 짐승은 칸을 *막는 게* 목적이라 안뜰 전체를 투명한 판으로 덮어야 했다. 바깥 손님은 막을 게 없다 — 손님 자신이 한 칸짜리 `<button.outer-pet>` 이고 걸음을 따라 움직인다. 그래서 진짜 칸 위로 올라갈 경로가 아예 없고, 덩어리가 직사각형이 아니어도 되고, 포커스·`aria-label` 이 그냥 딸려온다.
+
+- `outerBlobs()` 가 `outer` 칸을 4-연결 덩어리로 쪼갠다. 큰 것부터 **최대 두 덩어리**에 서로 다른 손님을 하나씩 세운다(`diagonal` 이면 마주보는 두 모서리).
+- **자리는 보드 기준 `left`/`top` 퍼센트다. `translate` 퍼센트를 쓰면 안 된다.** `translate` 의 퍼센트는 제 상자 기준인데 WebKit 이 그 상자를 정수 px 로 스냅해서 계산한다 — 6×6 에서 61.66px 칸이 62px 로 잡혀 열마다 0.34px 씩 밀리고, **마지막 행·열의 손님이 보드를 1.7px 삐져나가 `overflow: hidden` 에 잘렸다**(WebKit 실측, Chromium 은 멀쩡). `outer.test.ts` 가 마크업에 `translate:` 가 없는지 본다.
+- **포인터가 올라오거나 포커스가 잡히면 걸음을 멈춘다**(`.perked`). 1~3초마다 움직이는 버튼은 누르려는 순간 도망간다.
+- **말풍선을 보드 안에 그리지 않는다.** `.board { overflow: hidden }` 이 모서리 칸의 풍선을 자른다. 기존 `.notice` 토스트를 `.notice.say` 로 뒤집어 쓴다 (`role="status"` 가 딸려온다).
+- **첫 마디는 늘 안내다.** 우클릭 메뉴는 눌러보기 전엔 있는 줄도 모른다. `(pointer: coarse)` 로 "오른쪽 버튼" / "꾹 누르면" 을 가른다. 두 번째부터 시드로 섞은 대사를 돈다 — **같은 사건 = 같은 순서.**
+- 폰에는 우클릭이 없어 **500ms 길게 누르기**로 같은 메뉴를 연다(`HOLD_MS`). 10px 미끄러지면 스크롤로 보고 취소한다. `-webkit-touch-callout: none` 이 없으면 iOS 가 제 확대·복사 메뉴를 먼저 띄운다.
+- 메뉴는 네이티브 `<dialog>` 라 top layer 로 올라가 보드의 `overflow` 와 무관하다. 자리는 포인터 좌표에 두되 뷰포트 안으로 접는다 — **`PetMenu.tsx` 의 `MENU_W` 는 `outer.css` 의 `width` 와 같아야 한다**(`outer.test.ts` 가 대조한다). 열 때 포커스는 첫 항목이 아니라 **메뉴 자신**에게 준다(`Sheet` 와 같은 이유 — 빨간 링).
+- 메뉴 항목은 `petMenuItems.ts` 한 곳에서 만들고 두 셸이 나눠 쓴다. **도움말이 셸마다 다르다** — 데스크톱은 투어(`<Tour>` 는 데스크톱 셸에만 있고 데스크톱 선택자를 겨눈다), 모바일은 규칙·범례가 든 사건 브리핑 시트다.
+- "순위 보기"·"닉네임 변경"은 같은 시트 안의 다른 자리를 연다. `Sheet` 의 `jumpTo` 가 열린 뒤 한 프레임 기다렸다 `scrollIntoView` 한다.
 
 ### 바텀시트
 
@@ -206,6 +234,8 @@ buildFloorplan(마스크 → BSP → void 빼기 → 조각 흡수 → 지터)
 **Chromium 에서 멀쩡한 레이아웃 버그는 대부분 Safari 전용이다. Chromium 으로 "재현 안 됨"을 확인했다고 없는 문제로 넘기지 말 것.**
 
 실제로 겪은 것 — `repeat(var(--n), 1fr)`: WebKit 은 `repeat()` 안의 `var()` 를 computed-value 시점에 한 번 펼쳐 캐싱한다([webkit#202259](https://bugs.webkit.org/show_bug.cgi?id=202259)). 난이도를 바꿨다 되돌아오면 트랙 *개수*만 갱신되고 *폭*은 옛 값이라 6×6 이 4열 폭으로 깔리고 `.board { overflow: hidden }` 이 넘친 열을 잘라 4×6 처럼 보였다. 첫 진입에는 멀쩡하고 왕복해야 터져서 "종종" 나는 것처럼 보인다. 값이 바뀌는 곳에 `var()` 를 `repeat()`·`calc()` 안쪽으로 넣지 말고 인라인 스타일로 계산해서 넘길 것.
+
+또 하나 — **`translate` 의 퍼센트는 격자 자리를 잡는 데 쓰면 안 된다.** 기준이 제 상자인데 WebKit 이 그 상자를 정수 px 로 스냅해서 계산한다. 6×6 에서 61.66px 칸이 62px 로 잡혀 칸마다 0.34px 씩 밀렸고, 마지막 열의 손님이 보드를 1.7px 삐져나가 잘렸다(Chromium 은 정확히 떨어진다). 자리는 **컨테이너 기준 `left`/`top` 퍼센트**로 준다.
 
 Safari 를 실측하는 법 — **환경마다 되는 경로가 다르다. 아래를 위에서부터 시도할 것.**
 
@@ -250,6 +280,7 @@ Safari 를 실측하는 법 — **환경마다 되는 경로가 다르다. 아�
 | `src/components/board.test.ts` | 보드 렌더링 — 칸·가구·이름표 자리·실루엣·벽 부착물 + `board.css`/`wall.css` 불변식 |
 | `src/components/render.test.ts` | 앱(데스크톱 셸)·모달·온보딩·점수판 렌더링 |
 | `src/components/yard.test.ts` | 안뜰 짐승 — 걸음 규칙·판 범위·테마별 그림 + `yard.css` 불변식 |
+| `src/components/outer.test.ts` | 바깥 손님 — 덩어리 쪼개기·자리·대사·컨텍스트 메뉴 + `outer.css` 불변식 |
 | `src/components/mobile.test.ts` | 모바일 셸·증언 목록·시트 + `mobile.css` 불변식 |
 | `src/repo.test.ts` | 500줄 규약 · CSS 전역 금지 패턴(`repeat(var(`) · 바닥 재질 질감 · 테마 안 이름 겹침 |
 
@@ -261,8 +292,10 @@ Safari 를 실측하는 법 — **환경마다 되는 경로가 다르다. 아�
 
 ### 스타일
 
-`src/index.css` 는 `@import` 목록이고 규칙은 `src/styles/<컴포넌트>.css` 에 있다. Vite 가 빌드 때 그 순서대로 인라인하므로 **import 순서 = 캐스케이드 순서**다. 컴포넌트를 추가하면 파일을 만들고 진입점에 한 줄 넣는다. `mobile.css` 는 데스크톱 규칙을 덮어야 하므로 늦게, `motion.css`(`prefers-reduced-motion`)는 전부를 덮어야 하므로 **맨 마지막**이다. 보드는 셋으로 갈려 있다 — `board.css`(칸·방·가구) → `wall.css`(창문·문) → `yard.css`(안뜰의 주인). 뒤의 둘은 `.cell`·`.board` 안에 얹히므로 이 순서를 지켜야 한다.
+`src/index.css` 는 `@import` 목록이고 규칙은 `src/styles/<컴포넌트>.css` 에 있다. Vite 가 빌드 때 그 순서대로 인라인하므로 **import 순서 = 캐스케이드 순서**다. 컴포넌트를 추가하면 파일을 만들고 진입점에 한 줄 넣는다. `mobile.css` 는 데스크톱 규칙을 덮어야 하므로 늦게, `motion.css`(`prefers-reduced-motion`)는 전부를 덮어야 하므로 **맨 마지막**이다. 보드는 셋으로 갈려 있다 — `board.css`(칸·방·가구) → `wall.css`(창문·문) → `yard.css`(안뜰의 주인) → `outer.css`(바깥의 손님). 뒤의 셋은 `.cell`·`.board` 안에 얹히므로 이 순서를 지켜야 한다.
 
 지켜온 것들: 동심 반경(바깥 = 안쪽 + 패딩), 컨트롤 최소 40px 히트영역, `focus-visible` 링, `prefers-reduced-motion` 대응, 한국어 `word-break: keep-all`, `transition` 은 속성을 명시(`all` 금지). 두꺼운 잉크 테두리 + `4px 4px 0` 하드 섀도가 이 UI의 디자인 언어다.
 
 전역 클래스(`.chip`·`.link`·`.ver`)를 **부모 선택자로 묶지 말 것**. `.footer .ver` 로 묶여 있던 탓에 같은 버튼이 모바일 메뉴 시트에서는 스타일이 통째로 빠져 브라우저 기본 버튼으로 나왔다.
+
+**뜻을 가진 색·무늬는 `base.css` `:root` 에 토큰으로 한 번만 둔다.** 지금 셋이다 — `--nostand`(설 수 없음 빗금)·`--dead-x`(피해자 X)·`--yes-tint`/`--no-tint`(`맞다`/`아니다` 알약 색쌍). 값을 두 벌 두면 한쪽만 고쳐져 같은 뜻이 다르게 보이는 날이 온다. 반대 방향도 막아야 한다 — 뜻이 **다른** 표시에 이 토큰을 빌려 쓰면 한 기호가 두 뜻을 진다(`피해자` 알약이 `설 수 없음` 분홍을 그대로 써서 픽셀 단위로 같아진 적이 있다). `repo.test.ts` 가 셋 다 정의 위치와 값 복제를 검사한다.

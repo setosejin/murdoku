@@ -5,10 +5,30 @@
   --tile: #fdfaf2;
   --tile-line: #cec2a8;
   --accent: #c0392b;
+  /* 설 수 없는 칸의 사선 빗금. 뜻을 가진 기호라 여기 한 곳에서만 정하고
+     보드(`.cell.blocked`)와 범례(`.legend .no`)가 같이 쓴다 — 값이 두 벌이면
+     언젠가 갈라진다. 바닥 재질은 이 무늬를 흉내 내면 안 된다.
+     예전 값(#23201c12)은 잔디 바닥(12%)보다 옅어서, 뜻을 가진 기호가
+     배경 무늬에 묻혔다 */
+  --nostand: repeating-linear-gradient(45deg, #0000 0 5px, #23201c26 5px 7px);
   --muted: #7d7466;
   --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
   --dur-press: 160ms;
   --dur-fast: 180ms;
+  /* 피해자 표시. 브리핑 카드의 초상 X(.card.victim)가 쓰던 기호를 증언 뱃지와
+     보드의 정답 토큰까지 넓힌 것 — 값이 두 벌이면 언젠가 갈라지므로 여기 한 번만 둔다.
+     굵기가 px 이 아니라 퍼센트인 이유: 24px 뱃지와 보드 토큰(20~40px)에서 같은 비율로
+     보여야 한다. 두 자리 다 정사각이라 축마다 왜곡되지 않는다.
+     calc() 안에 var() 가 없다 — 값이 바뀌는 자리에서 WebKit 이 캐싱한다 (webkit#202259) */
+  --dead-x:
+    linear-gradient(to bottom right, #0000 calc(50% - 4%), var(--accent) calc(50% - 4%) calc(50% + 4%), #0000 calc(50% + 4%)),
+    linear-gradient(to bottom left, #0000 calc(50% - 4%), var(--accent) calc(50% - 4%) calc(50% + 4%), #0000 calc(50% + 4%));
+  /* `맞다`/`아니다` 에 묶인 색쌍. 범례 알약(`설 수 있음`/`설 수 없음`)이 원래 자리고
+     옆 다이어그램(`.adj i.yes`)이 같은 초록을 빌리는 것도 뜻이 같아서다.
+     여기 한 번만 두는 이유: `피해자` 알약이 분홍을 그대로 써서 `설 수 없음` 과
+     픽셀 단위로 같아진 적이 있다. 뜻이 다르면 이 쌍에서 빼내 제 색을 줘야 한다 */
+  --yes-tint: #dcefdd;
+  --no-tint: #f2dcd8;
   color-scheme: light;
 }
 

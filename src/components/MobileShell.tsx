@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import Board from './Board';
 import CaseCards from './CaseCards';
 import ChangelogDialog from './ChangelogDialog';
@@ -9,6 +9,8 @@ import Leaderboard from './Leaderboard';
 import RankToast from './RankToast';
 import Sheet from './Sheet';
 import { AccusePanel, DifficultySeg, LegendPanel, RulesPanel, SeedPanel } from './GamePanels';
+import { petMenuItems } from './petMenuItems';
+import { markBriefSeen, seenBrief } from '../game/history';
 import type { Game } from '../hooks/useGame';
 
 type SheetId = 'case' | 'accuse' | 'menu';
@@ -22,15 +24,45 @@ type SheetId = 'case' | 'accuse' | 'menu';
  */
 export default function MobileShell({ game }: { game: Game }) {
   const [sheet, setSheet] = useState<SheetId | null>(null);
-  const close = () => setSheet(null);
+  /** 메뉴 시트를 열면서 어느 패널로 내려갈지. 손님 메뉴가 쓴다 */
+  const [jump, setJump] = useState<string | undefined>(undefined);
+  /** 첫 방문으로 저절로 열렸나. 그때만 다시 여는 길을 알려준다 */
+  const [firstBrief, setFirstBrief] = useState(false);
+  const close = () => {
+    setSheet(null);
+    setFirstBrief(false);
+  };
   const { puzzle } = game;
   const alerted = game.rankAlert !== null;
 
+  // 데스크톱 Tour 는 모바일에 없다 — 겨누는 자리(.dclues·.legend)가 메인 화면에 없어서다.
+  // 대신 첫 방문에 사건 브리핑을 연다. 인물·범례·규칙이 이미 그 안에 다 있다.
+  // useState 초기값으로 읽으면 서버 렌더에서도 열린 채 나가므로 마운트 뒤에 켠다
+  // (App.tsx 의 온보딩과 같은 이유)
+  useEffect(() => {
+    if (seenBrief()) return;
+    setSheet('case');
+    setFirstBrief(true);
+    markBriefSeen();
+  }, []);
+
   // 메뉴를 열면 알림은 제 할 일을 다 했다 — 점수판이 바로 이 안에 있다
-  const openMenu = () => {
+  const openMenu = (to?: string) => {
+    setJump(to);
     setSheet('menu');
     game.dismissRank();
   };
+
+  /* 바깥 손님을 우클릭(폰은 꾹 누르기)하면 나오는 항목. 목록은 데스크톱과 공유한다.
+     도움말만 갈린다 — 온보딩 투어는 데스크톱 선택자를 겨누므로 여기서는 못 쓴다.
+     대신 규칙과 범례가 들어 있는 사건 브리핑을 연다 */
+  const petMenu = petMenuItems({
+    onHelp: () => setSheet('case'),
+    onRank: () => openMenu('jump-scores'),
+    onName: () => openMenu('jump-account'),
+    onNew: () => game.reset(),
+    onClear: game.clearMarks,
+  });
 
   return (
     <div className="mshell">
@@ -57,7 +89,7 @@ export default function MobileShell({ game }: { game: Game }) {
           /* 점은 눈에만 보인다 — 이름표도 같이 바뀌어야 한다 */
           aria-label={alerted ? '메뉴 (순위 알림)' : '메뉴'}
           aria-haspopup="dialog"
-          onClick={openMenu}
+          onClick={() => openMenu()}
         >
           ☰
           {alerted && <span className="alert-dot" aria-hidden="true" />}
@@ -73,6 +105,7 @@ export default function MobileShell({ game }: { game: Game }) {
           marks={game.marks}
           onCell={game.onCell}
           revealed={game.revealed}
+          petMenu={petMenu}
         />
       </main>
 
@@ -101,6 +134,14 @@ export default function MobileShell({ game }: { game: Game }) {
       </nav>
 
       <Sheet open={sheet === 'case'} onClose={close} title={puzzle.title}>
+        {/* 저절로 열린 시트는 어디서 왔는지를 안 알려준다. 닫고 나면 규칙에 다시
+            닿는 길을 모르므로 첫 방문에만 말해준다. 맨 아래에 두면 끝까지 내리지
+            않는 사람은 못 본다 */}
+        {firstBrief && (
+          <p className="brief-again">
+            위쪽 <b>사건 제목</b>을 누르면 이 브리핑을 언제든 다시 볼 수 있어.
+          </p>
+        )}
         <p className="brief">{puzzle.brief}</p>
         <CaseCards puzzle={puzzle} />
         {/* 범례는 사건마다 다른 기준(어느 가구를 밟을 수 있나)이라 사건 브리핑에
@@ -113,6 +154,7 @@ export default function MobileShell({ game }: { game: Game }) {
       <Sheet open={sheet === 'accuse'} onClose={close} title="범인 지목">
         <AccusePanel
           suspects={game.suspects}
+          victim={game.victim}
           accused={game.accused}
           setAccused={game.setAccused}
           accuse={game.accuse}
@@ -134,7 +176,7 @@ export default function MobileShell({ game }: { game: Game }) {
         )}
       </Sheet>
 
-      <Sheet open={sheet === 'menu'} onClose={close} title="메뉴">
+      <Sheet open={sheet === 'menu'} onClose={close} title="메뉴" jumpTo={jump}>
         <div className="panel">
           <b>난이도</b>
           <DifficultySeg
