@@ -150,9 +150,12 @@ export default function useGame() {
     if (!ok) return;
     setRevealed(true);
     const previous = mergePlays(loadPlays(), plays);
-    const next = mergePlays(previous, [{ seed, n, at: Date.now(), ok: true, tries, title: puzzle.title }]);
-    // 예전의 정답 확인 기록도 총점과 같은 첫 기록 정책으로 센다.
-    setEarned(Math.max(0, summarize(next).score - summarize(previous).score));
+    const play: Play = { seed, n, at: Date.now(), ok: true, tries, title: puzzle.title };
+    const next = mergePlays(previous, [play]);
+    // 총점 차이에는 200개 상한으로 잘린 다른 사건의 변동도 섞인다.
+    // 이번 사건만 같은 첫 기록 정책으로 세어 획득 점수에 반영한다.
+    const caseHistory = previous.filter((p) => p.n === n && p.seed === seed);
+    setEarned(Math.max(0, summarize([...caseHistory, play]).score - summarize(caseHistory).score));
     setPlays(next);
     syncHistory(code, next);
   };

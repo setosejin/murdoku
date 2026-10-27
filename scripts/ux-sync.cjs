@@ -85,6 +85,36 @@ async function legacy(browser, mobile) {
   } finally { await context.close(); }
 }
 
+async function trimmedHistory(browser, mobile) {
+  const { page, context, errors } = await newPage(browser, mobile ? 375 : 1280, mobile ? 667 : 800);
+  try {
+    await page.route('**/__ux-sync/**', (r) => r.fulfill({
+      json: r.request().url().includes('/lb/') ? { top: [], rank: null } : r.request().postDataJSON(),
+    }));
+    await page.evaluate(() => {
+      localStorage.removeItem('murdoku.current');
+      localStorage.setItem('murdoku.history', JSON.stringify([
+        { n: 7, seed: 'old-replay', at: 1, tries: 5, ok: true, title: '옛 사건' },
+        { n: 7, seed: 'old-replay', at: 2, tries: 1, ok: true, title: '옛 사건 재플레이' },
+        ...Array.from({ length: 198 }, (_, i) => ({
+          n: 4, seed: `past-${i}`, at: i + 3, tries: 1, ok: true, title: `지난 사건 ${i}`,
+        })),
+      ]));
+    });
+    await page.reload({ waitUntil: 'networkidle' });
+    await openCase(page, mobile, 4, 'ux-history-limit');
+    const { correct } = await people(page);
+    if (mobile) await page.locator('.mbar').getByRole('button', { name: '지목하기' }).click();
+    await accuse(page, correct);
+    assert.equal(await page.locator('.earned').textContent(), '+150점', '다른 사건의 기록 잘림을 이번 점수에 넣지 않는다');
+    assert.equal(await page.locator('.save-notice').count(), 0);
+    await page.reload({ waitUntil: 'networkidle' });
+    assert.equal(await page.locator('.earned').textContent(), '+150점');
+    assert.equal(await page.locator('.verdict.ok').count(), 1);
+    assert.deepEqual(errors, []);
+  } finally { await context.close(); }
+}
+
 async function unavailableStorage(browser) {
   const { page, context, errors } = await newPage(browser, 375, 667);
   try {
@@ -121,7 +151,7 @@ async function unavailableStorage(browser) {
 (async () => {
   assert.ok(process.env.UX_URL, `UX_URL=${url} 를 지정한다`);
   const selected = process.argv[2] || 'all';
-  assert.ok(['all', 'race', 'legacy', 'storage'].includes(selected));
+  assert.ok(['all', 'race', 'legacy', 'storage', 'trim'].includes(selected));
   for (const [name, type] of [['webkit', webkit], ['chromium', chromium]]) {
     const browser = await type.launch();
     try {
@@ -129,6 +159,7 @@ async function unavailableStorage(browser) {
         if (selected === 'all' || selected === 'race')
           for (const fails of [true, false]) await race(browser, mobile, fails);
         if (selected === 'all' || selected === 'legacy') await legacy(browser, mobile);
+        if (selected === 'all' || selected === 'trim') await trimmedHistory(browser, mobile);
       }
       if (selected === 'all' || selected === 'storage') await unavailableStorage(browser);
       console.log(`${name}: ${selected} 회귀 검사 통과`);
