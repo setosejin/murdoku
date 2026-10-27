@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import Board from './Board';
 import CaseCards from './CaseCards';
 import ChangelogDialog from './ChangelogDialog';
@@ -30,6 +30,7 @@ export default function MobileShell({ game, onHide, privacyHidden }: {
   privacyHidden: boolean;
 }) {
   const [sheet, setSheet] = useState<SheetId | null>(null);
+  const helpHandled = useRef(false);
   /** 메뉴 시트를 열면서 어느 패널로 내려갈지. 손님 메뉴가 쓴다 */
   const [jump, setJump] = useState<string | undefined>(undefined);
   const close = () => setSheet(null);
@@ -38,7 +39,9 @@ export default function MobileShell({ game, onHide, privacyHidden }: {
 
   // 기존 방문 표식을 존중한다. 새 방문자에게는 인물 카드보다 조작법을 먼저 보여준다.
   useEffect(() => {
-    if (privacyHidden || seenBrief()) return;
+    if (privacyHidden || helpHandled.current) return;
+    helpHandled.current = true;
+    if (seenBrief()) return;
     setSheet('help');
     markBriefSeen();
   }, [privacyHidden]);

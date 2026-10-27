@@ -1,14 +1,15 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { DIFFICULTIES, generatePuzzle } from '../game/generate';
 import { detectiveName, getNick, getUser } from '../game/auth';
 import { readCurrentGame, saveCurrentGame, type CurrentGame } from '../game/currentGame';
 import {
-  addPlay,
   checkRank,
   fetchBoard,
   getCode,
   loadPlays,
-  scoreOf,
+  mergePlays,
+  savePlays,
+  summarize,
   sync,
   type Board,
   type Play,
@@ -53,6 +54,15 @@ export default function useGame() {
   const [board, setBoard] = useState<Board | null | undefined>(undefined);
   /** 순위를 뺏겼다. 토스트와 메뉴 버튼의 점이 이걸 본다 */
   const [rankAlert, setRankAlert] = useState<RankDrop | null>(null);
+  const syncState = useRef({ version: 0 });
+  const syncHistory = useCallback((forCode: string, local: readonly Play[]) => {
+    const state = syncState.current;
+    const version = ++state.version;
+    void sync(forCode, local).then((incoming) => {
+      if (version !== state.version) return;
+      setPlays((current) => mergePlays(current, incoming));
+    });
+  }, []);
 
   useEffect(() => {
     const saved = saveCurrentGame({
@@ -61,10 +71,14 @@ export default function useGame() {
     setSaveNotice((notice) => saved ? (notice === SAVE_FAILED ? null : notice) : SAVE_FAILED);
   }, [n, seed, marks, brush, accused, result, attempt, revealed, peeked, earned]);
 
-  // 기록 코드가 정해지거나 바뀌면 서버와 합친다. 실패는 sync 안에서 삼켜진다
+  useEffect(() => { savePlays(plays); }, [plays]);
+
+  // 늦은 시작 응답이나 이전 계정의 응답이 새 해결 기록을 덮지 못하게 한다.
   useEffect(() => {
-    sync(code, loadPlays()).then(setPlays);
-  }, [code]);
+    const state = syncState.current;
+    syncHistory(code, loadPlays());
+    return () => { state.version++; };
+  }, [code, syncHistory]);
 
   // 순위표는 점수판이 아니라 여기가 갖는다 — 알림 점이 시트 밖(메뉴 버튼)에 붙어서,
   // 시트를 안 열어도 순위를 알고 있어야 한다.
@@ -96,7 +110,7 @@ export default function useGame() {
   const victim = puzzle.people.find((p) => p.isVictim)!;
   const culpritName = puzzle.people.find((p) => p.id === puzzle.culpritId)!.name;
   const finished = peeked || result === 'correct';
-  const replaying = plays.some((p) => p.ok && p.n === n && p.seed === seed);
+  const replaying = plays.some((p) => p.n === n && p.seed === seed);
 
   const reset = (nextN = n, nextSeed = newSeed()) => {
     if (!finished && (Object.keys(marks).length > 0 || attempt > 0) &&
@@ -135,10 +149,12 @@ export default function useGame() {
     setAttempt(tries);
     if (!ok) return;
     setRevealed(true);
-    setEarned(replaying ? 0 : scoreOf({ n, tries, ok: true }));
-    const next = addPlay({ seed, n, at: Date.now(), ok: true, tries, title: puzzle.title });
+    const previous = mergePlays(loadPlays(), plays);
+    const next = mergePlays(previous, [{ seed, n, at: Date.now(), ok: true, tries, title: puzzle.title }]);
+    // 예전의 정답 확인 기록도 총점과 같은 첫 기록 정책으로 센다.
+    setEarned(Math.max(0, summarize(next).score - summarize(previous).score));
     setPlays(next);
-    sync(code, next).then(setPlays);
+    syncHistory(code, next);
   };
 
   return {

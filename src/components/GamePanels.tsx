@@ -240,7 +240,7 @@ export function AccusePanel({
           </li>
         ))}
       </ul>
-      {replaying && !finished && <p className="hint">이미 해결한 사건이야. 다시 풀어도 추가 점수는 없어.</p>}
+      {replaying && !finished && <p className="hint">기록에 있는 사건이야. 다시 풀어도 추가 점수는 없어.</p>}
       {finished ? (
         <button
           key="next"

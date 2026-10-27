@@ -454,7 +454,7 @@ async function layout(browser, engine, baseline) {
   return rows;
 }
 
-(async () => {
+if (require.main === module) (async () => {
   assert.ok(['baseline', 'layout', 'all', ...Object.keys(scenarios)].includes(selected), '알 수 없는 검사');
   const captured = [];
   for (const [engine, type] of [['webkit', webkit], ['chromium', chromium]]) {
@@ -480,3 +480,5 @@ async function layout(browser, engine, baseline) {
   }
   if (selected === 'baseline') fs.writeFileSync(baselinePath, JSON.stringify(captured, null, 2));
 })().catch((error) => { console.error(error); process.exitCode = 1; });
+
+module.exports = { newPage, openCase, snapshot, people, accuse, markTwo, closed, menu };

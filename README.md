@@ -348,11 +348,19 @@ NODE_PATH=/tmp/murdoku-ux-tools/node_modules node scripts/ux-smoke.cjs all
 
 `scripts/ux-layout-baseline.json`은 이번 개선 전 `f07c8a3` 화면을 macOS의 WebKit·Chromium에서 잰 기준이다.
 시드는 `ux-audit-20261021`, 난이도는 `4 → 6 → 7 → 4`이며 추가로 320×568의 버튼 겹침도 본다.
-새 기준이 필요한 의도적 변경에서만 `UX_BASELINE=/tmp/new-baseline.json ... node scripts/ux-smoke.cjs baseline`으로
+새 기준이 필요한 의도적 변경에서만 `UX_BASELINE=/tmp/new-baseline.json NODE_PATH=/tmp/murdoku-ux-tools/node_modules node scripts/ux-smoke.cjs baseline`으로
 별도 파일을 만들고 비교한다. 실패를 없애기 위해 기준 파일을 덮어쓰지 않는다.
 
 가리기 검사는 CSS 값이 아니라 실제 캡처에서 글자·격자 윤곽이 흐려졌는지도 본다.
 WebKit 결과를 실물 Safari·VoiceOver·TalkBack 확인으로 대신하지 않는다.
+
+동기화 순서와 저장 불가 상황은 별도 로컬 설정으로 확인한다. `/__ux-sync` 응답은 검사에서만 가짜로 처리하며, 실제 서버에 연결하지 않는다.
+
+```bash
+VITE_SYNC_URL=/__ux-sync npm run dev -- --host 127.0.0.1 --port 5219 --strictPort
+# 다른 터미널에서 실행
+UX_URL=http://127.0.0.1:5219 NODE_PATH=/tmp/murdoku-ux-tools/node_modules node scripts/ux-sync.cjs all
+```
 
 ## 그림 에셋 붙이기
 

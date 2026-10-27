@@ -134,6 +134,8 @@ git -c credential.https://github.com.helper= \
 
 진행은 `murdoku.current`에 현재 사건 하나만 저장한다. `seed:n`으로 퍼즐을 복원하고 메모·시도 횟수·해결/포기 상태는 저장본에서 가져온다. 완료 기록·계정 동기화와 섞지 않는다. 저장 실패는 화면에 알린다. `reset`·`clearMarks`는 취소 시 `false`를 반환하므로 시트 닫기와 입력 지우기도 성공 후에만 한다.
 
+기록 `sync`는 응답을 합쳐 반환할 뿐 직접 저장하지 않는다. `useGame`이 최신 요청인지 확인하고 기록 상태를 합친 뒤 저장한다. 늦은 시작 응답이 새 해결 기록을 덮지 않게 하는 순서다. 획득 점수는 `summarize`의 실제 증가량으로 세며, 예전 `ok:false` 기록도 같은 정책을 따른다. 첫 모바일 안내는 저장된 방문 표식 외에 현재 마운트에서 처리했는지도 기억한다.
+
 가림 상태는 셸 밖 `App`이 소유한다. `.privacy-hidden`은 **셸과 그 안의 열린 dialog를 각각** 흐린다 — WebKit에서 `dialog::backdrop`의 `backdrop-filter`는 computed style이 맞아도 실제로 흐려지지 않았다. 가림 자체는 네이티브 모달이라 뒤쪽 입력을 막는다. 가리는 동안 새 모달을 그 위에 열지 않는다. `scripts/ux-smoke.cjs privacy`는 CSS 값뿐 아니라 캡처한 픽셀의 선명도도 검사한다.
 
 데스크톱도 **한 화면**이다. `.app { height: 100dvh }` 이고 `.play` 가 `증언(=브러시) | 보드 | 지목` 세 열이다. 넘치는 몫은 페이지가 아니라 열(`.dclues` / `.side`) 안에서 스크롤한다. 여기서 쉽게 깨지는 것 셋:
@@ -293,6 +295,7 @@ Safari 를 실측하는 법 — **환경마다 되는 경로가 다르다. 아�
 | `src/components/mobile.test.ts` | 모바일 셸·증언 목록·시트 + `mobile.css` 불변식 |
 | `src/components/privacy.test.ts` | 가림 화면과 시트의 가리기 진입점 |
 | `scripts/ux-smoke.cjs` | WebKit·Chromium 실제 조작·복원·모달·블러 픽셀·보드 크기 |
+| `scripts/ux-sync.cjs` | 동기화 응답 역전·옛 기록의 점수·저장 불가 상태의 가림 복귀 |
 | `src/repo.test.ts` | 500줄 규약 · CSS 전역 금지 패턴(`repeat(var(`) · 바닥 재질 질감 · 테마 안 이름 겹침 |
 
 렌더링은 jsdom 없이 `react-dom/server` 의 `renderToStaticMarkup` 으로 HTML 문자열을 확인한다. **문자열이 아니라 마크업으로 단언할 것** — 버전 기록 모달이 `CHANGELOG.md` 를 그대로 그려서 UI 문구를 인용하면 거짓 양성이 난다.
