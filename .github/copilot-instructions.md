@@ -102,7 +102,7 @@ git -c credential.https://github.com.helper= \
 | `src/hooks/useGame.ts` | 게임 상태 전부. 두 셸이 나눠 쓴다 |
 | `src/hooks/useMediaQuery.ts` | `MOBILE_QUERY` + 미디어 쿼리 구독 (셸 선택) |
 | `src/App.tsx` | 데스크톱 셸 + 모바일/데스크톱 갈림길 |
-| `src/components/MobileShell.tsx` | 모바일 셸 — 한 화면 레이아웃 + 바텀시트 3종(사건·지목·메뉴) |
+| `src/components/MobileShell.tsx` | 모바일 셸 — 한 화면 레이아웃 + 시트 4종(사건·게임 방법·지목·메뉴) |
 | `src/components/ClueList.tsx` | 증언 목록 겸 메모 브러시 (두 셸 공용) |
 | `src/components/Sheet.tsx` | 바텀시트(모바일)·가운데 모달(`modal` 변형, 데스크톱) `<dialog>` 래퍼 |
 | `src/components/Board.tsx` | 격자·방 경계·가구·벽 부착물·메모 렌더 |
@@ -115,7 +115,10 @@ git -c credential.https://github.com.helper= \
 | `src/components/PetMenu.tsx` | 손님을 우클릭·길게 누르면 열리는 컨텍스트 `<dialog>` |
 | `src/components/petMenuItems.ts` | 그 메뉴의 항목 목록 (두 셸 공용) |
 | `src/components/CaseCards.tsx` | 용의자·피해자 카드 그리드 (두 셸 공용) |
-| `src/components/GamePanels.tsx` | 규칙·범례·브러시바·지목·시드 패널 (두 셸 공용). 규칙·범례는 사건 브리핑 안에만 있다 |
+| `src/components/GamePanels.tsx` | 규칙·범례·브러시바·지목·시드 패널 (두 셸 공용) |
+| `src/components/HelpSheet.tsx` | 조작 안내·규칙·이번 사건의 범례 (두 셸 공용) |
+| `src/components/PrivacyScreen.tsx` | 가림 dialog·공용 가리기 버튼 |
+| `src/game/currentGame.ts` | 현재 사건 하나의 기기 내 저장·검증·복원 |
 | `src/components/ChangelogDialog.tsx` | `CHANGELOG.md` 를 읽어 모달로 그린다 (마크다운 부분집합 렌더러) |
 | `src/components/HistoryPanel.tsx` | 기록 목록 + 계정(로그인/가입) + 복구 키 패널 |
 | `src/game/auth.ts` | 계정 — 아이디/`dk`/닉네임 검증(워커와 공용) + 브라우저 PBKDF2 + 부를 이름(`detectiveName`) |
@@ -127,7 +130,13 @@ git -c credential.https://github.com.helper= \
 
 모바일은 **스크롤이 없다.** 붙박이는 상단바·보드·증언 목록(= 메모 브러시)·하단 액션바 넷뿐이고 나머지는 전부 시트로 들어간다. 새 UI 를 모바일 메인 화면에 붙이려면 그만큼 보드가 작아진다는 뜻이다 — 시트를 먼저 고려할 것.
 
-모바일에는 스포트라이트 온보딩이 없다(겨누는 `.dclues`·`.legend` 가 메인 화면에 없다). 대신 **첫 방문에 사건 시트가 저절로 열린다** — 인물·범례·규칙이 이미 그 안에 있다. 표시는 `murdoku.brief` 로 데스크톱 온보딩의 `murdoku.tour` 와 **나눠 둔다**. 합치면 모바일로 먼저 본 사람이 데스크톱 온보딩을 영영 못 보는데 화면으로는 안 보인다 — `history.test.ts` 가 검사한다.
+모바일에는 스포트라이트 온보딩이 없다. 대신 **첫 방문에 게임 방법이 저절로 열린다** — 조작 안내가 먼저 나오고 규칙·이번 사건의 범례가 이어진다. 기존 방문 표식 `murdoku.brief`는 유지하며 데스크톱의 `murdoku.tour`와 나눠 둔다. `?`와 손님 도움말은 두 셸에서 같은 `HelpSheet`를 연다. 데스크톱 투어 재시작은 도움말의 퇴장이 끝난 `onAfterClose`에서만 한다.
+
+진행은 `murdoku.current`에 현재 사건 하나만 저장한다. `seed:n`으로 퍼즐을 복원하고 메모·시도 횟수·해결/포기 상태는 저장본에서 가져온다. 완료 기록·계정 동기화와 섞지 않는다. 저장 실패는 화면에 알린다. `reset`·`clearMarks`는 취소 시 `false`를 반환하므로 시트 닫기와 입력 지우기도 성공 후에만 한다.
+
+기록 `sync`는 응답을 합쳐 반환할 뿐 직접 저장하지 않는다. `useGame`이 최신 요청인지 확인하고 기록 상태를 합친 뒤 저장한다. 늦은 시작 응답이 새 해결 기록을 덮지 않게 하는 순서다. 획득 점수는 **이번 사건의 기록만** `summarize`로 비교하며, 예전 `ok:false` 기록도 같은 정책을 따른다. 전체 총점을 빼면 200개 상한으로 잘린 다른 사건의 변동이 섞여 저장 가능한 점수 상한을 넘는다. 첫 모바일 안내는 저장된 방문 표식 외에 현재 마운트에서 처리했는지도 기억한다.
+
+가림 상태는 셸 밖 `App`이 소유한다. `.privacy-hidden`은 **셸과 그 안의 열린 dialog를 각각** 흐린다 — WebKit에서 `dialog::backdrop`의 `backdrop-filter`는 computed style이 맞아도 실제로 흐려지지 않았다. 가림 자체는 네이티브 모달이라 뒤쪽 입력을 막는다. 가리는 동안 새 모달을 그 위에 열지 않는다. `scripts/ux-smoke.cjs privacy`는 CSS 값뿐 아니라 캡처한 픽셀의 선명도도 검사한다.
 
 데스크톱도 **한 화면**이다. `.app { height: 100dvh }` 이고 `.play` 가 `증언(=브러시) | 보드 | 지목` 세 열이다. 넘치는 몫은 페이지가 아니라 열(`.dclues` / `.side`) 안에서 스크롤한다. 여기서 쉽게 깨지는 것 셋:
 
@@ -219,7 +228,7 @@ buildFloorplan(마스크 → BSP → void 빼기 → 조각 흡수 → 지터)
 - **첫 마디는 늘 안내다.** 우클릭 메뉴는 눌러보기 전엔 있는 줄도 모른다. `(pointer: coarse)` 로 "오른쪽 버튼" / "꾹 누르면" 을 가른다. 두 번째부터 시드로 섞은 대사를 돈다 — **같은 사건 = 같은 순서.**
 - 폰에는 우클릭이 없어 **500ms 길게 누르기**로 같은 메뉴를 연다(`HOLD_MS`). 10px 미끄러지면 스크롤로 보고 취소한다. `-webkit-touch-callout: none` 이 없으면 iOS 가 제 확대·복사 메뉴를 먼저 띄운다.
 - 메뉴는 네이티브 `<dialog>` 라 top layer 로 올라가 보드의 `overflow` 와 무관하다. 자리는 포인터 좌표에 두되 뷰포트 안으로 접는다 — **`PetMenu.tsx` 의 `MENU_W` 는 `outer.css` 의 `width` 와 같아야 한다**(`outer.test.ts` 가 대조한다). 열 때 포커스는 첫 항목이 아니라 **메뉴 자신**에게 준다(`Sheet` 와 같은 이유 — 빨간 링).
-- 메뉴 항목은 `petMenuItems.ts` 한 곳에서 만들고 두 셸이 나눠 쓴다. **도움말이 셸마다 다르다** — 데스크톱은 투어(`<Tour>` 는 데스크톱 셸에만 있고 데스크톱 선택자를 겨눈다), 모바일은 규칙·범례가 든 사건 브리핑 시트다.
+- 메뉴 항목은 `petMenuItems.ts` 한 곳에서 만들고 두 셸이 나눠 쓴다. 도움말은 `HelpSheet`, 화면 가리기는 `App`의 공용 가림 상태로 연결한다.
 - "순위 보기"·"닉네임 변경"은 같은 시트 안의 다른 자리를 연다. `Sheet` 의 `jumpTo` 가 열린 뒤 한 프레임 기다렸다 `scrollIntoView` 한다.
 
 ### 바텀시트
@@ -228,6 +237,7 @@ buildFloorplan(마스크 → BSP → void 빼기 → 조각 흡수 → 지터)
 
 - **`.sheet` 에 `display` 를 무조건 주면 안 된다.** 브라우저 기본 `dialog:not([open]) { display: none }` 을 덮어써서 닫힌 시트가 화면에 그대로 쌓인다(실제로 겪었다 — 페이지가 1494px 로 늘어났다). `display` 는 `:not([open])` 에서 `none` 으로 되돌리고, `transition` 에 `display ... allow-discrete` 를 넣어 퇴장 모션을 살린다.
 - 열 때 포커스를 `.sheet-body` 로 직접 옮긴다. 그냥 두면 닫기 버튼이 첫 포커스라 열자마자 빨간 `focus-visible` 링이 뜬다. React 의 `autoFocus` 는 마운트 시점에 `focus()` 를 부르는 거라 여기선 안 먹는다.
+- `close`·`cancel`은 `target === currentTarget`일 때만 처리한다. 안 그러면 시트 안의 피드백 dialog를 닫는 이벤트가 부모 시트까지 닫는다.
 
 ### Safari 함정
 
@@ -275,6 +285,7 @@ Safari 를 실측하는 법 — **환경마다 되는 경로가 다르다. 아�
 | `src/game/floorplan.test.ts` | 마스크별 행·열 완전 매칭 존재 · void 비율 · 건물 연결성 · 결정성 |
 | `src/game/clues.test.ts` | `matchingCells` 판정 (ON·NEXT_TO·IN_ROOM·FROM_ROOM) |
 | `src/game/history.test.ts` | 기록 검증·병합·점수 + 동기화 워커 라우트 |
+| `src/game/currentGame.test.ts` | 현재 사건 저장 경계·손상·저장 불가·상태 복원 |
 | `src/game/rank.test.ts` | 순위표 — 워커 라우트·닉네임·`rankDrop` + 점수판/토스트/점 렌더 |
 | `src/game/auth.test.ts` | 계정 검증·워커 라우트·로그인 UI |
 | `src/components/board.test.ts` | 보드 렌더링 — 칸·가구·이름표 자리·실루엣·벽 부착물 + `board.css`/`wall.css` 불변식 |
@@ -282,6 +293,9 @@ Safari 를 실측하는 법 — **환경마다 되는 경로가 다르다. 아�
 | `src/components/yard.test.ts` | 안뜰 짐승 — 걸음 규칙·판 범위·테마별 그림 + `yard.css` 불변식 |
 | `src/components/outer.test.ts` | 바깥 손님 — 덩어리 쪼개기·자리·대사·컨텍스트 메뉴 + `outer.css` 불변식 |
 | `src/components/mobile.test.ts` | 모바일 셸·증언 목록·시트 + `mobile.css` 불변식 |
+| `src/components/privacy.test.ts` | 가림 화면과 시트의 가리기 진입점 |
+| `scripts/ux-smoke.cjs` | WebKit·Chromium 실제 조작·복원·모달·블러 픽셀·보드 크기 |
+| `scripts/ux-sync.cjs` | 동기화 응답 역전·옛 기록의 점수·저장 불가 상태의 가림 복귀 |
 | `src/repo.test.ts` | 500줄 규약 · CSS 전역 금지 패턴(`repeat(var(`) · 바닥 재질 질감 · 테마 안 이름 겹침 |
 
 렌더링은 jsdom 없이 `react-dom/server` 의 `renderToStaticMarkup` 으로 HTML 문자열을 확인한다. **문자열이 아니라 마크업으로 단언할 것** — 버전 기록 모달이 `CHANGELOG.md` 를 그대로 그려서 UI 문구를 인용하면 거짓 양성이 난다.

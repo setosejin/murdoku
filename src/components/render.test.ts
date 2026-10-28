@@ -31,12 +31,16 @@ describe('App 렌더링', () => {
 
   // 규칙도 범례도 처음 한 번 읽고 마는 것이라 사이드 열을 계속 차지할 이유가 없다.
   // 기본 화면에서 빠진 만큼 보드가 넓어진다
-  it('범례는 기본 화면이 아니라 사건 브리핑 안에 있다', () => {
+  it('규칙과 범례는 사건 브리핑이 아니라 게임 방법에 있다', () => {
     expect((html.match(/class="panel legend"/g) ?? []).length).toBe(1);
     const side = html.slice(html.indexOf('class="side"'), html.indexOf('class="footer"'));
     expect(side).not.toContain('legend');
-    const brief = html.slice(html.indexOf('<dialog'));
-    expect(brief.indexOf('class="panel legend"')).toBeGreaterThan(-1);
+    const brief = html.slice(html.indexOf('<dialog'), html.indexOf('</dialog>'));
+    expect(brief).not.toContain('class="panel legend"');
+    const help = html.match(/<dialog[^>]*aria-label="게임 방법"[^>]*>(.*?)<\/dialog>/s)?.[1] ?? '';
+    expect(help).toContain('class="panel legend"');
+    expect(help).toContain('class="panel rules"');
+    expect(help).toContain('class="help-steps"');
   });
 
   /* `인접`·`붙어 있다` 는 대각선을 배제하지 않는 말이라, 실제로 대각선을 세다가
@@ -96,16 +100,18 @@ describe('App 렌더링', () => {
     }
   });
 
-  it('온보딩은 증언 아래 ? 로 다시 연다', () => {
+  it('게임 방법 버튼은 메모 도구 밖에 있고 화면 안내도 거기서 다시 연다', () => {
     // 첫 방문 자동 열기는 마운트 뒤 effect 라 서버 렌더에는 안 나온다
-    expect(html).toContain('aria-label="게임 방법 보기"');
+    expect(html).toContain('class="chip dhelp"');
+    expect(html).toContain('aria-label="게임 방법"');
+    expect(html).toMatch(/<button[^>]*>화면 안내 다시 보기<\/button>/);
     expect(html).not.toContain('class="tour"');
   });
 
   // 자리 재기(document.querySelector·getBoundingClientRect)가 effect 밖으로
   // 새어 나오면 여기서 먼저 터진다 — 브라우저에서는 한참 뒤에나 보인다
   it('온보딩은 DOM 없이도 첫 단계를 그린다', () => {
-    const tour = renderToStaticMarkup(createElement(Tour, { onClose: () => {} }));
+    const tour = renderToStaticMarkup(createElement(Tour, { onClose: () => {}, onHide: () => {} }));
     expect(tour).toContain(TOUR_STEPS[0].title);
     expect(tour).toContain(`1 / ${TOUR_STEPS.length}`);
     // 첫 단계에서는 되돌아갈 데가 없다
@@ -150,6 +156,8 @@ describe('정답을 본 사건', () => {
     accused: suspects[0].id,
     setAccused: () => {},
     accuse: () => {},
+    onNext: () => {},
+    replaying: false,
     result: null,
     attempt: 0,
     culpritName: '아무개',
@@ -171,8 +179,22 @@ describe('정답을 본 사건', () => {
   it('한 번 보면 지목이 막히고 이유를 말한다', () => {
     // 감췄다고 안 본 게 되지 않는다 — revealed 가 아니라 peeked 로 잠근다
     const html = render({ peeked: true, revealed: false });
-    expect(html).toMatch(/<button[^>]*disabled[^>]*>지목하기<\/button>/);
+    expect(html).not.toMatch(/>지목하기<\/button>/);
+    expect(html).toMatch(/>다음 사건<\/button>/);
     expect(html).toContain('이 사건은 여기까지야');
+  });
+
+  it('해결한 사건은 후보를 잠그고 다음 사건으로 안내한다', () => {
+    const html = render({ result: 'correct', earned: 150, revealed: true });
+    expect((html.match(/aria-pressed="[^"]*"[^>]*disabled/g) ?? []).length).toBe(suspects.length);
+    expect(html).not.toMatch(/>지목하기<\/button>/);
+    expect(html).toMatch(/>다음 사건<\/button>/);
+  });
+
+  it('재플레이 완료는 실제로 늘지 않은 점수를 획득했다고 말하지 않는다', () => {
+    const html = render({ result: 'correct', earned: 0, replaying: true });
+    expect(html).toContain('<em class="earned">추가 점수 없음</em>');
+    expect(html).not.toContain('+0점');
   });
 
   it('맞힌 뒤에는 정답을 봐도 지목 버튼 문구가 겁주지 않는다', () => {
@@ -214,7 +236,7 @@ describe('FeedbackDialog', () => {
   });
 
   it('제목 입력과 취소/제출 버튼을 그린다', () => {
-    const html = renderToStaticMarkup(createElement(FeedbackDialog, { seed: 'abc123', n: 4 }));
+    const html = renderToStaticMarkup(createElement(FeedbackDialog, { seed: 'abc123', n: 4, onHide: () => {} }));
     expect(html).toContain('<dialog');
     expect(html).toContain('피드백');
     expect(html).toContain('required');
@@ -260,7 +282,7 @@ describe('버전 기록', () => {
   });
 
   it('버튼과 dialog 를 그린다', () => {
-    const html = renderToStaticMarkup(createElement(ChangelogDialog));
+    const html = renderToStaticMarkup(createElement(ChangelogDialog, { onHide: () => {} }));
     expect(html).toContain('<dialog');
     expect(html).toContain(`v${import.meta.env.VITE_APP_VERSION}`);
     expect(html).toContain('버전 기록');

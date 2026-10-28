@@ -1,5 +1,6 @@
 import { useEffect, useLayoutEffect, useRef, useState, type CSSProperties } from 'react';
 import { TOUR_STEPS } from '../data/tour';
+import { PrivacyButton } from './PrivacyScreen';
 
 /**
  * 스포트라이트 온보딩. 규칙을 줄글로 읽히는 대신 화면의 실물을 하나씩 비춘다 —
@@ -16,12 +17,16 @@ const PAD = 8;
 const CARD_W = 320;
 /** ponytail: 카드 높이를 실측하지 않고 어림값으로 위/아래를 고른다.
     모자라면 화면 아래에 띄우므로 빗나가도 글이 잘리지는 않는다 */
-const CARD_ROOM = 190;
+const CARD_ROOM = 240;
 
 type Spot = { x: number; y: number; w: number; h: number };
 type Place = { spot: Spot | null; card: CSSProperties };
 
-export default function Tour({ onClose }: { onClose: () => void }) {
+export default function Tour({ onClose, onHide, privacyHidden = false }: {
+  onClose: () => void;
+  onHide: () => void;
+  privacyHidden?: boolean;
+}) {
   const ref = useRef<HTMLDialogElement>(null);
   const card = useRef<HTMLDivElement>(null);
   const [i, setI] = useState(0);
@@ -32,8 +37,11 @@ export default function Tour({ onClose }: { onClose: () => void }) {
   useEffect(() => {
     const d = ref.current;
     // showModal 이 포커스 가둠·ESC·top-layer 를 다 준다 (Sheet 와 같은 이유)
-    if (d && !d.open) d.showModal();
-  }, []);
+    if (d && !d.open && !privacyHidden) {
+      d.showModal();
+      card.current?.focus();
+    }
+  }, [privacyHidden]);
 
   useLayoutEffect(() => {
     const read = () => {
@@ -112,7 +120,10 @@ export default function Tour({ onClose }: { onClose: () => void }) {
         ref={card}
         onClick={(e) => e.stopPropagation()}
       >
-        <b>{step.title}</b>
+        <div className="tour-heading">
+          <b>{step.title}</b>
+          <PrivacyButton onHide={onHide} />
+        </div>
         <p>{step.body}</p>
         <div className="tour-foot">
           {/* 카드 바깥 클릭으로도 넘어가므로 잘못 눌러 지나칠 수 있다.

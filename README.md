@@ -63,6 +63,9 @@ npm run build   # 정적 빌드 (dist/)
 | `src/components/PetMenu.tsx` | 그 손님이 여는 메뉴 `<dialog>` (항목은 `petMenuItems.ts`)    |
 | `src/components/CaseCards.tsx` | 용의자·피해자 카드 그리드 (두 셸 공용)                      |
 | `src/components/GamePanels.tsx` | 규칙·범례·브러시바·지목·시드 패널 (두 셸 공용)             |
+| `src/components/HelpSheet.tsx` | 게임 방법 — 조작 안내·규칙·이번 사건의 범례               |
+| `src/components/PrivacyScreen.tsx` | 화면 가리기·복귀와 공용 버튼                         |
+| `src/game/currentGame.ts` | 현재 사건 하나의 검증·기기 내 저장·복원                       |
 | `src/components/HistoryPanel.tsx` | 기록 목록 + 계정 + 복구 키 패널                        |
 | `src/components/Leaderboard.tsx` | 점수판 — TOP 10 + 내 점수·순위 (두 셸 공용)             |
 | `src/components/RankToast.tsx` | 순위를 뺏겼다는 토스트 (두 셸 공용)                        |
@@ -93,9 +96,9 @@ npm run build   # 정적 빌드 (dist/)
 └──────────────┴───────────────────┴──────────────┘
 ```
 
-증언을 읽는 자리가 곧 브러시를 고르는 자리다 — 줄을 누르면 그 인물로 칸을 표시한다(모바일이 먼저 쓴 방식). 사건 브리핑·규칙·가구 범례는 제목 버튼이, 시드·기록·계정·피드백은 `⋯` 가 여는 모달에 들어간다. 넘치는 몫은 페이지가 아니라 열 안에서 스크롤한다.
+증언을 읽는 자리가 곧 브러시를 고르는 자리다 — 줄을 누르면 그 인물로 칸을 표시한다. 사건 이야기·인물 카드는 제목 버튼으로, **조작법·규칙·이번 사건의 가구 범례는 `?` 게임 방법**으로 연다. 데스크톱 화면 안내도 게임 방법 안에서 다시 볼 수 있다. 시드·기록·계정·피드백은 `⋯` 모달에 들어간다. 넘치는 몫은 페이지가 아니라 열 안에서 스크롤한다.
 
-**모바일(좁거나 낮은 화면)은 스크롤이 없다.** 한 화면에 셋만 붙박이로 둔다.
+**모바일(좁거나 낮은 화면)은 페이지 스크롤이 없다.** 상단바·보드·증언 목록·하단바가 한 화면에 들어간다. 첫 방문에는 메모 조작법이 먼저 나오는 게임 방법을 열고, 이후에는 상단 `?`로 다시 볼 수 있다.
 
 ```
 ┌──────────────────────────────────────┐
@@ -110,13 +113,23 @@ npm run build   # 정적 빌드 (dist/)
 └──────────────────────────────────────┘
 ```
 
-나머지(사건 설명·규칙·가구 범례·지목·난이도·시드·기록·계정)는 전부 바텀시트에 들어간다. 스크롤은 시트 안에서만 생긴다.
+나머지(사건 설명·규칙·가구 범례·지목·난이도·시드·기록·계정)는 바텀시트에 들어간다. 증언 목록과 시트 안에서만 스크롤한다.
 
 보드는 `min(100cqw, 100cqh)` 로 남는 공간의 짧은 변에 맞춘다(`@supports not (container-type: size)` 폴백은 예전처럼 폭만 본다). 칸 안의 글자·아이콘도 뷰포트가 아니라 **보드 폭**(`cqw`)을 따라가야 보드가 줄었을 때 같이 준다.
 
 > `src/hooks/useMediaQuery.ts` 의 `MOBILE_QUERY` 와 `src/styles/mobile.css` 의 미디어 쿼리는 **글자까지 같아야 한다**. 어긋나면 마크업은 모바일인데 스타일은 데스크톱이 된다. 테스트가 일치를 검사한다.
 
+### 잠시 화면 가리기
+
+상단의 **화면 가리기** 버튼을 누르면 열린 사건·도움말·메뉴까지 강하게 흐려지고 `계속하기`만 보인다. 뒤의 게임 조작은 막히고 사건·메모·지목 횟수는 그대로다. `계속하기`나 Escape로 돌아온다. 시트·피드백·버전 기록·화면 안내·손님 메뉴에서도 같은 동작을 쓸 수 있다.
+
+블러를 지원하지 않으면 중립 배경으로 덮는다. 가림은 현재 화면의 편의 기능이지 보안 기능은 아니다. 브라우저 탭 제목·아이콘은 숨기지 않으며 새로고침 뒤에는 가림이 풀린다.
+
 ## 플레이 기록
+
+**풀던 사건도 이 기기에서 이어진다.** 난이도·시드·메모·선택한 인물·지목 횟수와 해결/포기 상태를 현재 사건 하나로 자동 저장한다. 새로고침해도 그대로 돌아오지만, 이 진행은 계정 서버로 동기화하지 않는다. 저장 공간을 쓸 수 없거나 저장본이 손상됐으면 화면에서 알린다.
+
+현재 난이도를 다시 눌러도 사건은 바뀌지 않는다. 메모나 지목 시도가 남은 판에서 다른 사건을 열 때와 메모를 모두 지울 때만 확인한다. 취소하면 진행과 입력을 유지한다.
 
 해결한 사건이 `기록` 패널에 쌓이고(모바일은 `☰` 메뉴 시트 안), 항목을 누르면 그 사건이 다시 열린다. 같은 자리의 `점수판` 이 총점과 TOP 10 을 보여준다.
 
@@ -159,6 +172,8 @@ type Play = { seed; n; at; ok; tries; title };  // 약 80바이트
 
 - **정답을 보면 그 사건은 거기서 끝난다.** `정답 보기` 는 누르기 전에 대가를 말하고(`정답 보기 (이 사건 포기)`), 누른 뒤에는 `지목하기` 가 잠긴다. 기록에도 점수에도 남지 않는다. 잠금은 `revealed` 가 아니라 따로 둔 `peeked` 로 건다 — `revealed` 는 토글이라 다시 감추면 흔적이 사라진다.
 - **같은 사건은 첫 해결만 친다.** 기록에서 사건을 다시 열어 답을 알고 한 번에 맞혀도 총점은 안 오른다 (`summarize` 가 `seed:n` 마다 가장 이른 `at` 을 고른다).
+
+해결·포기한 판은 더 지목할 수 없고 `다음 사건`으로 넘어간다. 재플레이는 시작 전에 추가 점수가 없음을 알리고, 완료 후에도 실제로 늘지 않은 점수를 획득했다고 표시하지 않는다.
 
 `Play.ok` 는 이제 앱이 `false` 로 쓰는 길이 없지만 검증은 남겨둔다 — `sanitizePlays` 가 받는 값은 네트워크와 localStorage 에서 오고, `scoreOf` 는 그런 기록을 0점으로 친다.
 
@@ -311,6 +326,40 @@ curl -s -X POST https://murdoku-history.murdoku.workers.dev/lb/aaaaaaaaaaaaaaaaa
 
 curl -s -X POST https://murdoku-history.murdoku.workers.dev/zzz
 # "없는 주소다" 면 정상. "기록 코드가 아니다" 면 역시 옛 워커다
+```
+
+## 브라우저 UX 회귀 검사
+
+렌더링 검사와 별도로 실제 WebKit·Chromium에서 저장·복원, 진행 파기 취소, 해결 결과, 도움말,
+화면 가리기, 키보드 조작과 보드 크기를 확인한다. Playwright는 앱 의존성에 넣지 않는다.
+
+```bash
+# 처음 실행할 때만 저장소 밖에 설치
+npm install --prefix /tmp/murdoku-ux-tools --no-audit --no-fund playwright
+/tmp/murdoku-ux-tools/node_modules/.bin/playwright install webkit chromium
+
+# 다른 터미널에서 개발 서버 실행
+npm run dev -- --host 127.0.0.1 --port 5173 --strictPort
+NODE_PATH=/tmp/murdoku-ux-tools/node_modules node scripts/ux-smoke.cjs all
+```
+
+`all` 대신 `lifecycle`, `transitions`, `resume`, `help`, `privacy`, `accessibility`, `layout`으로 좁혀 돌릴 수 있다.
+서버 주소는 `UX_URL`로 바꾼다. 검사 컨텍스트는 개발 서버 외부 요청을 차단하므로 실제 계정·순위에 쓰지 않는다.
+
+`scripts/ux-layout-baseline.json`은 이번 개선 전 `f07c8a3` 화면을 macOS의 WebKit·Chromium에서 잰 기준이다.
+시드는 `ux-audit-20261021`, 난이도는 `4 → 6 → 7 → 4`이며 추가로 320×568의 버튼 겹침도 본다.
+새 기준이 필요한 의도적 변경에서만 `UX_BASELINE=/tmp/new-baseline.json NODE_PATH=/tmp/murdoku-ux-tools/node_modules node scripts/ux-smoke.cjs baseline`으로
+별도 파일을 만들고 비교한다. 실패를 없애기 위해 기준 파일을 덮어쓰지 않는다.
+
+가리기 검사는 CSS 값이 아니라 실제 캡처에서 글자·격자 윤곽이 흐려졌는지도 본다.
+WebKit 결과를 실물 Safari·VoiceOver·TalkBack 확인으로 대신하지 않는다.
+
+동기화 순서와 저장 불가 상황은 별도 로컬 설정으로 확인한다. `/__ux-sync` 응답은 검사에서만 가짜로 처리하며, 실제 서버에 연결하지 않는다.
+
+```bash
+VITE_SYNC_URL=/__ux-sync npm run dev -- --host 127.0.0.1 --port 5219 --strictPort
+# 다른 터미널에서 실행
+UX_URL=http://127.0.0.1:5219 NODE_PATH=/tmp/murdoku-ux-tools/node_modules node scripts/ux-sync.cjs all
 ```
 
 ## 그림 에셋 붙이기

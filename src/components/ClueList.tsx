@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useId, useRef, useState } from 'react';
 import type { Puzzle } from '../game/types';
 import { VICTIM_LINE } from './CaseCards';
 
@@ -19,6 +19,7 @@ export default function ClueList({
 }) {
   const clueOf = (id: string) => puzzle.clues.find((c) => c.personId === id)?.text ?? '';
   const listRef = useRef<HTMLUListElement>(null);
+  const listId = useId();
   const [fade, setFade] = useState('');
 
   // 자리가 좁으면 목록이 안에서 스크롤하고 마지막 줄이 반쯤 걸친다. 걸친 줄을
@@ -67,6 +68,7 @@ export default function ClueList({
             // 피해자는 여전히 눌리는 브러시다 — 자리를 추리해서 표시해야 한다.
             // 비활성으로 보이게 하지 않고, 죽었다는 사실만 덧붙인다
             aria-label={`${p.name}${p.isVictim ? ' (피해자)' : ''} 로 표시하기`}
+            aria-describedby={`${listId}-${p.id}`}
             onClick={() => setBrush(p.id)}
           >
             <span className={`clue-badge${p.isVictim ? ' dead' : ''}`} style={{ background: p.color }}>
@@ -74,7 +76,7 @@ export default function ClueList({
             </span>
             <b>{p.name}</b>
             {p.isVictim && <em className="dead-tag">피해자</em>}
-            <span className="clue-text">{p.isVictim ? VICTIM_LINE : clueOf(p.id)}</span>
+            <span className="clue-text" id={`${listId}-${p.id}`}>{p.isVictim ? VICTIM_LINE : clueOf(p.id)}</span>
           </button>
         </li>
       ))}

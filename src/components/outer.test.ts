@@ -16,6 +16,7 @@ import outerCss from '../styles/outer.css?raw';
 const noop = () => {};
 const MENU = petMenuItems({
   onHelp: noop,
+  onHide: noop,
   onRank: noop,
   onName: noop,
   onNew: noop,
@@ -240,13 +241,14 @@ describe('손님 콘텐츠', () => {
 });
 
 describe('손님 메뉴', () => {
-  it('다섯 갈래다 — 도움말·순위·닉네임·새 사건·메모 지우기', () => {
-    expect(MENU.map((m) => m.id)).toEqual(['help', 'rank', 'name', 'new', 'clear']);
+  it('도움말·화면 가리기·순위·닉네임·새 사건·메모 지우기를 연다', () => {
+    expect(MENU.map((m) => m.id)).toEqual(['help', 'privacy', 'rank', 'name', 'new', 'clear']);
   });
 
   it('고르면 그 콜백을 부른다', () => {
     const spies = {
       onHelp: vi.fn(),
+      onHide: vi.fn(),
       onRank: vi.fn(),
       onName: vi.fn(),
       onNew: vi.fn(),

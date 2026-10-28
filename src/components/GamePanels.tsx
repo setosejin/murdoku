@@ -3,6 +3,7 @@ import { Art } from './Art';
 import { spanOf } from '../game/types';
 import type { Furniture, Person } from '../game/types';
 import type { Difficulty } from '../game/generate';
+import { MAX_SEED_LEN } from '../game/history';
 
 /**
  * 사이드 패널의 내용물들. 데스크톱은 `.side` 열에 세로로 쌓고,
@@ -47,7 +48,7 @@ export function DifficultySeg({
           aria-pressed={d.n === n}
           aria-label={`${d.label} (${d.n}×${d.n})`}
           title={`${d.label} (${d.n}×${d.n})`}
-          onClick={() => onPick(d.n)}
+          onClick={() => { if (d.n !== n) onPick(d.n); }}
         >
           {d.n}×{d.n}
         </button>
@@ -130,13 +131,10 @@ export function BrushBar({
   brush,
   setBrush,
   clearMarks,
-  onHelp,
 }: {
   brush: string;
   setBrush: (id: string) => void;
   clearMarks: () => void;
-  /** 온보딩 열기. 데스크톱 셸만 넘긴다 */
-  onHelp?: () => void;
 }) {
   return (
     <div className="dclues-bar">
@@ -151,18 +149,6 @@ export function BrushBar({
       <button type="button" className="chip" onClick={clearMarks}>
         메모 지우기
       </button>
-      {onHelp && (
-        <button
-          type="button"
-          className="chip icon"
-          aria-label="게임 방법 보기"
-          aria-haspopup="dialog"
-          title="게임 방법"
-          onClick={onHelp}
-        >
-          ?
-        </button>
-      )}
     </div>
   );
 }
@@ -174,6 +160,8 @@ export type AccuseProps = {
   accused: string;
   setAccused: (id: string) => void;
   accuse: () => void;
+  onNext: () => void;
+  replaying: boolean;
   /** 판정 결과. 같은 결과를 다시 지목해도 모션이 재생되도록 attempt 를 key 로 쓴다 */
   result: 'correct' | 'wrong' | null;
   attempt: number;
@@ -196,6 +184,8 @@ export function AccusePanel({
   accused,
   setAccused,
   accuse,
+  onNext,
+  replaying,
   result,
   attempt,
   culpritName,
@@ -207,10 +197,11 @@ export function AccusePanel({
   bare,
 }: AccuseProps) {
   const solved = result === 'correct';
+  const finished = solved || peeked;
   return (
     <div className={bare ? 'accuse bare' : 'panel accuse'}>
       {!bare && <b>범인은?</b>}
-      {/* 규칙 전문은 브리핑 모달 안에만 있어서, 모달을 안 연 사람에게는 없는 것과 같다.
+      {/* 규칙 전문은 도움말 안에 있어서, 모달을 안 연 사람에게는 없는 것과 같다.
           지목하는 순간이 규칙이 필요한 순간이라 여기 상시로 둔다.
           조사(와/과)를 피하려고 이름 뒤에서 문장을 끊는다 — 받침에 상관없이 늘 맞는다.
           앞의 뱃지는 증언 목록의 그것과 같은 모양이다: 문장 속 기호가 화면의
@@ -237,6 +228,7 @@ export function AccusePanel({
               type="button"
               className={`clue-row${accused === p.id ? ' on' : ''}`}
               aria-pressed={accused === p.id}
+              disabled={finished}
               onClick={() => setAccused(p.id)}
             >
               <span className="clue-badge" style={{ background: p.color }}>
@@ -248,9 +240,24 @@ export function AccusePanel({
           </li>
         ))}
       </ul>
-      <button type="button" className="chip primary" onClick={accuse} disabled={!accused || peeked}>
-        지목하기
-      </button>
+      {replaying && !finished && <p className="hint">기록에 있는 사건이야. 다시 풀어도 추가 점수는 없어.</p>}
+      {finished ? (
+        <button
+          key="next"
+          type="button"
+          className="chip primary"
+          onClick={(e) => {
+            // 지목의 더블클릭이 새로 나타난 다음 사건까지 누르지 않게 한다.
+            if (e.detail <= 1) onNext();
+          }}
+        >
+          다음 사건
+        </button>
+      ) : (
+        <button key="accuse" type="button" className="chip primary" onClick={accuse} disabled={!accused}>
+          지목하기
+        </button>
+      )}
       {/* 정답을 본 순간 이 사건은 끝난다. 왜 눌리지 않는지 여기서 말해준다 */}
       {peeked && !solved && (
         <p className="hint" role="status">
@@ -260,7 +267,7 @@ export function AccusePanel({
       {solved && (
         <p key={attempt} className="verdict ok" role="status">
           {detective ? `역시 ${detective}. ` : '정답! '}범인은 {culpritName}!{' '}
-          <em className="earned">+{earned}점</em>
+          <em className="earned">{earned > 0 ? `+${earned}점` : '추가 점수 없음'}</em>
         </p>
       )}
       {result === 'wrong' && !peeked && (
@@ -275,7 +282,7 @@ export function AccusePanel({
   );
 }
 
-export function SeedPanel({ seed, onOpen }: { seed: string; onOpen: (seed: string) => void }) {
+export function SeedPanel({ seed, onOpen }: { seed: string; onOpen: (seed: string) => boolean }) {
   const [input, setInput] = useState('');
 
   return (
@@ -285,8 +292,7 @@ export function SeedPanel({ seed, onOpen }: { seed: string; onOpen: (seed: strin
       <form
         onSubmit={(e) => {
           e.preventDefault();
-          if (input.trim()) onOpen(input.trim());
-          setInput('');
+          if (input.trim() && onOpen(input.trim())) setInput('');
         }}
       >
         <input
@@ -294,6 +300,9 @@ export function SeedPanel({ seed, onOpen }: { seed: string; onOpen: (seed: strin
           onChange={(e) => setInput(e.target.value)}
           placeholder="같은 사건 불러오기"
           aria-label="시드 입력"
+          maxLength={MAX_SEED_LEN}
+          required
+          pattern=".*\S.*"
         />
         <button type="submit" className="chip">
           열기

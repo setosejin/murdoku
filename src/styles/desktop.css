@@ -78,11 +78,16 @@
 }
 
 /* ---- 왼쪽: 증언 = 메모 브러시 ---- */
+.dcol {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  gap: 8px;
+}
 .dclues {
   /* 열 높이만큼 늘리면 짧은 사건에서 패널 아래가 텅 빈다 — 내용에 맞추되
      화면을 넘지는 않게 자른다 (넘치는 몫은 아래에서 목록이 스크롤로 받는다) */
-  align-self: start;
-  max-height: 100%;
+  flex: 0 1 auto;
   min-height: 0;
   /* 첫 진입에만 한 번. 세 열이 동시에 툭 나타나면 어디부터 봐야 할지가 안 잡힌다.
      @starting-style 은 마운트에만 걸리고 이 열들은 key 가 없어 다시 마운트되지
@@ -126,9 +131,10 @@
   padding: 6px 8px;
   font-size: 13px;
 }
-/* 온보딩 여는 ? 는 게임 동작이 아니라 안내다 — 늘어나지 않는 조용한 원으로 둔다 */
-.dclues-bar .chip.icon {
+/* 메모 도구와 구분되는 도움말 진입점. */
+.dhelp {
   flex: none;
+  align-self: flex-end;
   width: 40px;
   padding: 0;
   font-size: 16px;
@@ -136,7 +142,7 @@
   color: var(--muted);
 }
 @media (hover: hover) and (pointer: fine) {
-  .dclues-bar .chip.icon:hover {
+  .dhelp:hover {
     border-color: var(--wall);
     color: var(--ink);
   }

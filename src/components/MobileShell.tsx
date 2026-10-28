@@ -1,19 +1,21 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import Board from './Board';
 import CaseCards from './CaseCards';
 import ChangelogDialog from './ChangelogDialog';
 import ClueList from './ClueList';
 import FeedbackDialog from './FeedbackDialog';
 import HistoryPanel from './HistoryPanel';
+import HelpSheet from './HelpSheet';
+import { PrivacyButton } from './PrivacyScreen';
 import Leaderboard from './Leaderboard';
 import RankToast from './RankToast';
 import Sheet from './Sheet';
-import { AccusePanel, DifficultySeg, LegendPanel, RulesPanel, SeedPanel } from './GamePanels';
+import { AccusePanel, DifficultySeg, SeedPanel } from './GamePanels';
 import { petMenuItems } from './petMenuItems';
 import { markBriefSeen, seenBrief } from '../game/history';
 import type { Game } from '../hooks/useGame';
 
-type SheetId = 'case' | 'accuse' | 'menu';
+type SheetId = 'case' | 'accuse' | 'menu' | 'help';
 
 /**
  * 모바일 셸 — 한 화면 안에 다 들어오고 스크롤이 없다.
@@ -22,29 +24,27 @@ type SheetId = 'case' | 'accuse' | 'menu';
  * 나머지(사건 설명·규칙·범례·지목·난이도·시드·기록)는 전부 바텀시트로 들어간다.
  * 시트 안에서만 스크롤이 생긴다.
  */
-export default function MobileShell({ game }: { game: Game }) {
+export default function MobileShell({ game, onHide, privacyHidden }: {
+  game: Game;
+  onHide: () => void;
+  privacyHidden: boolean;
+}) {
   const [sheet, setSheet] = useState<SheetId | null>(null);
+  const helpHandled = useRef(false);
   /** 메뉴 시트를 열면서 어느 패널로 내려갈지. 손님 메뉴가 쓴다 */
   const [jump, setJump] = useState<string | undefined>(undefined);
-  /** 첫 방문으로 저절로 열렸나. 그때만 다시 여는 길을 알려준다 */
-  const [firstBrief, setFirstBrief] = useState(false);
-  const close = () => {
-    setSheet(null);
-    setFirstBrief(false);
-  };
+  const close = () => setSheet(null);
   const { puzzle } = game;
   const alerted = game.rankAlert !== null;
 
-  // 데스크톱 Tour 는 모바일에 없다 — 겨누는 자리(.dclues·.legend)가 메인 화면에 없어서다.
-  // 대신 첫 방문에 사건 브리핑을 연다. 인물·범례·규칙이 이미 그 안에 다 있다.
-  // useState 초기값으로 읽으면 서버 렌더에서도 열린 채 나가므로 마운트 뒤에 켠다
-  // (App.tsx 의 온보딩과 같은 이유)
+  // 기존 방문 표식을 존중한다. 새 방문자에게는 인물 카드보다 조작법을 먼저 보여준다.
   useEffect(() => {
+    if (privacyHidden || helpHandled.current) return;
+    helpHandled.current = true;
     if (seenBrief()) return;
-    setSheet('case');
-    setFirstBrief(true);
+    setSheet('help');
     markBriefSeen();
-  }, []);
+  }, [privacyHidden]);
 
   // 메뉴를 열면 알림은 제 할 일을 다 했다 — 점수판이 바로 이 안에 있다
   const openMenu = (to?: string) => {
@@ -53,19 +53,18 @@ export default function MobileShell({ game }: { game: Game }) {
     game.dismissRank();
   };
 
-  /* 바깥 손님을 우클릭(폰은 꾹 누르기)하면 나오는 항목. 목록은 데스크톱과 공유한다.
-     도움말만 갈린다 — 온보딩 투어는 데스크톱 선택자를 겨누므로 여기서는 못 쓴다.
-     대신 규칙과 범례가 들어 있는 사건 브리핑을 연다 */
+  /* 바깥 손님을 꾹 눌러도 같은 게임 방법을 연다. */
   const petMenu = petMenuItems({
-    onHelp: () => setSheet('case'),
+    onHelp: () => setSheet('help'),
     onRank: () => openMenu('jump-scores'),
     onName: () => openMenu('jump-account'),
     onNew: () => game.reset(),
     onClear: game.clearMarks,
+    onHide,
   });
 
   return (
-    <div className="mshell">
+    <div className={privacyHidden ? 'mshell privacy-hidden' : 'mshell'}>
       <header className="mtop">
         {/* 데스크톱 .topbar 의 h1 에 대응한다. 이 자리는 세로 비용이 0 이다 —
             상단바 높이는 옆의 44px 버튼들이 정하고 워드마크는 그 안에 든다.
@@ -83,6 +82,9 @@ export default function MobileShell({ game }: { game: Game }) {
             ⌄
           </span>
         </button>
+        <button type="button" className="micon mhelp" aria-label="게임 방법"
+          aria-haspopup="dialog" onClick={() => setSheet('help')}>?</button>
+        <PrivacyButton onHide={onHide} />
         <button
           type="button"
           className={alerted ? 'micon alerted' : 'micon'}
@@ -133,31 +135,27 @@ export default function MobileShell({ game }: { game: Game }) {
         </button>
       </nav>
 
-      <Sheet open={sheet === 'case'} onClose={close} title={puzzle.title}>
-        {/* 저절로 열린 시트는 어디서 왔는지를 안 알려준다. 닫고 나면 규칙에 다시
-            닿는 길을 모르므로 첫 방문에만 말해준다. 맨 아래에 두면 끝까지 내리지
-            않는 사람은 못 본다 */}
-        {firstBrief && (
-          <p className="brief-again">
-            위쪽 <b>사건 제목</b>을 누르면 이 브리핑을 언제든 다시 볼 수 있어.
-          </p>
-        )}
+      <Sheet open={sheet === 'case'} onClose={close} title={puzzle.title}
+        onHide={onHide} privacyHidden={privacyHidden}>
         <p className="brief">{puzzle.brief}</p>
         <CaseCards puzzle={puzzle} />
-        {/* 범례는 사건마다 다른 기준(어느 가구를 밟을 수 있나)이라 사건 브리핑에
-            같이 둔다. 시트 하나와 하단 액션바 버튼 하나가 줄었다 — 바 높이는
-            그대로지만 남은 두 버튼이 그만큼 넓어져 누르기 쉬워졌다 */}
-        <LegendPanel furniture={puzzle.furniture} />
-        <RulesPanel />
       </Sheet>
 
-      <Sheet open={sheet === 'accuse'} onClose={close} title="범인 지목">
+      <HelpSheet open={sheet === 'help'} onClose={close} furniture={puzzle.furniture}
+        onHide={onHide} privacyHidden={privacyHidden} />
+
+      <Sheet open={sheet === 'accuse'} onClose={close} title="범인 지목"
+        onHide={onHide} privacyHidden={privacyHidden}>
         <AccusePanel
           suspects={game.suspects}
           victim={game.victim}
           accused={game.accused}
           setAccused={game.setAccused}
           accuse={game.accuse}
+          onNext={() => {
+            if (game.reset()) close();
+          }}
+          replaying={game.replaying}
           result={game.result}
           attempt={game.attempt}
           culpritName={game.culpritName}
@@ -176,23 +174,22 @@ export default function MobileShell({ game }: { game: Game }) {
         )}
       </Sheet>
 
-      <Sheet open={sheet === 'menu'} onClose={close} title="메뉴" jumpTo={jump}>
+      <Sheet open={sheet === 'menu'} onClose={close} title="메뉴" jumpTo={jump}
+        onHide={onHide} privacyHidden={privacyHidden}>
         <div className="panel">
           <b>난이도</b>
           <DifficultySeg
             difficulties={game.difficulties}
             n={game.n}
             onPick={(n) => {
-              game.reset(n);
-              close();
+              if (game.reset(n)) close();
             }}
           />
           <button
             type="button"
             className="chip primary"
             onClick={() => {
-              game.reset();
-              close();
+              if (game.reset()) close();
             }}
           >
             새 사건
@@ -201,15 +198,18 @@ export default function MobileShell({ game }: { game: Game }) {
             type="button"
             className="chip"
             onClick={() => {
-              game.clearMarks();
-              close();
+              if (game.clearMarks()) close();
             }}
           >
             메모 지우기
           </button>
         </div>
 
-        <SeedPanel seed={game.seed} onOpen={(s) => game.reset(game.n, s)} />
+        <SeedPanel seed={game.seed} onOpen={(s) => {
+          const opened = game.reset(game.n, s);
+          if (opened) close();
+          return opened;
+        }} />
 
         <Leaderboard plays={game.plays} board={game.board} nick={game.nick} />
 
@@ -221,14 +221,13 @@ export default function MobileShell({ game }: { game: Game }) {
           setCode={game.setCode}
           setNick={game.setNick}
           onOpen={(pn, ps) => {
-            game.reset(pn, ps);
-            close();
+            if (game.reset(pn, ps)) close();
           }}
         />
 
         <div className="mmenu-foot">
-          <FeedbackDialog seed={game.seed} n={game.n} />
-          <ChangelogDialog />
+          <FeedbackDialog seed={game.seed} n={game.n} onHide={onHide} />
+          <ChangelogDialog onHide={onHide} />
         </div>
         {/* 데스크톱 푸터에만 있던 저작권·저장소 링크가 모바일에서 사라지지 않게 */}
         <p className="mmenu-copy">

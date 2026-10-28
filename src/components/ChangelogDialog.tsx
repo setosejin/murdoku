@@ -1,4 +1,5 @@
 import { useRef, type ReactNode } from 'react';
+import { PrivacyButton } from './PrivacyScreen';
 import changelog from '../../CHANGELOG.md?raw';
 
 /**
@@ -70,7 +71,7 @@ export function renderMarkdown(md: string): ReactNode[] {
   return out;
 }
 
-export default function ChangelogDialog() {
+export default function ChangelogDialog({ onHide }: { onHide: () => void }) {
   const ref = useRef<HTMLDialogElement>(null);
 
   return (
@@ -91,6 +92,7 @@ export default function ChangelogDialog() {
           {renderMarkdown(changelog)}
         </div>
         <div className="fb-actions cl-actions">
+          <PrivacyButton onHide={onHide} />
           <button type="button" className="chip" onClick={() => ref.current?.close()}>
             닫기
           </button>

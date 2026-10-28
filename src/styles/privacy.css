@@ -1,0 +1,36 @@
+.chip.privacy-toggle {
+  flex: none;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  display: inline-grid;
+  place-items: center;
+}
+
+.privacy-screen {
+  margin: auto;
+  padding: 4px;
+  border: 0;
+  background: transparent;
+  color: var(--ink);
+  overflow: visible;
+}
+.privacy-screen .chip {
+  min-height: 44px;
+  padding-inline: 24px;
+}
+/* 블러가 없으면 내용을 그대로 노출하지 않고 종이색으로 덮는다. */
+.privacy-screen::backdrop {
+  background: var(--paper);
+}
+@supports (filter: blur(1px)) {
+  /* WebKit은 dialog::backdrop의 blur를 계산하고도 그리지 않는다.
+     원본과 top-layer의 열린 dialog를 각각 흐려야 둘 다 가려진다. */
+  .privacy-hidden,
+  .privacy-hidden dialog[open] {
+    filter: blur(24px);
+  }
+  .privacy-screen::backdrop {
+    background: color-mix(in srgb, var(--paper) 35%, transparent);
+  }
+}

@@ -205,13 +205,19 @@ export default function Board({ puzzle, marks, onCell, revealed, petMenu }: Prop
       const crime = revealed && roomAt[r][c] === crimeRoom;
       const blocked = !idx.free[r][c];
       const here = roomById.get(roomAt[r][c])!;
+      const occupant = person
+        ? `${person.name}${person.isVictim ? ' (피해자)' : person.id === puzzle.culpritId ? ' (범인)' : ''}`
+        : revealed ? '빈 칸'
+          : mark === 'X' ? '아무도 없다는 메모'
+            : mark ? `${people.find((p) => p.id === mark)?.name ?? mark} 메모`
+              : '메모 없음';
 
       const desc = [
         `${r + 1}행 ${c + 1}열`,
         here.name,
         fur?.f.label,
         wall?.label,
-        mark ? `표시 ${mark}` : '빈 칸',
+        occupant,
       ]
         .filter(Boolean)
         .join(', ');

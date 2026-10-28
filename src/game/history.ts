@@ -36,7 +36,7 @@ export const N_RANGE = { min: 4, max: 7 } as const;
  */
 export const SCORE_BASE: Record<number, number> = { 4: 150, 5: 250, 6: 350, 7: 450 };
 
-const MAX_SEED_LEN = 64;
+export const MAX_SEED_LEN = 64;
 const MAX_TITLE_LEN = 80;
 /** 계정 아이디 길이 상한(auth.ts 의 ID_RE 와 같다). 순환 import 를 만들지 않으려고 숫자만 둔다 */
 const MAX_NAME_LEN = 20;
@@ -328,24 +328,22 @@ export async function fetchBoard(code: string): Promise<Board | null> {
 }
 
 /**
- * 서버와 기록을 합친다. VITE_SYNC_URL 이 없으면 아무것도 안 하고 로컬 전용으로 동작한다.
- * 실패는 전부 삼킨다 — 네트워크가 죽어도 게임과 로컬 기록은 그대로여야 한다.
+ * 서버 응답과 보낸 기록을 합쳐 반환한다. 저장은 최신 응답인지 확인한 useGame이 맡는다.
+ * 네트워크가 죽어도 게임과 로컬 기록은 그대로여야 하므로 실패하면 보낸 기록을 반환한다.
  */
 export async function sync(code: string, plays: readonly Play[]): Promise<Play[]> {
   // 모듈 로드 시점에 읽지 않는다. 워커가 이 파일을 import 해도 import.meta.env 를 건드리지 않도록
   const base = import.meta.env?.VITE_SYNC_URL;
-  if (!base || !isCode(code)) return plays as Play[];
+  if (!base || !isCode(code)) return [...plays];
   try {
     const res = await fetch(`${base}/h/${code}`, {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify(plays),
     });
-    if (!res.ok) return plays as Play[];
-    const merged = mergePlays(plays, sanitizePlays(await res.json()));
-    savePlays(merged);
-    return merged;
+    if (!res.ok) return [...plays];
+    return mergePlays(plays, sanitizePlays(await res.json()));
   } catch {
-    return plays as Play[];
+    return [...plays];
   }
 }
